@@ -1,0 +1,287 @@
+import 'package:flutter/material.dart';
+import '../models/prediction.dart';
+import '../models/model_status.dart';
+
+/// 予測結果を表示するカード
+class PredictionCard extends StatelessWidget {
+  final Prediction? prediction;
+  final ModelStatus status;
+
+  const PredictionCard({
+    super.key,
+    required this.prediction,
+    required this.status,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // 14日未満: 学習中表示
+    if (!status.ready) {
+      return _buildLearningCard();
+    }
+
+    // 予測結果がまだ無い場合（バッチ未実行など）
+    if (prediction == null || prediction!.pToday == null) {
+      return _buildWaitingCard();
+    }
+
+    return _buildPredictionCard(context);
+  }
+
+  /// 学習中（14日未満）のカード
+  Widget _buildLearningCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.model_training, size: 40, color: Colors.grey),
+          const SizedBox(height: 12),
+          const Text(
+            '予測モデル学習中',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'あと ${status.remainingDays} 日で予測開始',
+            style: const TextStyle(fontSize: 14, color: Colors.black54),
+          ),
+          const SizedBox(height: 12),
+          // プログレスバー
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: status.daysCollected / status.daysRequired,
+              minHeight: 8,
+              backgroundColor: Colors.grey.shade200,
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '${status.daysCollected} / ${status.daysRequired} 日',
+            style: const TextStyle(fontSize: 12, color: Colors.black45),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// バッチ未実行・予測結果待ちのカード
+  Widget _buildWaitingCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blue.shade100),
+      ),
+      child: const Column(
+        children: [
+          Icon(Icons.schedule, size: 36, color: Colors.blueAccent),
+          SizedBox(height: 10),
+          Text(
+            '予測準備中',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 6),
+          Text(
+            '明朝の更新をお待ちください',
+            style: TextStyle(fontSize: 13, color: Colors.black54),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 予測結果カード
+  Widget _buildPredictionCard(BuildContext context) {
+    final pred = prediction!;
+    final pToday = pred.pToday!;
+    final riskColor = _riskColor(pToday);
+    final showP3d = pred.p3d != null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: riskColor.withAlpha(25),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: riskColor.withAlpha(80)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ヘッダー: タイトル + 信頼度
+          Row(
+            children: [
+              const Text(
+                '今日の不調リスク',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              _confidenceBadge(pred.confidence),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // メイン: リスクパーセント + ラベル
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                pred.riskPercent,
+                style: TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
+                  color: riskColor,
+                  height: 1.0,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  pred.riskLabel,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: riskColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // 信頼度注記
+          if (pred.confidenceNote != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              pred.confidenceNote!,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+
+          // 3日リスク（開放時のみ）
+          if (showP3d) ...[
+            const Divider(height: 24),
+            _threeDayRisk(pred),
+          ],
+
+          // 3日リスク未開放メッセージ
+          if (!showP3d && status.daysCollected >= 14) ...[
+            const Divider(height: 24),
+            _threeDayLocked(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// 3日リスク表示
+  Widget _threeDayRisk(Prediction pred) {
+    final p3d = pred.p3d!;
+    final color = _riskColor(p3d);
+    return Row(
+      children: [
+        const Icon(Icons.calendar_today, size: 16, color: Colors.black54),
+        const SizedBox(width: 8),
+        const Text(
+          '3日間リスク',
+          style: TextStyle(fontSize: 14, color: Colors.black87),
+        ),
+        const Spacer(),
+        Text(
+          pred.risk3dPercent,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 3日リスク未開放表示
+  Widget _threeDayLocked() {
+    final need60 = status.daysCollected < 60;
+    final needUnhealthy = status.unhealthyCount < 10;
+
+    String message;
+    if (need60) {
+      final remaining = 60 - status.daysCollected;
+      message = '3日予測はあと $remaining 日で開放';
+    } else if (needUnhealthy) {
+      message = '3日予測：準備中';
+    } else {
+      message = '3日予測：まもなく開放';
+    }
+
+    return Row(
+      children: [
+        const Icon(Icons.lock_outline, size: 16, color: Colors.black38),
+        const SizedBox(width: 8),
+        Text(
+          message,
+          style: const TextStyle(fontSize: 13, color: Colors.black45),
+        ),
+      ],
+    );
+  }
+
+  /// 信頼度バッジ
+  Widget _confidenceBadge(String confidence) {
+    Color bgColor;
+    Color textColor;
+    String label;
+
+    switch (confidence) {
+      case 'high':
+        bgColor = Colors.green.shade100;
+        textColor = Colors.green.shade800;
+        label = '信頼度：高';
+        break;
+      case 'medium':
+        bgColor = Colors.amber.shade100;
+        textColor = Colors.amber.shade800;
+        label = '信頼度：中';
+        break;
+      default:
+        bgColor = Colors.grey.shade200;
+        textColor = Colors.grey.shade700;
+        label = '信頼度：低';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
+      ),
+    );
+  }
+
+  /// リスクレベルに応じた色
+  Color _riskColor(double p) {
+    if (p >= 0.6) return Colors.red.shade700;
+    if (p >= 0.4) return Colors.orange.shade700;
+    if (p >= 0.2) return Colors.amber.shade700;
+    return Colors.green.shade700;
+  }
+}

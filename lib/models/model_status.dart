@@ -38,4 +38,18 @@ class ModelStatus {
     if (ready) return '予測機能：利用可能';
     return '学習中（あと $remainingDays 日）';
   }
+
+  String get confidenceLevelLabel {
+    switch (confidenceLevel) {
+      case 'high':
+        return '高';
+      case 'medium':
+        return '中';
+      default:
+        return '低';
+    }
+  }
+
+  /// 3日リスクが開放条件を満たしているか
+  bool get is3dReady => daysCollected >= 60 && unhealthyCount >= 10;
 }

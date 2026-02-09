@@ -31,7 +31,42 @@ class StatusBanner extends StatelessWidget {
             '${status.daysCollected} / ${status.daysRequired} 日記録済み',
             style: const TextStyle(fontSize: 13, color: Colors.black54),
           ),
+          if (ready) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _infoPill(
+                  'モデル',
+                  status.modelType == 'lightgbm' ? 'LightGBM' : 'ロジスティック',
+                ),
+                const SizedBox(width: 10),
+                _infoPill('信頼度', status.confidenceLevelLabel),
+                if (status.recentMissingRate > 0) ...[
+                  const SizedBox(width: 10),
+                  _infoPill(
+                    '欠損率',
+                    '${(status.recentMissingRate * 100).round()}%',
+                  ),
+                ],
+              ],
+            ),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _infoPill(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(180),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        '$label: $value',
+        style: const TextStyle(fontSize: 11, color: Colors.black54),
       ),
     );
   }

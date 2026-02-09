@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/daily_log.dart';
 import '../models/model_status.dart';
+import '../models/prediction.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -16,6 +17,9 @@ class FirestoreService {
 
   DocumentReference get _statusRef =>
       _userDoc.collection('model_status').doc('current');
+
+  CollectionReference get _predictionsCol =>
+      _userDoc.collection('predictions');
 
   // --- Date Key ---
 
@@ -135,6 +139,42 @@ class FirestoreService {
       'stress': stress,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+  }
+
+  // --- Predictions ---
+
+  /// 今日の予測結果を取得
+  Future<Prediction?> getTodayPrediction() async {
+    final key = todayKey();
+    final doc = await _predictionsCol.doc(key).get();
+    if (!doc.exists) return null;
+    return Prediction.fromFirestore(
+        doc.id, doc.data() as Map<String, dynamic>);
+  }
+
+  // --- Feedback ---
+
+  /// 週次フィードバックを保存
+  /// result: 'correct', 'incorrect', 'unknown'
+  Future<void> saveWeeklyFeedback({
+    required String weekKey,
+    required String result,
+  }) async {
+    await _userDoc.collection('feedback').doc(weekKey).set({
+      'result': result,
+      'createdAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// 直近のフィードバック済み週キーを取得（重複防止用）
+  Future<String?> getLatestFeedbackWeek() async {
+    final snap = await _userDoc
+        .collection('feedback')
+        .orderBy(FieldPath.documentId, descending: true)
+        .limit(1)
+        .get();
+    if (snap.docs.isEmpty) return null;
+    return snap.docs.first.id;
   }
 
   // --- テスト用 ---
