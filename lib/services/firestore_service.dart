@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/daily_log.dart';
 import '../models/model_status.dart';
@@ -179,46 +181,151 @@ class FirestoreService {
 
   // --- テスト用 ---
 
-  /// 直近7日分のテストデータを一括作成
+  /// 100日分のリアルなテストデータ + 今日の予測結果を一括作成
+  ///
+  /// 体調パターン:
+  ///   - ベースライン 3〜4 で推移
+  ///   - 週末はやや回復傾向
+  ///   - 2〜3週間に1回、2〜3日続く不調期（スコア1〜2）を挿入
+  ///   - 睡眠不足の翌日は体調が下がりやすい
   Future<void> seedTestData() async {
-    final batch = _db.batch();
-    final scores = [3, 4, 2, 5, 3, 4, 4];
-    final sleepHours = [7.0, 6.5, 5.5, 8.0, 7.5, 6.0, 7.0];
-    final stepsList = [8000, 6500, 3000, 10000, 7500, 5000, 9000];
+    final rng = Random(42); // 再現性のためシード固定
+    final now = DateTime.now();
+    const totalDays = 100;
 
-    for (int i = 0; i < 7; i++) {
-      final day = DateTime.now().subtract(Duration(days: 6 - i));
-      final key = dateKey(day);
-      final ref = _dailyCol.doc(key);
+    // --- 100日分の日次データ生成 ---
+    final List<Map<String, dynamic>> dailyRows = [];
+    final List<int> moodScores = [];
 
-      batch.set(
-        ref,
-        {
-          'moodScore': scores[i],
-          'sleep': {
-            'durationHours': sleepHours[i],
-            'source': 'test',
-          },
-          'steps': stepsList[i],
-          'tzAtWake': DateTime.now().timeZoneName,
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
-      );
+    // 不調期の開始日（0-indexed, 今日からの遡り日数）
+    // 約2〜3週間ごとに2〜3日の不調期
+    final Set<int> sickDays = {};
+    for (final start in [8, 25, 48, 67, 85]) {
+      final duration = 2 + rng.nextInt(2); // 2〜3日
+      for (int d = 0; d < duration; d++) {
+        sickDays.add(start + d);
+      }
     }
 
-    await batch.commit();
+    for (int i = 0; i < totalDays; i++) {
+      final day = now.subtract(Duration(days: totalDays - 1 - i));
+      final key = dateKey(day);
+      final weekday = day.weekday; // 1=Mon, 7=Sun
+      final isWeekend = weekday >= 6;
 
-    // model_status を更新
-    final allDocs = await _dailyCol.get();
-    final count = allDocs.docs
-        .where((d) => (d.data() as Map<String, dynamic>)['moodScore'] is int)
-        .length;
+      // 体調スコア
+      int mood;
+      if (sickDays.contains(totalDays - 1 - i)) {
+        mood = 1 + rng.nextInt(2); // 1〜2
+      } else if (isWeekend) {
+        mood = 3 + rng.nextInt(2); // 3〜4 (週末は安定)
+        if (rng.nextDouble() < 0.3) mood = 5; // たまに絶好調
+      } else {
+        mood = 3 + rng.nextInt(2); // 3〜4
+        if (rng.nextDouble() < 0.15) mood = 2; // たまに軽い不調
+        if (rng.nextDouble() < 0.1) mood = 5;
+      }
+      mood = mood.clamp(1, 5);
+      moodScores.add(mood);
 
+      // 睡眠時間（体調に相関させる）
+      double baseSleep = 6.5 + rng.nextDouble() * 2.0; // 6.5〜8.5h
+      if (mood <= 2) baseSleep -= 1.0 + rng.nextDouble(); // 不調期は睡眠短い
+      if (isWeekend) baseSleep += 0.5; // 週末は長め
+      final sleepHours =
+          (baseSleep * 10).roundToDouble() / 10; // 小数1桁
+
+      // 歩数
+      int steps;
+      if (mood <= 2) {
+        steps = 2000 + rng.nextInt(3000); // 不調期は少ない
+      } else {
+        steps = 5000 + rng.nextInt(8000);
+      }
+
+      // ストレス（任意なので20%は欠損）
+      int? stress;
+      if (rng.nextDouble() > 0.2) {
+        if (mood <= 2) {
+          stress = 3 + rng.nextInt(3); // 不調時は高ストレス
+        } else {
+          stress = 1 + rng.nextInt(3);
+        }
+        stress = stress.clamp(1, 5);
+      }
+
+      final row = <String, dynamic>{
+        'key': key,
+        'moodScore': mood,
+        'sleep': {
+          'durationHours': sleepHours,
+          'source': 'test',
+        },
+        'steps': steps,
+        'tzAtWake': now.timeZoneName,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      if (stress != null) row['stress'] = stress;
+
+      dailyRows.add(row);
+    }
+
+    // Firestore batch は500操作制限があるので分割
+    for (int start = 0; start < dailyRows.length; start += 400) {
+      final batch = _db.batch();
+      final end = (start + 400).clamp(0, dailyRows.length);
+      for (int j = start; j < end; j++) {
+        final row = dailyRows[j];
+        final ref = _dailyCol.doc(row['key'] as String);
+        final data = Map<String, dynamic>.from(row)..remove('key');
+        batch.set(ref, data, SetOptions(merge: true));
+      }
+      await batch.commit();
+    }
+
+    // --- 不調カウント ---
+    // 14日移動平均を計算して不調フラグを数える
+    int unhealthyCount = 0;
+    for (int i = 13; i < moodScores.length; i++) {
+      final window = moodScores.sublist(i - 13, i + 1);
+      final avg = window.reduce((a, b) => a + b) / window.length;
+      if (moodScores[i] <= avg - 1) unhealthyCount++;
+    }
+
+    // --- 今日の予測結果を生成 ---
+    // 直近の体調傾向から簡易的にリスクを計算
+    final recent7 = moodScores.sublist(moodScores.length - 7);
+    final avgRecent = recent7.reduce((a, b) => a + b) / recent7.length;
+    final todayMood = moodScores.last;
+
+    // リスク確率（体調が低いほど高い）
+    double pToday = ((4.0 - avgRecent) / 4.0).clamp(0.0, 1.0);
+    // 今日のスコアが低ければさらに上昇
+    if (todayMood <= 2) pToday = (pToday + 0.3).clamp(0.0, 0.95);
+    pToday = (pToday * 100).roundToDouble() / 100;
+
+    // 3日リスク（今日より少し高め）
+    double p3d = (pToday * 1.3 + 0.05).clamp(0.0, 0.95);
+    p3d = (p3d * 100).roundToDouble() / 100;
+
+    final todayPredRef = _predictionsCol.doc(todayKey());
+    await todayPredRef.set({
+      'pToday': pToday,
+      'p3d': p3d,
+      'confidence': 'high', // 100日分あるので高信頼度
+      'generatedAt': FieldValue.serverTimestamp(),
+      'modelVersion': 'logistic_v1',
+    });
+
+    // --- model_status 更新 ---
     await _statusRef.set({
-      'daysCollected': count,
+      'daysCollected': totalDays,
       'daysRequired': 14,
-      'ready': count >= 14,
+      'ready': true,
+      'unhealthyCount': unhealthyCount,
+      'recentMissingRate': 0.0,
+      'modelType': 'logistic',
+      'confidenceLevel': 'high',
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }

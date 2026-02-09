@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
+from sklearn.preprocessing import StandardScaler
 
 import config
 
@@ -62,11 +63,17 @@ def train_and_predict(
         X_train, y_train = X, y
         X_test, y_test = None, None
 
+    # スケーリング（ロジスティック回帰の収束改善）
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test) if X_test is not None else None
+    X_last_scaled = scaler.transform(X[-1:])
+
     # --- ロジスティック回帰 ---
     lr_model = LogisticRegression(max_iter=1000, random_state=42)
-    lr_model.fit(X_train, y_train)
-    lr_prob = float(lr_model.predict_proba(X[-1:])[:, 1][0])
-    lr_auc = _safe_auc(y_test, lr_model.predict_proba(X_test)[:, 1]) if X_test is not None else None
+    lr_model.fit(X_train_scaled, y_train)
+    lr_prob = float(lr_model.predict_proba(X_last_scaled)[:, 1][0])
+    lr_auc = _safe_auc(y_test, lr_model.predict_proba(X_test_scaled)[:, 1]) if X_test_scaled is not None else None
 
     best_model_type = "logistic"
     best_prob = lr_prob
