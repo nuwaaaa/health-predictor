@@ -115,12 +115,15 @@ def main():
     p_today = result_today["probability"]
     model_type = result_today["model_type"]
     auc = result_today["auc"]
+    pr_auc = result_today["pr_auc"]
 
     if p_today is not None:
         print(f"\n  不調確率: {p_today * 100:.1f}%")
         print(f"  モデル:   {model_type}")
         if auc is not None:
-            print(f"  AUC:      {auc:.3f}")
+            print(f"  ROC-AUC:  {auc:.3f}")
+        if pr_auc is not None:
+            print(f"  PR-AUC:   {pr_auc:.3f}")
     else:
         print("  予測不可（データ不足）")
 
@@ -141,6 +144,10 @@ def main():
         if p_3d is not None:
             print(f"\n  3日不調確率: {p_3d * 100:.1f}%")
             print(f"  モデル:     {result_3d['model_type']}")
+            if result_3d["auc"] is not None:
+                print(f"  ROC-AUC:   {result_3d['auc']:.3f}")
+            if result_3d["pr_auc"] is not None:
+                print(f"  PR-AUC:    {result_3d['pr_auc']:.3f}")
         else:
             print("  予測不可")
     else:

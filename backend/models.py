@@ -12,7 +12,7 @@ import logging
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import average_precision_score, roc_auc_score
 from sklearn.preprocessing import StandardScaler
 
 import config
@@ -34,20 +34,21 @@ def train_and_predict(
             "probability": float or None,
             "model_type": "logistic" or "lightgbm",
             "auc": float or None,
+            "pr_auc": float or None,
         }
     """
     # 学習可能な行のみ抽出
     valid = df.dropna(subset=[target_col] + feature_cols).copy()
 
     if len(valid) < config.MIN_DAYS_TODAY:
-        return {"probability": None, "model_type": "logistic", "auc": None}
+        return {"probability": None, "model_type": "logistic", "auc": None, "pr_auc": None}
 
     X = valid[feature_cols].values
     y = valid[target_col].values.astype(int)
 
     # 正例が0件の場合は予測不可（確率0を返す）
     if y.sum() == 0:
-        return {"probability": 0.0, "model_type": "logistic", "auc": None}
+        return {"probability": 0.0, "model_type": "logistic", "auc": None, "pr_auc": None}
 
     # 最新行が予測対象（最終行）
     # 検証: 直近14日をテスト、残りをトレーニング
@@ -73,11 +74,14 @@ def train_and_predict(
     lr_model = LogisticRegression(max_iter=1000, random_state=42)
     lr_model.fit(X_train_scaled, y_train)
     lr_prob = float(lr_model.predict_proba(X_last_scaled)[:, 1][0])
-    lr_auc = _safe_auc(y_test, lr_model.predict_proba(X_test_scaled)[:, 1]) if X_test_scaled is not None else None
+    lr_test_proba = lr_model.predict_proba(X_test_scaled)[:, 1] if X_test_scaled is not None else None
+    lr_auc = _safe_auc(y_test, lr_test_proba)
+    lr_pr_auc = _safe_pr_auc(y_test, lr_test_proba)
 
     best_model_type = "logistic"
     best_prob = lr_prob
     best_auc = lr_auc
+    best_pr_auc = lr_pr_auc
 
     # --- LightGBM（条件達成時のみ）---
     if (
@@ -98,7 +102,9 @@ def train_and_predict(
             )
             lgb_model.fit(X_train, y_train)
             lgb_prob = float(lgb_model.predict_proba(X[-1:])[:, 1][0])
-            lgb_auc = _safe_auc(y_test, lgb_model.predict_proba(X_test)[:, 1]) if X_test is not None else None
+            lgb_test_proba = lgb_model.predict_proba(X_test)[:, 1] if X_test is not None else None
+            lgb_auc = _safe_auc(y_test, lgb_test_proba)
+            lgb_pr_auc = _safe_pr_auc(y_test, lgb_test_proba)
 
             # AUCで比較して良い方を採用
             if lgb_auc is not None and lr_auc is not None:
@@ -106,22 +112,27 @@ def train_and_predict(
                     best_model_type = "lightgbm"
                     best_prob = lgb_prob
                     best_auc = lgb_auc
+                    best_pr_auc = lgb_pr_auc
                     logger.info(
-                        "LightGBM selected (AUC: %.3f > LR: %.3f)",
+                        "LightGBM selected (AUC: %.3f, PR-AUC: %s > LR AUC: %.3f, PR-AUC: %s)",
                         lgb_auc,
+                        f"{lgb_pr_auc:.3f}" if lgb_pr_auc else "N/A",
                         lr_auc,
+                        f"{lr_pr_auc:.3f}" if lr_pr_auc else "N/A",
                     )
                 else:
                     logger.info(
-                        "Logistic selected (AUC: %.3f >= LGBM: %.3f)",
+                        "Logistic selected (AUC: %.3f, PR-AUC: %s >= LGBM AUC: %.3f, PR-AUC: %s)",
                         lr_auc,
+                        f"{lr_pr_auc:.3f}" if lr_pr_auc else "N/A",
                         lgb_auc,
+                        f"{lgb_pr_auc:.3f}" if lgb_pr_auc else "N/A",
                     )
             elif lgb_auc is not None:
-                # LRのAUCが計算できなかった場合はLGBMを採用
                 best_model_type = "lightgbm"
                 best_prob = lgb_prob
                 best_auc = lgb_auc
+                best_pr_auc = lgb_pr_auc
 
         except Exception as e:
             logger.warning("LightGBM training failed: %s", e)
@@ -130,16 +141,29 @@ def train_and_predict(
         "probability": best_prob,
         "model_type": best_model_type,
         "auc": best_auc,
+        "pr_auc": best_pr_auc,
     }
 
 
 def _safe_auc(y_true, y_score) -> float | None:
-    """AUCを安全に計算する。正例/負例のどちらかが0件の場合はNoneを返す。"""
-    if y_true is None or len(y_true) < 2:
+    """ROC-AUCを安全に計算する。正例/負例のどちらかが0件の場合はNoneを返す。"""
+    if y_true is None or y_score is None or len(y_true) < 2:
         return None
     if len(np.unique(y_true)) < 2:
         return None
     try:
         return float(roc_auc_score(y_true, y_score))
+    except ValueError:
+        return None
+
+
+def _safe_pr_auc(y_true, y_score) -> float | None:
+    """PR-AUC (Average Precision) を安全に計算する。"""
+    if y_true is None or y_score is None or len(y_true) < 2:
+        return None
+    if len(np.unique(y_true)) < 2:
+        return None
+    try:
+        return float(average_precision_score(y_true, y_score))
     except ValueError:
         return None

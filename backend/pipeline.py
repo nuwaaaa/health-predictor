@@ -193,13 +193,14 @@ def _process_user(db: firestore.Client, uid: str, today: str):
     )
 
     logger.info(
-        "User %s: pToday=%.3f, p3d=%s, model=%s, confidence=%s, auc=%s",
+        "User %s: pToday=%.3f, p3d=%s, model=%s, confidence=%s, auc=%s, pr_auc=%s",
         uid,
         today_result["probability"] or 0,
         f"{p3d:.3f}" if p3d is not None else "N/A",
         model_type,
         confidence_level,
         today_result["auc"],
+        today_result["pr_auc"],
     )
 
 
