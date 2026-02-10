@@ -16,6 +16,7 @@ dependencies:
   # Firebase
   firebase_core: ^4.4.0
   cloud_firestore: ^6.1.2
+  firebase_auth: ^5.3.5
 
   # Chart
   fl_chart: ^0.68.0

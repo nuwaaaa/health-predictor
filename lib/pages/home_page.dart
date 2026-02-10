@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/daily_log.dart';
 import '../models/model_status.dart';
 import '../models/prediction.dart';
+import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../widgets/mood_selector.dart';
 import '../widgets/chart_7days.dart';
@@ -19,7 +20,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  static const _uid = 'test_user';
+  final _authService = AuthService();
   late final FirestoreService _service;
 
   bool _loading = true;
@@ -33,7 +34,9 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _service = FirestoreService(uid: _uid);
+    final uid = _authService.uid;
+    if (uid == null) return;
+    _service = FirestoreService(uid: uid);
     _loadAll();
   }
 
@@ -143,6 +146,11 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.bug_report_outlined),
             tooltip: 'テストデータ作成',
             onPressed: _savingMood ? null : _seedTestData,
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'ログアウト',
+            onPressed: () => _authService.signOut(),
           ),
         ],
       ),
