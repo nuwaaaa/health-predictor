@@ -104,12 +104,15 @@ class _DailyInputPageState extends State<DailyInputPage> {
         final bed = _formatTime(_bedTime!);
         final wake = _formatTime(_wakeTime!);
         final dur = _sleepDuration;
-        if (dur != null) {
+        if (dur != null && dur > 0 && dur <= 24) {
           await widget.service.saveSleep(
             bedTime: bed,
             wakeTime: wake,
             durationHours: dur,
           );
+        } else if (dur != null) {
+          _showError('睡眠時間が不正です（0〜24時間）');
+          return;
         }
       }
 
@@ -117,9 +120,11 @@ class _DailyInputPageState extends State<DailyInputPage> {
       final stepsText = _stepsController.text.trim();
       if (stepsText.isNotEmpty) {
         final steps = int.tryParse(stepsText);
-        if (steps != null && steps >= 0) {
-          await widget.service.saveSteps(steps);
+        if (steps == null || steps < 0 || steps > 200000) {
+          _showError('歩数が不正です（0〜200,000）');
+          return;
         }
+        await widget.service.saveSteps(steps);
       }
 
       // ストレス
@@ -144,6 +149,14 @@ class _DailyInputPageState extends State<DailyInputPage> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    setState(() => _saving = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
