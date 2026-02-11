@@ -18,6 +18,9 @@ dependencies:
   cloud_firestore: ^6.1.2
   firebase_auth: ^6.1.4
 
+  # Health data (HealthKit / Health Connect)
+  health: ^11.1.0
+
   # Chart
   fl_chart: ^0.68.0
 

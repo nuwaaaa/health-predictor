@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/daily_log.dart';
 import '../services/firestore_service.dart';
+import '../services/health_data_service.dart';
 
 class DailyInputPage extends StatefulWidget {
   final FirestoreService service;
@@ -19,11 +20,19 @@ class DailyInputPage extends StatefulWidget {
 }
 
 class _DailyInputPageState extends State<DailyInputPage> {
+  final _healthService = HealthDataService();
+
   TimeOfDay? _bedTime;
   TimeOfDay? _wakeTime;
   final _stepsController = TextEditingController();
   int? _stress;
   bool _saving = false;
+  bool _importingSteps = false;
+  bool _importingSleep = false;
+
+  // auto-import されたデータかどうか
+  bool _stepsFromAuto = false;
+  bool _sleepFromAuto = false;
 
   @override
   void initState() {
@@ -40,6 +49,9 @@ class _DailyInputPageState extends State<DailyInputPage> {
     }
     if (log.sleep?.wakeTime != null) {
       _wakeTime = _parseTime(log.sleep!.wakeTime!);
+    }
+    if (log.sleep?.source == 'auto') {
+      _sleepFromAuto = true;
     }
     if (log.steps != null) {
       _stepsController.text = log.steps.toString();
@@ -86,12 +98,90 @@ class _DailyInputPageState extends State<DailyInputPage> {
 
     if (picked != null) {
       setState(() {
+        _sleepFromAuto = false; // 手動変更したのでautoフラグ解除
         if (isBed) {
           _bedTime = picked;
         } else {
           _wakeTime = picked;
         }
       });
+    }
+  }
+
+  /// HealthKit / Health Connect から歩数を自動取得
+  Future<void> _importSteps() async {
+    setState(() => _importingSteps = true);
+    try {
+      final granted = await _healthService.requestPermissions();
+      if (!granted) {
+        _showError('ヘルスケアへのアクセスが許可されていません');
+        return;
+      }
+
+      final steps = await _healthService.fetchTodaySteps();
+      if (steps == null || steps == 0) {
+        _showError('歩数データが見つかりませんでした');
+        return;
+      }
+
+      setState(() {
+        _stepsController.text = steps.toString();
+        _stepsFromAuto = true;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$steps 歩を取得しました'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      _showError('歩数の取得に失敗しました: $e');
+    } finally {
+      if (mounted) setState(() => _importingSteps = false);
+    }
+  }
+
+  /// HealthKit / Health Connect から睡眠データを自動取得
+  Future<void> _importSleep() async {
+    setState(() => _importingSleep = true);
+    try {
+      final granted = await _healthService.requestPermissions();
+      if (!granted) {
+        _showError('ヘルスケアへのアクセスが許可されていません');
+        return;
+      }
+
+      final sleepData = await _healthService.fetchLastNightSleep();
+      if (sleepData == null) {
+        _showError('睡眠データが見つかりませんでした');
+        return;
+      }
+
+      final bedStr = sleepData['bedTime'] as String;
+      final wakeStr = sleepData['wakeTime'] as String;
+      final dur = sleepData['durationHours'] as double;
+
+      setState(() {
+        _bedTime = _parseTime(bedStr);
+        _wakeTime = _parseTime(wakeStr);
+        _sleepFromAuto = true;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('睡眠 ${dur.toStringAsFixed(1)}h を取得しました'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      _showError('睡眠データの取得に失敗しました: $e');
+    } finally {
+      if (mounted) setState(() => _importingSleep = false);
     }
   }
 
@@ -109,6 +199,7 @@ class _DailyInputPageState extends State<DailyInputPage> {
             bedTime: bed,
             wakeTime: wake,
             durationHours: dur,
+            source: _sleepFromAuto ? 'auto' : 'manual',
           );
         } else if (dur != null) {
           _showError('睡眠時間が不正です（0〜24時間）');
@@ -124,7 +215,10 @@ class _DailyInputPageState extends State<DailyInputPage> {
           _showError('歩数が不正です（0〜200,000）');
           return;
         }
-        await widget.service.saveSteps(steps);
+        await widget.service.saveSteps(
+          steps,
+          source: _stepsFromAuto ? 'auto' : 'manual',
+        );
       }
 
       // ストレス
@@ -153,7 +247,11 @@ class _DailyInputPageState extends State<DailyInputPage> {
 
   void _showError(String message) {
     if (!mounted) return;
-    setState(() => _saving = false);
+    setState(() {
+      _saving = false;
+      _importingSteps = false;
+      _importingSleep = false;
+    });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
@@ -178,8 +276,20 @@ class _DailyInputPageState extends State<DailyInputPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // --- 睡眠 ---
-              const Text('睡眠',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Row(
+                children: [
+                  const Text('睡眠',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Spacer(),
+                  _autoImportButton(
+                    label: '自動取得',
+                    loading: _importingSleep,
+                    onTap: _importingSleep ? null : _importSleep,
+                    isAuto: _sleepFromAuto,
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -215,12 +325,30 @@ class _DailyInputPageState extends State<DailyInputPage> {
               const SizedBox(height: 28),
 
               // --- 歩数 ---
-              const Text('歩数',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Row(
+                children: [
+                  const Text('歩数',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Spacer(),
+                  _autoImportButton(
+                    label: '自動取得',
+                    loading: _importingSteps,
+                    onTap: _importingSteps ? null : _importSteps,
+                    isAuto: _stepsFromAuto,
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: _stepsController,
                 keyboardType: TextInputType.number,
+                onChanged: (_) {
+                  // 手動変更したのでautoフラグ解除
+                  if (_stepsFromAuto) {
+                    setState(() => _stepsFromAuto = false);
+                  }
+                },
                 decoration: InputDecoration(
                   hintText: '例: 8000',
                   suffixText: '歩',
@@ -313,6 +441,52 @@ class _DailyInputPageState extends State<DailyInputPage> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  /// 自動取得ボタン
+  Widget _autoImportButton({
+    required String label,
+    required bool loading,
+    required VoidCallback? onTap,
+    required bool isAuto,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isAuto ? Colors.green.shade50 : Colors.blue.shade50,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isAuto ? Colors.green.shade300 : Colors.blue.shade200,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (loading)
+              const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else if (isAuto)
+              Icon(Icons.check_circle, size: 14, color: Colors.green.shade600)
+            else
+              Icon(Icons.download_rounded, size: 14, color: Colors.blue.shade600),
+            const SizedBox(width: 4),
+            Text(
+              isAuto ? '取得済み' : label,
+              style: TextStyle(
+                fontSize: 12,
+                color: isAuto ? Colors.green.shade700 : Colors.blue.shade700,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
     );

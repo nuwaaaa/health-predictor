@@ -112,6 +112,7 @@ class FirestoreService {
     required String bedTime,
     required String wakeTime,
     required double durationHours,
+    String source = 'manual',
   }) async {
     final key = todayKey();
     await _dailyCol.doc(key).set({
@@ -119,17 +120,18 @@ class FirestoreService {
         'bedTime': bedTime,
         'wakeTime': wakeTime,
         'durationHours': durationHours,
-        'source': 'manual',
+        'source': source,
       },
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
 
   /// 歩数を保存
-  Future<void> saveSteps(int steps) async {
+  Future<void> saveSteps(int steps, {String source = 'manual'}) async {
     final key = todayKey();
     await _dailyCol.doc(key).set({
       'steps': steps,
+      'stepsSource': source,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }

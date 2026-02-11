@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>歩数と睡眠データを取得して体調予測に使用します</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>このアプリはヘルスケアデータの読み取りのみ行います</string>
 </dict>
 </plist>
