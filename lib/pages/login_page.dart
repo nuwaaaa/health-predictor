@@ -44,7 +44,7 @@ class _LoginPageState extends State<LoginPage> {
     } on FirebaseAuthException catch (e) {
       _showError(_authErrorMessage(e.code));
     } catch (e) {
-      _showError('エラーが発生しました');
+      _showError('エラー: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
