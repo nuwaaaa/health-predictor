@@ -183,26 +183,28 @@ class FirestoreService {
 
   // --- テスト用 ---
 
-  /// 100日分のリアルなテストデータ + 今日の予測結果を一括作成
+  /// テストデータ + 今日の予測結果を一括作成
+  ///
+  /// [totalDays] で日数を指定可能（デフォルト100日）
   ///
   /// 体調パターン:
   ///   - ベースライン 3〜4 で推移
   ///   - 週末はやや回復傾向
   ///   - 2〜3週間に1回、2〜3日続く不調期（スコア1〜2）を挿入
   ///   - 睡眠不足の翌日は体調が下がりやすい
-  Future<void> seedTestData() async {
+  Future<void> seedTestData({int totalDays = 100}) async {
     final rng = Random(42); // 再現性のためシード固定
     final now = DateTime.now();
-    const totalDays = 100;
 
-    // --- 100日分の日次データ生成 ---
+    // --- 日次データ生成 ---
     final List<Map<String, dynamic>> dailyRows = [];
     final List<int> moodScores = [];
 
     // 不調期の開始日（0-indexed, 今日からの遡り日数）
-    // 約2〜3週間ごとに2〜3日の不調期
+    // totalDaysに応じてフィルタ
     final Set<int> sickDays = {};
     for (final start in [8, 25, 48, 67, 85]) {
+      if (start >= totalDays) continue;
       final duration = 2 + rng.nextInt(2); // 2〜3日
       for (int d = 0; d < duration; d++) {
         sickDays.add(start + d);
@@ -294,40 +296,58 @@ class FirestoreService {
       if (moodScores[i] <= avg - 1) unhealthyCount++;
     }
 
-    // --- 今日の予測結果を生成 ---
-    // 直近の体調傾向から簡易的にリスクを計算
-    final recent7 = moodScores.sublist(moodScores.length - 7);
-    final avgRecent = recent7.reduce((a, b) => a + b) / recent7.length;
-    final todayMood = moodScores.last;
+    // --- 今日の予測結果を生成（14日以上の場合のみ） ---
+    final bool isReady = totalDays >= 14;
+    final bool is3dReady = totalDays >= 60 && unhealthyCount >= 10;
 
-    // リスク確率（体調が低いほど高い）
-    double pToday = ((4.0 - avgRecent) / 4.0).clamp(0.0, 1.0);
-    // 今日のスコアが低ければさらに上昇
-    if (todayMood <= 2) pToday = (pToday + 0.3).clamp(0.0, 0.95);
-    pToday = (pToday * 100).roundToDouble() / 100;
+    // 信頼度: 日数に応じて変化
+    String confidence;
+    if (totalDays >= 60) {
+      confidence = 'high';
+    } else if (totalDays >= 30) {
+      confidence = 'medium';
+    } else {
+      confidence = 'low';
+    }
 
-    // 3日リスク（今日より少し高め）
-    double p3d = (pToday * 1.3 + 0.05).clamp(0.0, 0.95);
-    p3d = (p3d * 100).roundToDouble() / 100;
+    if (isReady) {
+      final recentN = moodScores.length >= 7 ? 7 : moodScores.length;
+      final recent = moodScores.sublist(moodScores.length - recentN);
+      final avgRecent = recent.reduce((a, b) => a + b) / recent.length;
+      final todayMood = moodScores.last;
 
-    final todayPredRef = _predictionsCol.doc(todayKey());
-    await todayPredRef.set({
-      'pToday': pToday,
-      'p3d': p3d,
-      'confidence': 'high', // 100日分あるので高信頼度
-      'generatedAt': FieldValue.serverTimestamp(),
-      'modelVersion': 'logistic_v1',
-    });
+      // リスク確率（体調が低いほど高い）
+      double pToday = ((4.0 - avgRecent) / 4.0).clamp(0.0, 1.0);
+      if (todayMood <= 2) pToday = (pToday + 0.3).clamp(0.0, 0.95);
+      pToday = (pToday * 100).roundToDouble() / 100;
+
+      final predData = <String, dynamic>{
+        'pToday': pToday,
+        'confidence': confidence,
+        'generatedAt': FieldValue.serverTimestamp(),
+        'modelVersion': 'logistic_v1',
+      };
+
+      // 3日リスクは条件を満たす場合のみ
+      if (is3dReady) {
+        double p3d = (pToday * 1.3 + 0.05).clamp(0.0, 0.95);
+        p3d = (p3d * 100).roundToDouble() / 100;
+        predData['p3d'] = p3d;
+      }
+
+      final todayPredRef = _predictionsCol.doc(todayKey());
+      await todayPredRef.set(predData);
+    }
 
     // --- model_status 更新 ---
     await _statusRef.set({
       'daysCollected': totalDays,
       'daysRequired': 14,
-      'ready': true,
+      'ready': isReady,
       'unhealthyCount': unhealthyCount,
       'recentMissingRate': 0.0,
       'modelType': 'logistic',
-      'confidenceLevel': 'high',
+      'confidenceLevel': confidence,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }

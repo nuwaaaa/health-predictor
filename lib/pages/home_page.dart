@@ -110,14 +110,39 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Future<void> _seedTestData() async {
+  Future<void> _showSeedDialog() async {
+    final days = await showDialog<int>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('テストデータ作成'),
+        children: [
+          _seedOption(context, 7, '7日（学習中）'),
+          _seedOption(context, 30, '30日（今日リスクのみ）'),
+          _seedOption(context, 100, '100日（3日リスクも表示）'),
+        ],
+      ),
+    );
+    if (days != null) await _seedTestData(days);
+  }
+
+  Widget _seedOption(BuildContext context, int days, String label) {
+    return SimpleDialogOption(
+      onPressed: () => Navigator.pop(context, days),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Text(label, style: const TextStyle(fontSize: 16)),
+      ),
+    );
+  }
+
+  Future<void> _seedTestData(int days) async {
     setState(() => _savingMood = true);
     try {
-      await _service.seedTestData();
+      await _service.seedTestData(totalDays: days);
       await _loadAll();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('テストデータを作成しました')),
+          SnackBar(content: Text('${days}日分のテストデータを作成しました')),
         );
       }
     } catch (e) {
@@ -145,7 +170,7 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             icon: const Icon(Icons.bug_report_outlined),
             tooltip: 'テストデータ作成',
-            onPressed: _savingMood ? null : _seedTestData,
+            onPressed: _savingMood ? null : _showSeedDialog,
           ),
           IconButton(
             icon: const Icon(Icons.logout),
