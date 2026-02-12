@@ -173,6 +173,18 @@ class PredictionCard extends StatelessWidget {
             ),
           ],
 
+          // 特徴量寄与度TOP3
+          if (pred.contributions.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _contributionsSection(pred),
+          ],
+
+          // 改善アドバイス
+          if (pred.advices.isNotEmpty) ...[
+            const Divider(height: 24),
+            _adviceSection(pred),
+          ],
+
           // 3日リスク（開放時のみ）
           if (showP3d) ...[
             const Divider(height: 24),
@@ -274,6 +286,85 @@ class PredictionCard extends StatelessWidget {
         label,
         style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
       ),
+    );
+  }
+
+  /// 特徴量寄与度セクション
+  Widget _contributionsSection(Prediction pred) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '予測の主な要因',
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        ),
+        const SizedBox(height: 6),
+        ...pred.contributions.map((c) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  Icon(
+                    c.isRiskIncrease
+                        ? Icons.arrow_upward
+                        : Icons.arrow_downward,
+                    size: 14,
+                    color:
+                        c.isRiskIncrease ? Colors.red.shade400 : Colors.green.shade400,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    c.label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: c.isRiskIncrease
+                          ? Colors.red.shade700
+                          : Colors.green.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            )),
+      ],
+    );
+  }
+
+  /// 改善アドバイスセクション
+  Widget _adviceSection(Prediction pred) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.lightbulb_outline, size: 16, color: Colors.amber.shade700),
+            const SizedBox(width: 6),
+            Text(
+              '改善アドバイス',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.amber.shade800,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...pred.advices.map((a) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('・', style: TextStyle(color: Colors.grey.shade600)),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      a.message,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            )),
+      ],
     );
   }
 

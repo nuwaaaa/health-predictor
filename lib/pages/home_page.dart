@@ -9,6 +9,8 @@ import '../widgets/chart_7days.dart';
 import '../widgets/daily_list.dart';
 import '../widgets/status_banner.dart';
 import '../widgets/prediction_card.dart';
+import '../widgets/comparison_chart.dart';
+import '../widgets/sleep_pattern_chart.dart';
 import 'daily_input_page.dart';
 import 'weekly_feedback_page.dart';
 
@@ -253,6 +255,24 @@ class _HomePageState extends State<HomePage> {
                       Chart7Days(logs: _last7),
                       const SizedBox(height: 14),
                       DailyList(logs: _last7),
+
+                      const SizedBox(height: 24),
+
+                      // --- 体調×特徴量 比較グラフ ---
+                      const Text('体調と生活データの比較',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 10),
+                      ComparisonChart(logs: _last7),
+
+                      const SizedBox(height: 24),
+
+                      // --- 睡眠パターン ---
+                      const Text('睡眠パターン',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 10),
+                      SleepPatternChart(logs: _last7),
 
                       const SizedBox(height: 30),
                     ],

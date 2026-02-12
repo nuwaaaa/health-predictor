@@ -71,12 +71,23 @@ def train_and_predict(
     X_last_scaled = scaler.transform(X[-1:])
 
     # --- ロジスティック回帰 ---
-    lr_model = LogisticRegression(max_iter=1000, random_state=42)
+    # データ量に応じた正則化強度（要件書 Section 5）
+    if days_collected < 60:
+        lr_C = 0.1  # 強正則化
+    elif days_collected < 150:
+        lr_C = 0.5  # やや強
+    else:
+        lr_C = 1.0  # 標準
+
+    lr_model = LogisticRegression(C=lr_C, max_iter=1000, random_state=42)
     lr_model.fit(X_train_scaled, y_train)
     lr_prob = float(lr_model.predict_proba(X_last_scaled)[:, 1][0])
     lr_test_proba = lr_model.predict_proba(X_test_scaled)[:, 1] if X_test_scaled is not None else None
     lr_auc = _safe_auc(y_test, lr_test_proba)
     lr_pr_auc = _safe_pr_auc(y_test, lr_test_proba)
+
+    # 特徴量寄与度（標準化済み係数 × 特徴量値）
+    lr_contributions = _calc_lr_contributions(lr_model, scaler, X[-1:], feature_cols)
 
     best_model_type = "logistic"
     best_prob = lr_prob
@@ -91,11 +102,19 @@ def train_and_predict(
         try:
             import lightgbm as lgb
 
+            # データ量に応じたハイパーパラメータ（要件書 Section 5）
+            if days_collected < 150:
+                lgb_max_depth = 3
+                lgb_num_leaves = 8
+            else:
+                lgb_max_depth = 5
+                lgb_num_leaves = 31
+
             lgb_model = lgb.LGBMClassifier(
                 n_estimators=100,
-                max_depth=4,
+                max_depth=lgb_max_depth,
                 learning_rate=0.1,
-                num_leaves=15,
+                num_leaves=lgb_num_leaves,
                 min_child_samples=5,
                 random_state=42,
                 verbose=-1,
@@ -134,6 +153,10 @@ def train_and_predict(
                 best_auc = lgb_auc
                 best_pr_auc = lgb_pr_auc
 
+            # LightGBMが採用された場合、SHAP寄与度を計算
+            if best_model_type == "lightgbm":
+                lr_contributions = _calc_lgb_contributions(lgb_model, X[-1:], feature_cols)
+
         except Exception as e:
             logger.warning("LightGBM training failed: %s", e)
 
@@ -142,6 +165,7 @@ def train_and_predict(
         "model_type": best_model_type,
         "auc": best_auc,
         "pr_auc": best_pr_auc,
+        "contributions": lr_contributions,
     }
 
 
@@ -167,3 +191,49 @@ def _safe_pr_auc(y_true, y_score) -> float | None:
         return float(average_precision_score(y_true, y_score))
     except ValueError:
         return None
+
+
+def _calc_lr_contributions(
+    model: LogisticRegression,
+    scaler: StandardScaler,
+    X_raw: np.ndarray,
+    feature_cols: list[str],
+) -> list[dict]:
+    """ロジスティック回帰の寄与度: 標準化済み係数 × 標準化済み特徴量値。TOP3を返す。"""
+    try:
+        X_scaled = scaler.transform(X_raw)
+        coefs = model.coef_[0]
+        contributions = coefs * X_scaled[0]
+        items = [
+            {"feature": feature_cols[i], "value": float(contributions[i])}
+            for i in range(len(feature_cols))
+        ]
+        items.sort(key=lambda x: abs(x["value"]), reverse=True)
+        return items[:3]
+    except Exception:
+        return []
+
+
+def _calc_lgb_contributions(
+    model,
+    X_raw: np.ndarray,
+    feature_cols: list[str],
+) -> list[dict]:
+    """LightGBMの寄与度: SHAP値。TOP3を返す。"""
+    try:
+        import shap
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(X_raw)
+        # 二値分類の場合、正例クラスのSHAP値を使用
+        if isinstance(shap_values, list):
+            vals = shap_values[1][0]
+        else:
+            vals = shap_values[0]
+        items = [
+            {"feature": feature_cols[i], "value": float(vals[i])}
+            for i in range(len(feature_cols))
+        ]
+        items.sort(key=lambda x: abs(x["value"]), reverse=True)
+        return items[:3]
+    except Exception:
+        return []

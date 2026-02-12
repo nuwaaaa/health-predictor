@@ -15,6 +15,7 @@ import pandas as pd
 from google.cloud import firestore
 
 import config
+from advice import generate_advice
 from confidence import calculate_confidence
 from features import build_features, get_feature_columns
 from labels import generate_labels
@@ -169,6 +170,12 @@ def _process_user(db: firestore.Client, uid: str, today: str):
     model_type = today_result["model_type"]
     model_version = f"{model_type}_v1"
 
+    # 改善アドバイス生成
+    advices = generate_advice(df, today_result["probability"])
+
+    # 特徴量寄与度TOP3
+    contributions = today_result.get("contributions", [])
+
     # 予測結果を Firestore に保存
     _save_prediction(
         db=db,
@@ -178,6 +185,8 @@ def _process_user(db: firestore.Client, uid: str, today: str):
         p_3d=p3d,
         confidence=confidence_level,
         model_version=model_version,
+        contributions=contributions,
+        advices=advices,
     )
 
     # model_status を更新
@@ -212,6 +221,8 @@ def _save_prediction(
     p_3d: float | None,
     confidence: str,
     model_version: str,
+    contributions: list[dict] | None = None,
+    advices: list[dict] | None = None,
 ):
     """予測結果を Firestore に保存"""
     pred_ref = (
@@ -230,6 +241,10 @@ def _save_prediction(
         data["pToday"] = round(p_today, 4)
     if p_3d is not None:
         data["p3d"] = round(p_3d, 4)
+    if contributions:
+        data["contributions"] = contributions
+    if advices:
+        data["advices"] = advices
 
     pred_ref.set(data)
 

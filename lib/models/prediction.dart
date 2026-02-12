@@ -7,6 +7,8 @@ class Prediction {
   final String confidence; // 'low', 'medium', 'high'
   final DateTime? generatedAt;
   final String? modelVersion; // 例: 'logistic_v1', 'lgbm_v1'
+  final List<FeatureContribution> contributions; // 寄与度TOP3
+  final List<Advice> advices; // 改善アドバイス（最大2件）
 
   Prediction({
     required this.dateKey,
@@ -15,9 +17,14 @@ class Prediction {
     this.confidence = 'low',
     this.generatedAt,
     this.modelVersion,
+    this.contributions = const [],
+    this.advices = const [],
   });
 
   factory Prediction.fromFirestore(String docId, Map<String, dynamic> data) {
+    final contribRaw = data['contributions'] as List<dynamic>? ?? [];
+    final adviceRaw = data['advices'] as List<dynamic>? ?? [];
+
     return Prediction(
       dateKey: docId,
       pToday: (data['pToday'] as num?)?.toDouble(),
@@ -27,6 +34,13 @@ class Prediction {
           ? (data['generatedAt'] as dynamic).toDate()
           : null,
       modelVersion: data['modelVersion'] as String?,
+      contributions: contribRaw
+          .map((e) =>
+              FeatureContribution.fromMap(e as Map<String, dynamic>))
+          .toList(),
+      advices: adviceRaw
+          .map((e) => Advice.fromMap(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -68,5 +82,60 @@ class Prediction {
   String? get confidenceNote {
     if (confidence == 'low') return 'まだ学習中の参考値です';
     return null;
+  }
+}
+
+/// 特徴量寄与度
+class FeatureContribution {
+  final String feature;
+  final double value; // 正=リスク増加, 負=リスク低下
+
+  FeatureContribution({required this.feature, required this.value});
+
+  factory FeatureContribution.fromMap(Map<String, dynamic> map) {
+    return FeatureContribution(
+      feature: map['feature'] as String? ?? '',
+      value: (map['value'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
+  /// 特徴量名を日本語に変換
+  String get label {
+    const labels = {
+      'mood_lag1': '前日の体調',
+      'mood_ma3': '体調(3日平均)',
+      'mood_ma7': '体調(7日平均)',
+      'mood_delta1': '体調の変化',
+      'mood_dev14': '体調(14日偏差)',
+      'sleep_hours_filled': '睡眠時間',
+      'sleep_missing': '睡眠データ欠損',
+      'sleep_dev': '睡眠(偏差)',
+      'steps_filled': '歩数',
+      'steps_missing': '歩数データ欠損',
+      'steps_dev': '歩数(偏差)',
+      'stress_filled': 'ストレス',
+      'stress_missing': 'ストレス欠損',
+      'day_of_week': '曜日',
+      'is_weekend': '休日',
+    };
+    return labels[feature] ?? feature;
+  }
+
+  /// リスク増加方向かどうか
+  bool get isRiskIncrease => value > 0;
+}
+
+/// 改善アドバイス
+class Advice {
+  final String param; // 'sleep', 'steps', 'stress'
+  final String message;
+
+  Advice({required this.param, required this.message});
+
+  factory Advice.fromMap(Map<String, dynamic> map) {
+    return Advice(
+      param: map['param'] as String? ?? '',
+      message: map['message'] as String? ?? '',
+    );
   }
 }
