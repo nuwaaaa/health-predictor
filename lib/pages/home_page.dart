@@ -103,6 +103,26 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// 日次リストの行タップ → 過去データ編集/閲覧画面を開く
+  void _openDailyEdit(String dateKey, bool editable) async {
+    // 対象日のログを取得
+    final log = await _service.getLogForDate(dateKey);
+    if (!mounted) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DailyInputPage(
+          service: _service,
+          todayLog: log,
+          onSaved: _loadAll,
+          dateKey: dateKey,
+          readOnly: !editable,
+        ),
+      ),
+    );
+  }
+
   void _openWeeklyFeedback() {
     Navigator.push(
       context,
@@ -254,7 +274,10 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(height: 10),
                       Chart7Days(logs: _last7),
                       const SizedBox(height: 14),
-                      DailyList(logs: _last7),
+                      DailyList(
+                        logs: _last7,
+                        onTap: _openDailyEdit,
+                      ),
 
                       const SizedBox(height: 24),
 

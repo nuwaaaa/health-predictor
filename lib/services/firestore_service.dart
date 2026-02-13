@@ -107,14 +107,22 @@ class FirestoreService {
     });
   }
 
+  /// 指定日のログを取得
+  Future<DailyLog?> getLogForDate(String dateKey) async {
+    final doc = await _dailyCol.doc(dateKey).get();
+    if (!doc.exists) return null;
+    return DailyLog.fromFirestore(doc.id, doc.data() as Map<String, dynamic>);
+  }
+
   /// 睡眠データを保存
   Future<void> saveSleep({
     required String bedTime,
     required String wakeTime,
     required double durationHours,
     String source = 'manual',
+    String? dateKeyOverride,
   }) async {
-    final key = todayKey();
+    final key = dateKeyOverride ?? todayKey();
     await _dailyCol.doc(key).set({
       'sleep': {
         'bedTime': bedTime,
@@ -127,8 +135,8 @@ class FirestoreService {
   }
 
   /// 歩数を保存
-  Future<void> saveSteps(int steps, {String source = 'manual'}) async {
-    final key = todayKey();
+  Future<void> saveSteps(int steps, {String source = 'manual', String? dateKeyOverride}) async {
+    final key = dateKeyOverride ?? todayKey();
     await _dailyCol.doc(key).set({
       'steps': steps,
       'stepsSource': source,
@@ -137,10 +145,18 @@ class FirestoreService {
   }
 
   /// ストレスを保存
-  Future<void> saveStress(int stress) async {
-    final key = todayKey();
+  Future<void> saveStress(int stress, {String? dateKeyOverride}) async {
+    final key = dateKeyOverride ?? todayKey();
     await _dailyCol.doc(key).set({
       'stress': stress,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// 体調スコアを指定日に保存（過去データ編集用、daysCollected更新なし）
+  Future<void> saveMoodScoreForDate(String dateKey, int score) async {
+    await _dailyCol.doc(dateKey).set({
+      'moodScore': score,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }

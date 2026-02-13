@@ -2,17 +2,27 @@ import 'package:flutter/material.dart';
 import '../models/daily_log.dart';
 import '../services/firestore_service.dart';
 import '../services/health_data_service.dart';
+import '../widgets/mood_selector.dart';
 
+/// 日次データ入力・編集画面
+///
+/// - dateKey == null → 今日の詳細入力（睡眠・歩数・ストレスのみ、体調はホームで入力済み）
+/// - dateKey != null → 過去データ編集（体調・睡眠・歩数・ストレス全項目）
+/// - readOnly == true → 閲覧のみ（4日以上前）
 class DailyInputPage extends StatefulWidget {
   final FirestoreService service;
   final DailyLog? todayLog;
   final VoidCallback onSaved;
+  final String? dateKey;
+  final bool readOnly;
 
   const DailyInputPage({
     super.key,
     required this.service,
     required this.todayLog,
     required this.onSaved,
+    this.dateKey,
+    this.readOnly = false,
   });
 
   @override
@@ -22,6 +32,7 @@ class DailyInputPage extends StatefulWidget {
 class _DailyInputPageState extends State<DailyInputPage> {
   final _healthService = HealthDataService();
 
+  int? _moodScore;
   TimeOfDay? _bedTime;
   TimeOfDay? _wakeTime;
   final _stepsController = TextEditingController();
@@ -30,9 +41,11 @@ class _DailyInputPageState extends State<DailyInputPage> {
   bool _importingSteps = false;
   bool _importingSleep = false;
 
-  // auto-import されたデータかどうか
   bool _stepsFromAuto = false;
   bool _sleepFromAuto = false;
+
+  bool get _isEditingPast => widget.dateKey != null;
+  String get _targetDateKey => widget.dateKey ?? FirestoreService.todayKey();
 
   @override
   void initState() {
@@ -43,6 +56,8 @@ class _DailyInputPageState extends State<DailyInputPage> {
   void _loadExisting() {
     final log = widget.todayLog;
     if (log == null) return;
+
+    _moodScore = log.moodScore;
 
     if (log.sleep?.bedTime != null) {
       _bedTime = _parseTime(log.sleep!.bedTime!);
@@ -81,6 +96,7 @@ class _DailyInputPageState extends State<DailyInputPage> {
   }
 
   Future<void> _pickTime(bool isBed) async {
+    if (widget.readOnly) return;
     final initial = isBed
         ? (_bedTime ?? const TimeOfDay(hour: 23, minute: 0))
         : (_wakeTime ?? const TimeOfDay(hour: 7, minute: 0));
@@ -98,7 +114,7 @@ class _DailyInputPageState extends State<DailyInputPage> {
 
     if (picked != null) {
       setState(() {
-        _sleepFromAuto = false; // 手動変更したのでautoフラグ解除
+        _sleepFromAuto = false;
         if (isBed) {
           _bedTime = picked;
         } else {
@@ -189,6 +205,13 @@ class _DailyInputPageState extends State<DailyInputPage> {
     setState(() => _saving = true);
 
     try {
+      final dateKey = _isEditingPast ? _targetDateKey : null;
+
+      // 体調スコア（過去データ編集時のみ）
+      if (_isEditingPast && _moodScore != null) {
+        await widget.service.saveMoodScoreForDate(_targetDateKey, _moodScore!);
+      }
+
       // 睡眠
       if (_bedTime != null && _wakeTime != null) {
         final bed = _formatTime(_bedTime!);
@@ -200,6 +223,7 @@ class _DailyInputPageState extends State<DailyInputPage> {
             wakeTime: wake,
             durationHours: dur,
             source: _sleepFromAuto ? 'auto' : 'manual',
+            dateKeyOverride: dateKey,
           );
         } else if (dur != null) {
           _showError('睡眠時間が不正です（0〜24時間）');
@@ -218,12 +242,13 @@ class _DailyInputPageState extends State<DailyInputPage> {
         await widget.service.saveSteps(
           steps,
           source: _stepsFromAuto ? 'auto' : 'manual',
+          dateKeyOverride: dateKey,
         );
       }
 
       // ストレス
       if (_stress != null) {
-        await widget.service.saveStress(_stress!);
+        await widget.service.saveStress(_stress!, dateKeyOverride: dateKey);
       }
 
       widget.onSaved();
@@ -266,15 +291,45 @@ class _DailyInputPageState extends State<DailyInputPage> {
   @override
   Widget build(BuildContext context) {
     final dur = _sleepDuration;
+    final isReadOnly = widget.readOnly;
+
+    final String title;
+    if (isReadOnly) {
+      title = '$_targetDateKey の記録';
+    } else if (_isEditingPast) {
+      title = '$_targetDateKey を編集';
+    } else {
+      title = '今日の記録';
+    }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('今日の記録')),
+      appBar: AppBar(title: Text(title)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // --- 体調スコア（過去データ編集 or 閲覧時のみ表示）---
+              if (_isEditingPast || isReadOnly) ...[
+                const Text('体調スコア',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                IgnorePointer(
+                  ignoring: isReadOnly,
+                  child: Opacity(
+                    opacity: isReadOnly ? 0.5 : 1.0,
+                    child: MoodSelector(
+                      selected: _moodScore,
+                      enabled: !isReadOnly,
+                      onSelect: (score) => setState(() => _moodScore = score),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 28),
+              ],
+
               // --- 睡眠 ---
               Row(
                 children: [
@@ -282,33 +337,40 @@ class _DailyInputPageState extends State<DailyInputPage> {
                       style:
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const Spacer(),
-                  _autoImportButton(
-                    label: '自動取得',
-                    loading: _importingSleep,
-                    onTap: _importingSleep ? null : _importSleep,
-                    isAuto: _sleepFromAuto,
-                  ),
+                  if (!isReadOnly && !_isEditingPast)
+                    _autoImportButton(
+                      label: '自動取得',
+                      loading: _importingSleep,
+                      onTap: _importingSleep ? null : _importSleep,
+                      isAuto: _sleepFromAuto,
+                    ),
                 ],
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _timeButton(
-                      label: '就寝',
-                      time: _bedTime,
-                      onTap: () => _pickTime(true),
-                    ),
+              IgnorePointer(
+                ignoring: isReadOnly,
+                child: Opacity(
+                  opacity: isReadOnly ? 0.5 : 1.0,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _timeButton(
+                          label: '就寝',
+                          time: _bedTime,
+                          onTap: () => _pickTime(true),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _timeButton(
+                          label: '起床',
+                          time: _wakeTime,
+                          onTap: () => _pickTime(false),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _timeButton(
-                      label: '起床',
-                      time: _wakeTime,
-                      onTap: () => _pickTime(false),
-                    ),
-                  ),
-                ],
+                ),
               ),
               if (dur != null) ...[
                 const SizedBox(height: 8),
@@ -331,29 +393,35 @@ class _DailyInputPageState extends State<DailyInputPage> {
                       style:
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const Spacer(),
-                  _autoImportButton(
-                    label: '自動取得',
-                    loading: _importingSteps,
-                    onTap: _importingSteps ? null : _importSteps,
-                    isAuto: _stepsFromAuto,
-                  ),
+                  if (!isReadOnly && !_isEditingPast)
+                    _autoImportButton(
+                      label: '自動取得',
+                      loading: _importingSteps,
+                      onTap: _importingSteps ? null : _importSteps,
+                      isAuto: _stepsFromAuto,
+                    ),
                 ],
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: _stepsController,
-                keyboardType: TextInputType.number,
-                onChanged: (_) {
-                  // 手動変更したのでautoフラグ解除
-                  if (_stepsFromAuto) {
-                    setState(() => _stepsFromAuto = false);
-                  }
-                },
-                decoration: InputDecoration(
-                  hintText: '例: 8000',
-                  suffixText: '歩',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
+              IgnorePointer(
+                ignoring: isReadOnly,
+                child: Opacity(
+                  opacity: isReadOnly ? 0.5 : 1.0,
+                  child: TextField(
+                    controller: _stepsController,
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) {
+                      if (_stepsFromAuto) {
+                        setState(() => _stepsFromAuto = false);
+                      }
+                    },
+                    decoration: InputDecoration(
+                      hintText: '例: 8000',
+                      suffixText: '歩',
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
                 ),
               ),
 
@@ -363,46 +431,55 @@ class _DailyInputPageState extends State<DailyInputPage> {
               const Text('ストレス（任意）',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
-              Row(
-                children: List.generate(5, (i) {
-                  final v = i + 1;
-                  final selected = _stress == v;
-                  return Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(left: i == 0 ? 0 : 8),
-                      child: GestureDetector(
-                        onTap: () => setState(() {
-                          _stress = selected ? null : v; // タップで解除も可能
-                        }),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          decoration: BoxDecoration(
-                            color: selected
-                                ? Colors.red.shade100
-                                : Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: selected ? Colors.red : Colors.transparent,
-                              width: 2,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '$v',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: selected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
+              IgnorePointer(
+                ignoring: isReadOnly,
+                child: Opacity(
+                  opacity: isReadOnly ? 0.5 : 1.0,
+                  child: Row(
+                    children: List.generate(5, (i) {
+                      final v = i + 1;
+                      final selected = _stress == v;
+                      return Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(left: i == 0 ? 0 : 8),
+                          child: GestureDetector(
+                            onTap: isReadOnly
+                                ? null
+                                : () => setState(() {
+                                      _stress = selected ? null : v;
+                                    }),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                color: selected
+                                    ? Colors.red.shade100
+                                    : Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color:
+                                      selected ? Colors.red : Colors.transparent,
+                                  width: 2,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '$v',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: selected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                  );
-                }),
+                      );
+                    }),
+                  ),
+                ),
               ),
               const SizedBox(height: 4),
               const Row(
@@ -417,28 +494,36 @@ class _DailyInputPageState extends State<DailyInputPage> {
 
               const SizedBox(height: 36),
 
-              // --- 保存ボタン ---
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _saving ? null : _save,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+              // --- 保存 or 閲覧のみ表示 ---
+              if (isReadOnly)
+                const Center(
+                  child: Text(
+                    '4日以上前のデータは編集できません',
+                    style: TextStyle(fontSize: 14, color: Colors.black45),
                   ),
-                  child: _saving
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2),
-                        )
-                      : const Text('保存する', style: TextStyle(fontSize: 16)),
+                )
+              else
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _saving ? null : _save,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: _saving
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Text('保存する', style: TextStyle(fontSize: 16)),
+                  ),
                 ),
-              ),
             ],
           ),
         ),

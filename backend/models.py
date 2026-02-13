@@ -51,9 +51,8 @@ def train_and_predict(
         return {"probability": 0.0, "model_type": "logistic", "auc": None, "pr_auc": None}
 
     # 最新行が予測対象（最終行）
-    # 検証: 直近14日をテスト、残りをトレーニング
-    n_test = min(config.VALIDATION_DAYS, len(valid) // 3)
-    n_test = max(n_test, 1)
+    # 検証: データ量に応じた分割（設計書 Section 10）
+    n_test = _calc_validation_days(days_collected, len(valid))
 
     X_train, X_test = X[:-n_test], X[-n_test:]
     y_train, y_test = y[:-n_test], y[-n_test:]
@@ -102,20 +101,17 @@ def train_and_predict(
         try:
             import lightgbm as lgb
 
-            # データ量に応じたハイパーパラメータ（要件書 Section 5）
+            # データ量に応じたハイパーパラメータ（設計書 Section 10）
+            # 60-149日 / 150-299日 / 300日以上 の3段階
             if days_collected < 150:
-                lgb_max_depth = 3
-                lgb_num_leaves = 8
+                lgb_params = dict(max_depth=3, num_leaves=8, n_estimators=100, min_child_samples=5, learning_rate=0.1)
+            elif days_collected < 300:
+                lgb_params = dict(max_depth=4, num_leaves=16, n_estimators=150, min_child_samples=5, learning_rate=0.05)
             else:
-                lgb_max_depth = 5
-                lgb_num_leaves = 31
+                lgb_params = dict(max_depth=5, num_leaves=31, n_estimators=200, min_child_samples=3, learning_rate=0.05)
 
             lgb_model = lgb.LGBMClassifier(
-                n_estimators=100,
-                max_depth=lgb_max_depth,
-                learning_rate=0.1,
-                num_leaves=lgb_num_leaves,
-                min_child_samples=5,
+                **lgb_params,
                 random_state=42,
                 verbose=-1,
             )
@@ -167,6 +163,26 @@ def train_and_predict(
         "pr_auc": best_pr_auc,
         "contributions": lr_contributions,
     }
+
+
+def _calc_validation_days(days_collected: int, n_valid_rows: int) -> int:
+    """データ量に応じた検証日数を算出（設計書 Section 10）。
+
+    - 14-29日: 20%（最低3日）
+    - 30-99日: 7日
+    - 100日以上: 14日
+    最大でもデータの1/3を超えないようにする。
+    """
+    if days_collected < 30:
+        n_test = max(3, int(n_valid_rows * 0.2))
+    elif days_collected < 100:
+        n_test = 7
+    else:
+        n_test = 14
+
+    # データの1/3を超えない & 最低1日
+    n_test = min(n_test, n_valid_rows // 3)
+    return max(n_test, 1)
 
 
 def _safe_auc(y_true, y_score) -> float | None:
