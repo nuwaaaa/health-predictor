@@ -1,0 +1,70 @@
+```mermaid
+flowchart TB
+    subgraph BottomNav["Bottom Navigation"]
+        direction LR
+        TAB_HOME["🏠 ホーム"]
+        TAB_DATA["📊 データ"]
+        TAB_ANALYSIS["🔍 分析"]
+        TAB_SETTINGS["⚙️ 設定"]
+    end
+
+    subgraph Home["ホーム"]
+        H1["予測カード\n不調リスク% / 信頼度"]
+        H2["体調入力\n顔5段階 1タップ"]
+        H3["記録サマリー\n睡眠/歩数/ストレス チップ"]
+        H4["学習ステータスバナー"]
+        H5["要因TOP3 + アドバイス\n（要約）"]
+        H6["直近7日ミニカード"]
+    end
+
+    subgraph DailyInput["詳細入力画面"]
+        DI1["日付 + 入力状態"]
+        DI2["睡眠\n時刻ピッカー or 自動取得"]
+        DI3["歩数\n自動取得 or 手入力"]
+        DI4["ストレス\n1〜5（任意）"]
+        DI5["保存ボタン"]
+    end
+
+    subgraph Data["データ"]
+        D1["期間切替\n7日 / 30日 / 全期間"]
+        D2["体調×特徴量 比較グラフ\n左軸:体調 右軸:選択特徴量"]
+        D3["睡眠パターングラフ\n就寝〜起床バー表示"]
+        D4["日次一覧\n新→古、タップで詳細へ"]
+    end
+
+    subgraph DayDetail["日別詳細 / 編集"]
+        DD1["体調スコア"]
+        DD2["睡眠"]
+        DD3["歩数"]
+        DD4["ストレス"]
+        DD5["保存ボタン\n※直近3日のみ編集可"]
+    end
+
+    subgraph Analysis["分析"]
+        A1["要因TOP3\n赤/緑で方向表示"]
+        A2["アドバイス\n最大2件、数値付き"]
+        A3["週次フィードバック\n当たった/外れた/わからない"]
+        A4["モデル情報\nlogistic/lightgbm、信頼度"]
+    end
+
+    subgraph Settings["設定"]
+        S1["ヘルスケア連携\nApple Health / Google Fit"]
+        S2["通知設定"]
+        S3["プライバシー\n学習データ確認・削除"]
+        S4["アカウント"]
+    end
+
+    TAB_HOME --> Home
+    TAB_DATA --> Data
+    TAB_ANALYSIS --> Analysis
+    TAB_SETTINGS --> Settings
+
+    H3 -->|"タップ（push）"| DailyInput
+    DI5 -->|"保存（pop）"| Home
+
+    H5 -->|"もっと見る"| Analysis
+    H6 -->|"データへ"| Data
+
+    D4 -->|"タップ（push）"| DayDetail
+    DD5 -->|"保存（pop）"| Data
+```
