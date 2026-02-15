@@ -87,6 +87,13 @@ class _AnalysisPageState extends State<AnalysisPage> {
         children: [
           const SizedBox(height: 18),
 
+          // --- 不調の基準 ---
+          _sectionTitle('あなたの「不調」の基準'),
+          const SizedBox(height: 10),
+          _unhealthyThresholdCard(),
+
+          const SizedBox(height: 24),
+
           // --- 要因 TOP3 ---
           _sectionTitle('予測に影響した要因 TOP3'),
           const SizedBox(height: 10),
@@ -120,6 +127,42 @@ class _AnalysisPageState extends State<AnalysisPage> {
           _modelInfoCard(),
 
           const SizedBox(height: 30),
+        ],
+      ),
+    );
+  }
+
+  Widget _unhealthyThresholdCard() {
+    final status = widget.status;
+    final mean14 = status.moodMean14;
+    final threshold = status.unhealthyThreshold;
+
+    if (mean14 == null || threshold == null) {
+      return _emptyCard('不調基準はまだ算出されていません');
+    }
+
+    // 直近30日の不調日数（概算: unhealthyCountを表示）
+    final unhealthyCount = status.unhealthyCount;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.shade100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _infoRow('普段の体調', '${mean14.toStringAsFixed(1)}（直近14日の平均）'),
+          _infoRow('不調ライン', '${threshold.toStringAsFixed(1)} 以下'),
+          _infoRow('不調日数', '$unhealthyCount 日（累計）'),
+          const SizedBox(height: 8),
+          Text(
+            'この基準はあなたの入力データから毎日自動で更新されます。',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          ),
         ],
       ),
     );

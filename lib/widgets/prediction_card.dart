@@ -160,6 +160,15 @@ class PredictionCard extends StatelessWidget {
             ],
           ),
 
+          // 不調基準の要約表示
+          if (status.unhealthyThreshold != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              'あなたの基準: 体調 ${status.unhealthyThreshold!.toStringAsFixed(1)} 以下の日',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+          ],
+
           // 信頼度注記
           if (pred.confidenceNote != null) ...[
             const SizedBox(height: 8),

@@ -8,6 +8,8 @@ class ModelStatus {
   final double recentMissingRate;
   final String modelType; // 'logistic' or 'lightgbm'
   final String confidenceLevel; // 'low', 'medium', 'high'
+  final double? moodMean14; // 直近14日の体調平均
+  final double? unhealthyThreshold; // 不調閾値（moodMean14 - 1）
 
   ModelStatus({
     this.daysCollected = 0,
@@ -17,6 +19,8 @@ class ModelStatus {
     this.recentMissingRate = 0.0,
     this.modelType = 'logistic',
     this.confidenceLevel = 'low',
+    this.moodMean14,
+    this.unhealthyThreshold,
   });
 
   factory ModelStatus.fromFirestore(Map<String, dynamic> data) {
@@ -28,6 +32,8 @@ class ModelStatus {
       recentMissingRate: (data['recentMissingRate'] as num?)?.toDouble() ?? 0.0,
       modelType: (data['modelType'] as String?) ?? 'logistic',
       confidenceLevel: (data['confidenceLevel'] as String?) ?? 'low',
+      moodMean14: (data['moodMean14'] as num?)?.toDouble(),
+      unhealthyThreshold: (data['unhealthyThreshold'] as num?)?.toDouble(),
     );
   }
 

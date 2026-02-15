@@ -167,6 +167,11 @@ def _process_user(db: firestore.Client, uid: str, today: str):
         recent_missing_rate=recent_missing_rate,
     )
 
+    # 不調基準の算出（直近14日の体調平均 → 閾値 = 平均 - 1）
+    recent_14 = df["moodScore"].dropna().tail(14)
+    mood_mean_14 = float(recent_14.mean()) if len(recent_14) > 0 else None
+    unhealthy_threshold = round(mood_mean_14 - 1, 2) if mood_mean_14 is not None else None
+
     model_type = today_result["model_type"]
     model_version = f"{model_type}_v1"
 
@@ -199,6 +204,8 @@ def _process_user(db: firestore.Client, uid: str, today: str):
         model_type=model_type,
         confidence_level=confidence_level,
         ready=True,
+        mood_mean_14=mood_mean_14,
+        unhealthy_threshold=unhealthy_threshold,
     )
 
     logger.info(
@@ -258,6 +265,8 @@ def _update_model_status(
     model_type: str,
     confidence_level: str,
     ready: bool,
+    mood_mean_14: float | None = None,
+    unhealthy_threshold: float | None = None,
 ):
     """model_status を更新"""
     status_ref = (
@@ -267,19 +276,22 @@ def _update_model_status(
         .document("current")
     )
 
-    status_ref.set(
-        {
-            "daysCollected": days_collected,
-            "daysRequired": config.MIN_DAYS_TODAY,
-            "ready": ready,
-            "unhealthyCount": unhealthy_count,
-            "recentMissingRate": round(recent_missing_rate, 3),
-            "modelType": model_type,
-            "confidenceLevel": confidence_level,
-            "updatedAt": firestore.SERVER_TIMESTAMP,
-        },
-        merge=True,
-    )
+    data = {
+        "daysCollected": days_collected,
+        "daysRequired": config.MIN_DAYS_TODAY,
+        "ready": ready,
+        "unhealthyCount": unhealthy_count,
+        "recentMissingRate": round(recent_missing_rate, 3),
+        "modelType": model_type,
+        "confidenceLevel": confidence_level,
+        "updatedAt": firestore.SERVER_TIMESTAMP,
+    }
+    if mood_mean_14 is not None:
+        data["moodMean14"] = round(mood_mean_14, 2)
+    if unhealthy_threshold is not None:
+        data["unhealthyThreshold"] = unhealthy_threshold
+
+    status_ref.set(data, merge=True)
 
 
 if __name__ == "__main__":

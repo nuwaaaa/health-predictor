@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../models/daily_log.dart';
+import 'chart_7days.dart';
 
 /// 体調×特徴量 比較グラフ（要件書 Section 2.5）
 /// 左軸: 体調スコア(1-5), 右軸: 選択した特徴量
@@ -141,10 +142,24 @@ class _ComparisonChartState extends State<ComparisonChart> {
                   if (i < 0 || i >= logs.length) {
                     return const SizedBox.shrink();
                   }
-                  final mmdd = logs[i].dateKey.substring(5);
+                  // 間引き
+                  final interval = logs.length <= 10
+                      ? 1
+                      : logs.length <= 31
+                          ? 5
+                          : (logs.length / 8).ceil();
+                  final isFirst = i == 0;
+                  final isLast = i == logs.length - 1;
+                  if (!isFirst && !isLast && i % interval != 0) {
+                    return const SizedBox.shrink();
+                  }
+                  final dateKey = logs[i].dateKey;
+                  final label = logs.length > 60
+                      ? dateKey.substring(2, 7)
+                      : dateKey.substring(5);
                   return Padding(
                     padding: const EdgeInsets.only(top: 6),
-                    child: Text(mmdd, style: const TextStyle(fontSize: 10)),
+                    child: Text(label, style: const TextStyle(fontSize: 10)),
                   );
                 },
               ),
@@ -154,14 +169,23 @@ class _ComparisonChartState extends State<ComparisonChart> {
             // 体調スコア（青）
             LineChartBarData(
               isCurved: true,
-              barWidth: 3,
-              color: Colors.blue,
-              dotData: const FlDotData(show: true),
+              barWidth: logs.length > 7 ? 1.5 : 3,
+              color: logs.length > 7 ? Colors.blue.withAlpha(120) : Colors.blue,
+              dotData: FlDotData(show: logs.length <= 31),
               spots: [
                 for (int i = 0; i < logs.length; i++)
                   FlSpot(i.toDouble(), (logs[i].moodScore ?? 3).toDouble()),
               ],
             ),
+            // 7日移動平均（30日以上で体調線に重ねる）
+            if (logs.length > 7)
+              LineChartBarData(
+                isCurved: true,
+                barWidth: 3,
+                color: Colors.blue.withAlpha(200),
+                dotData: const FlDotData(show: false),
+                spots: Chart7Days.calcMovingAverage(logs),
+              ),
             // 選択した特徴量（オレンジ）
             LineChartBarData(
               isCurved: true,

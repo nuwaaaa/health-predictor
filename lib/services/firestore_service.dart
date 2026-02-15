@@ -356,7 +356,11 @@ class FirestoreService {
     }
 
     // --- model_status 更新 ---
-    await _statusRef.set({
+    // テストデータの平均体調は約3.0（1-5ランダム）、不調閾値 = 平均 - 1
+    final moodMean14 = isReady ? 3.2 : null;
+    final unhealthyThreshold = isReady ? 2.2 : null;
+
+    final statusData = <String, dynamic>{
       'daysCollected': totalDays,
       'daysRequired': 14,
       'ready': isReady,
@@ -365,6 +369,10 @@ class FirestoreService {
       'modelType': 'logistic',
       'confidenceLevel': confidence,
       'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    };
+    if (moodMean14 != null) statusData['moodMean14'] = moodMean14;
+    if (unhealthyThreshold != null) statusData['unhealthyThreshold'] = unhealthyThreshold;
+
+    await _statusRef.set(statusData, SetOptions(merge: true));
   }
 }
