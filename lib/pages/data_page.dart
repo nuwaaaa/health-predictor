@@ -89,12 +89,17 @@ class _DataPageState extends State<DataPage> {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: widget.onReload,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('データ'),
+        centerTitle: true,
+      ),
+      body: RefreshIndicator(
+        onRefresh: widget.onReload,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 18),
@@ -157,6 +162,7 @@ class _DataPageState extends State<DataPage> {
             const SizedBox(height: 30),
           ],
         ),
+      ),
       ),
     );
   }

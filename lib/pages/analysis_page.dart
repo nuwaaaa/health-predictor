@@ -77,17 +77,19 @@ class _AnalysisPageState extends State<AnalysisPage> {
     final pred = widget.prediction;
     final status = widget.status;
 
-    // 14日未満の場合
-    if (!status.ready) {
-      return _buildNotReady();
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 18),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('分析'),
+        centerTitle: true,
+      ),
+      body: !status.ready
+          ? _buildNotReady()
+          : SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 18),
 
           // --- 不調の基準 ---
           _sectionTitle('あなたの「不調」の基準'),
@@ -131,6 +133,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
           const SizedBox(height: 30),
         ],
       ),
+    ),
     );
   }
 

@@ -77,9 +77,14 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: widget.onReload,
-      child: SingleChildScrollView(
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('ホーム'),
+        centerTitle: true,
+      ),
+      body: RefreshIndicator(
+        onRefresh: widget.onReload,
+        child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
@@ -154,6 +159,7 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 30),
           ],
         ),
+      ),
       ),
     );
   }

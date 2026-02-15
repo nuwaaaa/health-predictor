@@ -70,12 +70,17 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 18),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('設定'),
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 18),
 
           // --- ヘルスケア連携 ---
           _sectionTitle('ヘルスケア連携'),
@@ -151,6 +156,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
           const SizedBox(height: 30),
         ],
+      ),
       ),
     );
   }
