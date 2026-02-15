@@ -1,10 +1,4 @@
-import 'dart:convert';
-import 'dart:math';
-
-import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -69,94 +63,37 @@ class AuthService {
   }
 
   // ---------------------------------------------------------------------------
-  // Google Sign-In
+  // Google Sign-In（Firebase signInWithProvider）
   // ---------------------------------------------------------------------------
 
-  /// Google Sign-In の credential を取得
-  Future<OAuthCredential?> _getGoogleCredential() async {
-    final googleUser = await GoogleSignIn().signIn();
-    if (googleUser == null) return null; // ユーザーがキャンセル
-
-    final googleAuth = await googleUser.authentication;
-    return GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
-  }
-
   /// Google でログイン
-  Future<UserCredential?> signInWithGoogle() async {
-    final credential = await _getGoogleCredential();
-    if (credential == null) return null;
-    return _auth.signInWithCredential(credential);
+  Future<UserCredential> signInWithGoogle() {
+    return _auth.signInWithProvider(GoogleAuthProvider());
   }
 
   /// 匿名アカウントに Google を連携（uid維持）
-  Future<UserCredential?> linkWithGoogle() async {
-    final credential = await _getGoogleCredential();
-    if (credential == null) return null;
-    return _auth.currentUser!.linkWithCredential(credential);
+  Future<UserCredential> linkWithGoogle() {
+    return _auth.currentUser!.linkWithProvider(GoogleAuthProvider());
   }
 
   // ---------------------------------------------------------------------------
-  // Apple Sign-In
+  // Apple Sign-In（Firebase signInWithProvider）
   // ---------------------------------------------------------------------------
-
-  /// Apple Sign-In 用の nonce 生成
-  String _generateNonce([int length = 32]) {
-    const charset =
-        '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
-    final random = Random.secure();
-    return List.generate(length, (_) => charset[random.nextInt(charset.length)])
-        .join();
-  }
-
-  String _sha256ofString(String input) {
-    final bytes = utf8.encode(input);
-    final digest = sha256.convert(bytes);
-    return digest.toString();
-  }
 
   /// Apple でログイン
-  Future<UserCredential?> signInWithApple() async {
-    final rawNonce = _generateNonce();
-    final nonce = _sha256ofString(rawNonce);
-
-    final appleCredential = await SignInWithApple.getAppleIDCredential(
-      scopes: [
-        AppleIDAuthorizationScopes.email,
-        AppleIDAuthorizationScopes.fullName,
-      ],
-      nonce: nonce,
-    );
-
-    final oauthCredential = OAuthProvider('apple.com').credential(
-      idToken: appleCredential.identityToken,
-      rawNonce: rawNonce,
-    );
-
-    return _auth.signInWithCredential(oauthCredential);
+  Future<UserCredential> signInWithApple() {
+    final provider = AppleAuthProvider()
+      ..addScope('email')
+      ..addScope('name');
+    return _auth.signInWithProvider(provider);
   }
 
   /// 匿名アカウントに Apple を連携（uid維持）
-  Future<UserCredential?> linkWithApple() async {
-    final rawNonce = _generateNonce();
-    final nonce = _sha256ofString(rawNonce);
-
-    final appleCredential = await SignInWithApple.getAppleIDCredential(
-      scopes: [
-        AppleIDAuthorizationScopes.email,
-        AppleIDAuthorizationScopes.fullName,
-      ],
-      nonce: nonce,
-    );
-
-    final oauthCredential = OAuthProvider('apple.com').credential(
-      idToken: appleCredential.identityToken,
-      rawNonce: rawNonce,
-    );
-
-    return _auth.currentUser!.linkWithCredential(oauthCredential);
+  Future<UserCredential> linkWithApple() {
+    final provider = AppleAuthProvider()
+      ..addScope('email')
+      ..addScope('name');
+    return _auth.currentUser!.linkWithProvider(provider);
   }
 
   // ---------------------------------------------------------------------------
@@ -177,27 +114,12 @@ class AuthService {
 
   /// Google で再認証
   Future<void> reauthenticateWithGoogle() async {
-    final credential = await _getGoogleCredential();
-    if (credential == null) throw Exception('Google再認証がキャンセルされました');
-    await _auth.currentUser!.reauthenticateWithCredential(credential);
+    await _auth.currentUser!.reauthenticateWithProvider(GoogleAuthProvider());
   }
 
   /// Apple で再認証
   Future<void> reauthenticateWithApple() async {
-    final rawNonce = _generateNonce();
-    final nonce = _sha256ofString(rawNonce);
-
-    final appleCredential = await SignInWithApple.getAppleIDCredential(
-      scopes: [],
-      nonce: nonce,
-    );
-
-    final oauthCredential = OAuthProvider('apple.com').credential(
-      idToken: appleCredential.identityToken,
-      rawNonce: rawNonce,
-    );
-
-    await _auth.currentUser!.reauthenticateWithCredential(oauthCredential);
+    await _auth.currentUser!.reauthenticateWithProvider(AppleAuthProvider());
   }
 
   // ---------------------------------------------------------------------------

@@ -1,5 +1,4 @@
-import 'dart:io' show Platform;
-
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
@@ -273,7 +272,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
               ),
               const SizedBox(height: 10),
-              if (Platform.isIOS && !hasApple)
+              if (defaultTargetPlatform == TargetPlatform.iOS && !hasApple)
                 _settingCard(
                   icon: Icons.apple,
                   title: 'Appleで連携',

@@ -1,5 +1,4 @@
-import 'dart:io' show Platform;
-
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
@@ -195,7 +194,7 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 24),
 
                 // --- Apple Sign-In (iOS のみ) ---
-                if (Platform.isIOS) ...[
+                if (defaultTargetPlatform == TargetPlatform.iOS) ...[
                   _socialButton(
                     label: 'Appleでサインイン',
                     icon: Icons.apple,
