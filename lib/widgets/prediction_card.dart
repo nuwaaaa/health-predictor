@@ -5,11 +5,13 @@ import '../models/model_status.dart';
 /// 予測結果を表示するカード
 class PredictionCard extends StatelessWidget {
   final Prediction? prediction;
+  final bool isFallback;
   final ModelStatus status;
 
   const PredictionCard({
     super.key,
     required this.prediction,
+    this.isFallback = false,
     required this.status,
   });
 
@@ -122,11 +124,25 @@ class PredictionCard extends StatelessWidget {
           // ヘッダー: タイトル + 信頼度
           Row(
             children: [
-              const Text(
-                '今日の不調リスク',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isFallback ? '直近の予測（${_formatDateKey(pred.dateKey)}）' : '今日の不調リスク',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    if (isFallback)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          '今日の予測は明朝更新されます',
+                          style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                        ),
+                      ),
+                  ],
+                ),
               ),
-              const Spacer(),
               _confidenceBadge(pred.confidence),
             ],
           ),
@@ -375,6 +391,18 @@ class PredictionCard extends StatelessWidget {
             )),
       ],
     );
+  }
+
+  /// dateKey (yyyy-MM-dd) を M/d 形式に変換
+  String _formatDateKey(String dateKey) {
+    try {
+      final parts = dateKey.split('-');
+      final month = int.parse(parts[1]);
+      final day = int.parse(parts[2]);
+      return '$month/$day';
+    } catch (_) {
+      return dateKey;
+    }
   }
 
   /// リスクレベルに応じた色

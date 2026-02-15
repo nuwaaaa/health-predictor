@@ -172,6 +172,18 @@ class FirestoreService {
         doc.id, doc.data() as Map<String, dynamic>);
   }
 
+  /// 直近の予測結果を取得（今日の予測がない場合のフォールバック用）
+  Future<Prediction?> getLatestPrediction() async {
+    final snap = await _predictionsCol
+        .orderBy(FieldPath.documentId, descending: true)
+        .limit(1)
+        .get();
+    if (snap.docs.isEmpty) return null;
+    final doc = snap.docs.first;
+    return Prediction.fromFirestore(
+        doc.id, doc.data() as Map<String, dynamic>);
+  }
+
   // --- Feedback ---
 
   /// 週次フィードバックを保存

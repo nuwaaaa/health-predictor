@@ -7,12 +7,14 @@ import '../services/firestore_service.dart';
 class AnalysisPage extends StatefulWidget {
   final FirestoreService service;
   final Prediction? prediction;
+  final bool isFallbackPrediction;
   final ModelStatus status;
 
   const AnalysisPage({
     super.key,
     required this.service,
     required this.prediction,
+    this.isFallbackPrediction = false,
     required this.status,
   });
 

@@ -16,6 +16,7 @@ class HomePage extends StatefulWidget {
   final DailyLog? todayLog;
   final ModelStatus status;
   final Prediction? prediction;
+  final bool isFallbackPrediction;
   final List<DailyLog> last7;
   final Future<void> Function() onReload;
   final void Function(int tabIndex) onSwitchTab;
@@ -26,6 +27,7 @@ class HomePage extends StatefulWidget {
     required this.todayLog,
     required this.status,
     required this.prediction,
+    this.isFallbackPrediction = false,
     required this.last7,
     required this.onReload,
     required this.onSwitchTab,
@@ -88,6 +90,7 @@ class _HomePageState extends State<HomePage> {
             // --- (1) 予測カード ---
             PredictionCard(
               prediction: widget.prediction,
+              isFallback: widget.isFallbackPrediction,
               status: widget.status,
             ),
 

@@ -27,6 +27,7 @@ class MainScaffoldState extends State<MainScaffold> {
   DailyLog? _todayLog;
   ModelStatus _status = ModelStatus();
   Prediction? _prediction;
+  bool _isFallbackPrediction = false;
   List<DailyLog> _last7 = [];
 
   @override
@@ -47,11 +48,21 @@ class MainScaffoldState extends State<MainScaffold> {
         _service.getLastNDays(7),
         _service.getTodayPrediction(),
       ]);
+      var prediction = results[3] as Prediction?;
+      var isFallback = false;
+
+      // 今日の予測がない場合、直近の予測をフォールバック表示
+      if (prediction == null) {
+        prediction = await _service.getLatestPrediction();
+        isFallback = prediction != null;
+      }
+
       setState(() {
         _todayLog = results[0] as DailyLog?;
         _status = results[1] as ModelStatus;
         _last7 = results[2] as List<DailyLog>;
-        _prediction = results[3] as Prediction?;
+        _prediction = prediction;
+        _isFallbackPrediction = isFallback;
       });
     } catch (e) {
       if (mounted) {
@@ -82,6 +93,7 @@ class MainScaffoldState extends State<MainScaffold> {
                   todayLog: _todayLog,
                   status: _status,
                   prediction: _prediction,
+                  isFallbackPrediction: _isFallbackPrediction,
                   last7: _last7,
                   onReload: _loadAll,
                   onSwitchTab: switchTab,
@@ -94,6 +106,7 @@ class MainScaffoldState extends State<MainScaffold> {
                 AnalysisPage(
                   service: _service,
                   prediction: _prediction,
+                  isFallbackPrediction: _isFallbackPrediction,
                   status: _status,
                 ),
                 SettingsPage(
