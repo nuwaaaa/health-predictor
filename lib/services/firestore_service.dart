@@ -209,6 +209,24 @@ class FirestoreService {
     return snap.docs.first.id;
   }
 
+  // --- アカウント削除 ---
+
+  /// ユーザーの全サブコレクション（daily, predictions, model_status, feedback）を削除
+  Future<void> deleteAllUserData() async {
+    final subcollections = ['daily', 'predictions', 'model_status', 'feedback'];
+    for (final name in subcollections) {
+      final col = _userDoc.collection(name);
+      final docs = await col.get();
+      final batch = _db.batch();
+      for (final doc in docs.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+    // ユーザードキュメント自体も削除
+    await _userDoc.delete();
+  }
+
   // --- テスト用 ---
 
   /// テストデータ + 今日の予測結果を一括作成
