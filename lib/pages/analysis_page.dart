@@ -40,9 +40,13 @@ class _AnalysisPageState extends State<AnalysisPage> {
   }
 
   Future<void> _checkExistingFeedback() async {
-    final latest = await widget.service.getLatestFeedbackWeek();
-    if (latest == _currentWeekKey && mounted) {
-      setState(() => _alreadySubmittedWeek = latest);
+    try {
+      final latest = await widget.service.getLatestFeedbackWeek();
+      if (latest == _currentWeekKey && mounted) {
+        setState(() => _alreadySubmittedWeek = latest);
+      }
+    } catch (_) {
+      // フィードバック確認失敗は無視（権限エラー等）
     }
   }
 

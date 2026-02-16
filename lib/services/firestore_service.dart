@@ -211,10 +211,13 @@ class FirestoreService {
 
   // --- アカウント削除 ---
 
-  /// ユーザーの全サブコレクション（daily, predictions, model_status, feedback）を削除
+  /// ユーザーの全サブコレクションを削除
+  /// predictions はセキュリティルールで write: false のため、
+  /// クライアント側からは削除できない（Cloud Functions で対応が必要）
   Future<void> deleteAllUserData() async {
-    final subcollections = ['daily', 'predictions', 'model_status', 'feedback'];
-    for (final name in subcollections) {
+    // クライアントから削除可能なコレクション
+    final deletable = ['daily', 'model_status', 'feedback'];
+    for (final name in deletable) {
       final col = _userDoc.collection(name);
       final docs = await col.get();
       final batch = _db.batch();
@@ -381,8 +384,13 @@ class FirestoreService {
         predData['p3d'] = p3d;
       }
 
-      final todayPredRef = _predictionsCol.doc(todayKey());
-      await todayPredRef.set(predData);
+      // predictions はセキュリティルールで write: false の場合があるため try-catch
+      try {
+        final todayPredRef = _predictionsCol.doc(todayKey());
+        await todayPredRef.set(predData);
+      } catch (_) {
+        // 本番ルール適用時は predictions 書き込み不可（正常動作）
+      }
     }
 
     // --- model_status 更新 ---
