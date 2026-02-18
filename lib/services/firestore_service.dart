@@ -56,7 +56,7 @@ class FirestoreService {
         .toList();
 
     // ドキュメントIDで昇順ソート（古い→新しい）
-    logs.sort((a, b) => a.date.compareTo(b.date));
+    logs.sort((a, b) => a.dateKey.compareTo(b.dateKey));
     return logs;
   }
 
