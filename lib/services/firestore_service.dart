@@ -43,9 +43,10 @@ class FirestoreService {
 
   /// 直近N日分のログを取得（古い→新しい順）
   Future<List<DailyLog>> getLastNDays(int n) async {
+    // 日付範囲で取得（カスタムインデックス不要）
+    final startKey = dateKey(DateTime.now().subtract(Duration(days: n)));
     final snap = await _dailyCol
-        .orderBy(FieldPath.documentId, descending: true)
-        .limit(n)
+        .where(FieldPath.documentId, isGreaterThanOrEqualTo: startKey)
         .get();
 
     final logs = snap.docs
@@ -54,7 +55,9 @@ class FirestoreService {
         .where((log) => log.moodScore != null)
         .toList();
 
-    return logs.reversed.toList(); // 古い→新しい
+    // ドキュメントIDで昇順ソート（古い→新しい）
+    logs.sort((a, b) => a.date.compareTo(b.date));
+    return logs;
   }
 
   /// model_status を取得
@@ -174,12 +177,16 @@ class FirestoreService {
 
   /// 直近の予測結果を取得（今日の予測がない場合のフォールバック用）
   Future<Prediction?> getLatestPrediction() async {
+    // 直近30日分を取得し、最新のものを返す（カスタムインデックス不要）
+    final startKey = dateKey(DateTime.now().subtract(const Duration(days: 30)));
     final snap = await _predictionsCol
-        .orderBy(FieldPath.documentId, descending: true)
-        .limit(1)
+        .where(FieldPath.documentId, isGreaterThanOrEqualTo: startKey)
         .get();
     if (snap.docs.isEmpty) return null;
-    final doc = snap.docs.first;
+    // 最後のドキュメント（最新日付）を取得
+    final docs = snap.docs.toList()
+      ..sort((a, b) => a.id.compareTo(b.id));
+    final doc = docs.last;
     return Prediction.fromFirestore(
         doc.id, doc.data() as Map<String, dynamic>);
   }
@@ -200,13 +207,14 @@ class FirestoreService {
 
   /// 直近のフィードバック済み週キーを取得（重複防止用）
   Future<String?> getLatestFeedbackWeek() async {
+    // 全フィードバックを取得し、最新のものを返す（カスタムインデックス不要）
     final snap = await _userDoc
         .collection('feedback')
-        .orderBy(FieldPath.documentId, descending: true)
-        .limit(1)
         .get();
     if (snap.docs.isEmpty) return null;
-    return snap.docs.first.id;
+    final docs = snap.docs.toList()
+      ..sort((a, b) => a.id.compareTo(b.id));
+    return docs.last.id;
   }
 
   // --- アカウント削除 ---
