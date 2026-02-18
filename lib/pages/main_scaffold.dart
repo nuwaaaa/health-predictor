@@ -41,38 +41,64 @@ class MainScaffoldState extends State<MainScaffold> {
 
   Future<void> _loadAll() async {
     setState(() => _loading = true);
-    try {
-      final results = await Future.wait([
-        _service.getTodayLog(),
-        _service.getModelStatus(),
-        _service.getLastNDays(7),
-        _service.getTodayPrediction(),
-      ]);
-      var prediction = results[3] as Prediction?;
-      var isFallback = false;
+    final errors = <String>[];
 
-      // 今日の予測がない場合、直近の予測をフォールバック表示
-      if (prediction == null) {
+    // 各クエリを個別にtry-catchして、1つの失敗で全体が止まるのを防ぐ
+    DailyLog? todayLog;
+    ModelStatus status = ModelStatus();
+    List<DailyLog> last7 = [];
+    Prediction? prediction;
+    bool isFallback = false;
+
+    try {
+      todayLog = await _service.getTodayLog();
+    } catch (e) {
+      errors.add('日次ログ: $e');
+    }
+
+    try {
+      status = await _service.getModelStatus();
+    } catch (e) {
+      errors.add('モデル状態: $e');
+    }
+
+    try {
+      last7 = await _service.getLastNDays(7);
+    } catch (e) {
+      errors.add('直近7日: $e');
+    }
+
+    try {
+      prediction = await _service.getTodayPrediction();
+    } catch (e) {
+      errors.add('今日の予測: $e');
+    }
+
+    // 今日の予測がない場合、直近の予測をフォールバック表示
+    if (prediction == null) {
+      try {
         prediction = await _service.getLatestPrediction();
         isFallback = prediction != null;
+      } catch (e) {
+        errors.add('直近予測: $e');
       }
-
-      setState(() {
-        _todayLog = results[0] as DailyLog?;
-        _status = results[1] as ModelStatus;
-        _last7 = results[2] as List<DailyLog>;
-        _prediction = prediction;
-        _isFallbackPrediction = isFallback;
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('読み込み失敗: $e')),
-        );
-      }
-    } finally {
-      setState(() => _loading = false);
     }
+
+    setState(() {
+      _todayLog = todayLog;
+      _status = status;
+      _last7 = last7;
+      _prediction = prediction;
+      _isFallbackPrediction = isFallback;
+    });
+
+    if (errors.isNotEmpty && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('読み込み失敗: ${errors.first}')),
+      );
+    }
+
+    setState(() => _loading = false);
   }
 
   /// タブ切替（外部から呼べるように公開）
