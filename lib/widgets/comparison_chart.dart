@@ -268,6 +268,41 @@ class _ComparisonChartState extends State<ComparisonChart> {
           maxY: 5,
           gridData: const FlGridData(show: true),
           borderData: FlBorderData(show: false),
+          // ツールチップ: 体調は小数1位、特徴量は元のスケールで表示
+          lineTouchData: LineTouchData(
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipItems: (touchedSpots) {
+                return touchedSpots.map((spot) {
+                  final isMood = spot.bar.color == Colors.blue ||
+                      spot.bar.color == Colors.blue.withAlpha(120) ||
+                      spot.bar.color == Colors.blue.withAlpha(200);
+                  if (isMood) {
+                    // 体調スコア・移動平均: そのまま小数1位
+                    return LineTooltipItem(
+                      spot.y.toStringAsFixed(1),
+                      TextStyle(
+                        color: spot.bar.color ?? Colors.blue,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    );
+                  } else {
+                    // 特徴量: 正規化を元に戻して元のスケールで表示
+                    final original = featureRange == 0
+                        ? featureMin
+                        : featureMin +
+                            (spot.y - 1.0) / 4.0 * featureRange;
+                    return LineTooltipItem(
+                      _formatRightAxis(original),
+                      TextStyle(
+                        color: Colors.orange.shade700,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    );
+                  }
+                }).toList();
+              },
+            ),
+          ),
           titlesData: FlTitlesData(
             topTitles:
                 const AxisTitles(sideTitles: SideTitles(showTitles: false)),

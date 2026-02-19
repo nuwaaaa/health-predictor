@@ -62,6 +62,22 @@ class Chart7Days extends StatelessWidget {
             maxY: 5,
             gridData: const FlGridData(show: true),
             borderData: FlBorderData(show: false),
+            // ツールチップ: 小数第1位まで表示
+            lineTouchData: LineTouchData(
+              touchTooltipData: LineTouchTooltipData(
+                getTooltipItems: (touchedSpots) {
+                  return touchedSpots.map((spot) {
+                    return LineTooltipItem(
+                      spot.y.toStringAsFixed(1),
+                      TextStyle(
+                        color: spot.bar.color ?? Colors.blue,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    );
+                  }).toList();
+                },
+              ),
+            ),
             titlesData: FlTitlesData(
               topTitles:
                   const AxisTitles(sideTitles: SideTitles(showTitles: false)),
