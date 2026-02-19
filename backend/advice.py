@@ -19,7 +19,7 @@ def generate_advice(
 
     返却: [{"param": str, "message": str}, ...]
     """
-    if p_today is None or p_today < risk_threshold:
+    if p_today is None:
         return []
 
     if len(df) < 14:

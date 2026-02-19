@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/daily_log.dart';
 import '../models/model_status.dart';
 import '../models/prediction.dart';
 import '../services/firestore_service.dart';
@@ -26,11 +27,13 @@ class _AnalysisPageState extends State<AnalysisPage> {
   bool _feedbackSubmitted = false;
   bool _feedbackSaving = false;
   String? _alreadySubmittedWeek;
+  List<Advice> _clientAdvices = [];
 
   @override
   void initState() {
     super.initState();
     _checkExistingFeedback();
+    _computeClientAdvice();
   }
 
   String get _currentWeekKey {
@@ -47,6 +50,112 @@ class _AnalysisPageState extends State<AnalysisPage> {
       }
     } catch (_) {
       // フィードバック確認失敗は無視（権限エラー等）
+    }
+  }
+
+  /// バックエンドがアドバイスを生成していない場合のフォールバック
+  /// 直近のログデータから好調日・不調日を比較しアドバイスを生成
+  Future<void> _computeClientAdvice() async {
+    // バックエンドのアドバイスがあれば不要
+    final pred = widget.prediction;
+    if (pred != null && pred.advices.isNotEmpty) return;
+
+    try {
+      final logs = await widget.service.getLastNDays(90);
+      if (logs.length < 14) return;
+
+      final validLogs = logs.where((l) => l.moodScore != null).toList();
+      if (validLogs.length < 14) return;
+
+      final meanMood = validLogs
+              .map((l) => l.moodScore!)
+              .reduce((a, b) => a + b) /
+          validLogs.length;
+
+      final goodDays =
+          validLogs.where((l) => l.moodScore! >= meanMood + 0.5).toList();
+      final badDays =
+          validLogs.where((l) => l.moodScore! <= meanMood - 0.5).toList();
+
+      if (goodDays.length < 3 || badDays.length < 3) return;
+
+      final advices = <Advice>[];
+
+      // --- 睡眠アドバイス ---
+      final goodSleep = goodDays
+          .where((l) => l.sleep?.durationHours != null)
+          .map((l) => l.sleep!.durationHours!)
+          .toList();
+      final badSleep = badDays
+          .where((l) => l.sleep?.durationHours != null)
+          .map((l) => l.sleep!.durationHours!)
+          .toList();
+      if (goodSleep.length >= 3 && badSleep.length >= 3) {
+        final avgGood = goodSleep.reduce((a, b) => a + b) / goodSleep.length;
+        final avgBad = badSleep.reduce((a, b) => a + b) / badSleep.length;
+        if (avgGood - avgBad > 0.3) {
+          final recHours = (avgGood * 10).roundToDouble() / 10;
+          final bedHour = (24 + 7 - recHours.floor()) % 24;
+          final bedMin = ((recHours % 1) * 60).round();
+          advices.add(Advice(
+            param: 'sleep',
+            message:
+                'あなたの好調日は平均${recHours}時間の睡眠です。今夜は$bedHour:${bedMin.toString().padLeft(2, '0')}頃までに就寝がおすすめです',
+          ));
+        }
+      }
+
+      // --- 歩数アドバイス ---
+      final goodSteps = goodDays
+          .where((l) => l.steps != null)
+          .map((l) => l.steps!.toDouble())
+          .toList();
+      final badSteps = badDays
+          .where((l) => l.steps != null)
+          .map((l) => l.steps!.toDouble())
+          .toList();
+      if (goodSteps.length >= 3 && badSteps.length >= 3) {
+        final avgGood = goodSteps.reduce((a, b) => a + b) / goodSteps.length;
+        final avgBad = badSteps.reduce((a, b) => a + b) / badSteps.length;
+        if (avgGood - avgBad > 500) {
+          final threshold = (avgGood / 1000).round() * 1000;
+          advices.add(Advice(
+            param: 'steps',
+            message: '${threshold}歩以上の日は体調が安定する傾向があります',
+          ));
+        }
+      }
+
+      // --- ストレスアドバイス ---
+      final goodStress = goodDays
+          .where((l) => l.stress != null)
+          .map((l) => l.stress!.toDouble())
+          .toList();
+      final badStress = badDays
+          .where((l) => l.stress != null)
+          .map((l) => l.stress!.toDouble())
+          .toList();
+      if (goodStress.length >= 3 && badStress.length >= 3) {
+        final avgGoodStr =
+            goodStress.reduce((a, b) => a + b) / goodStress.length;
+        final avgBadStr =
+            badStress.reduce((a, b) => a + b) / badStress.length;
+        if (avgBadStr - avgGoodStr > 0.5) {
+          final recLevel = avgGoodStr.round();
+          advices.add(Advice(
+            param: 'stress',
+            message: 'ストレスLv$recLevel以下の日は体調が良い傾向があります',
+          ));
+        }
+      }
+
+      if (advices.isNotEmpty && mounted) {
+        setState(() {
+          _clientAdvices = advices.length > 2 ? advices.sublist(0, 2) : advices;
+        });
+      }
+    } catch (_) {
+      // フォールバック計算失敗は無視
     }
   }
 
@@ -117,8 +226,10 @@ class _AnalysisPageState extends State<AnalysisPage> {
           const SizedBox(height: 10),
           if (pred != null && pred.advices.isNotEmpty)
             _adviceCard(pred)
+          else if (_clientAdvices.isNotEmpty)
+            _clientAdviceCard()
           else
-            _emptyCard('アドバイスはありません（良い調子です）'),
+            _emptyCard('データが増えるとアドバイスが表示されます'),
 
           const SizedBox(height: 24),
 
@@ -277,6 +388,40 @@ class _AnalysisPageState extends State<AnalysisPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: pred.advices.map((a) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.lightbulb_outline,
+                    size: 18, color: Colors.amber.shade700),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    a.message,
+                    style: const TextStyle(fontSize: 14, height: 1.5),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _clientAdviceCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: _clientAdvices.map((a) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: Row(

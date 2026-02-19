@@ -380,11 +380,101 @@ class FirestoreService {
       if (todayMood <= 2) pToday = (pToday + 0.3).clamp(0.0, 0.95);
       pToday = (pToday * 100).roundToDouble() / 100;
 
+      // --- contributions (要因TOP3) を計算 ---
+      // 直近データから現実的な寄与度を生成
+      final yesterdayMood = moodScores.length >= 2
+          ? moodScores[moodScores.length - 2]
+          : 3;
+      final lastSleep =
+          (dailyRows.last['sleep'] as Map<String, dynamic>)['durationHours']
+              as double;
+      final lastSteps = dailyRows.last['steps'] as int;
+
+      // 寄与度: 正=リスク増加, 負=リスク低下
+      final contributions = <Map<String, dynamic>>[
+        {
+          'feature': 'mood_lag1',
+          'value': (3.0 - yesterdayMood) * 0.3, // 体調低い→正(リスク増)
+        },
+        {
+          'feature': 'sleep_hours_filled',
+          'value': (7.0 - lastSleep) * 0.2, // 睡眠短い→正(リスク増)
+        },
+        {
+          'feature': 'steps_filled',
+          'value': (6000 - lastSteps) / 10000.0, // 歩数少ない→正(リスク増)
+        },
+      ];
+      // 絶対値でソート（影響が大きい順）
+      contributions.sort((a, b) =>
+          (b['value'] as double).abs().compareTo((a['value'] as double).abs()));
+
+      // --- advices (改善アドバイス) を計算 ---
+      // 好調日・不調日の統計から backend/advice.py と同等のロジック
+      final advices = <Map<String, dynamic>>[];
+      if (totalDays >= 14) {
+        final meanMood =
+            moodScores.reduce((a, b) => a + b) / moodScores.length;
+        final goodRows = <Map<String, dynamic>>[];
+        final badRows = <Map<String, dynamic>>[];
+        for (int i = 0; i < dailyRows.length; i++) {
+          if (moodScores[i] >= meanMood + 0.5) goodRows.add(dailyRows[i]);
+          if (moodScores[i] <= meanMood - 0.5) badRows.add(dailyRows[i]);
+        }
+
+        if (goodRows.length >= 3 && badRows.length >= 3) {
+          // 睡眠アドバイス
+          double goodSleepSum = 0, badSleepSum = 0;
+          for (final r in goodRows) {
+            goodSleepSum +=
+                (r['sleep'] as Map<String, dynamic>)['durationHours'] as double;
+          }
+          for (final r in badRows) {
+            badSleepSum +=
+                (r['sleep'] as Map<String, dynamic>)['durationHours'] as double;
+          }
+          final avgGoodSleep = goodSleepSum / goodRows.length;
+          final avgBadSleep = badSleepSum / badRows.length;
+          if (avgGoodSleep - avgBadSleep > 0.3) {
+            final recHours = (avgGoodSleep * 10).roundToDouble() / 10;
+            final bedHour = (24 + 7 - recHours.floor()) % 24;
+            final bedMin = ((recHours % 1) * 60).round();
+            advices.add({
+              'param': 'sleep',
+              'message':
+                  'あなたの好調日は平均${recHours}時間の睡眠です。今夜は$bedHour:${bedMin.toString().padLeft(2, '0')}頃までに就寝がおすすめです',
+            });
+          }
+
+          // 歩数アドバイス
+          double goodStepsSum = 0, badStepsSum = 0;
+          for (final r in goodRows) {
+            goodStepsSum += (r['steps'] as int).toDouble();
+          }
+          for (final r in badRows) {
+            badStepsSum += (r['steps'] as int).toDouble();
+          }
+          final avgGoodSteps = goodStepsSum / goodRows.length;
+          final avgBadSteps = badStepsSum / badRows.length;
+          if (avgGoodSteps - avgBadSteps > 500) {
+            final threshold =
+                (avgGoodSteps / 1000).round() * 1000;
+            advices.add({
+              'param': 'steps',
+              'message':
+                  '${threshold}歩以上の日は体調が安定する傾向があります',
+            });
+          }
+        }
+      }
+
       final predData = <String, dynamic>{
         'pToday': pToday,
         'confidence': confidence,
         'generatedAt': FieldValue.serverTimestamp(),
         'modelVersion': 'logistic_v1',
+        'contributions': contributions,
+        'advices': advices.length > 2 ? advices.sublist(0, 2) : advices,
       };
 
       // 3日リスクは条件を満たす場合のみ
