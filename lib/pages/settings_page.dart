@@ -319,33 +319,6 @@ class _SettingsPageState extends State<SettingsPage> {
               const SizedBox(height: 24),
             ],
 
-            // --- 連携済みの場合はステータス表示 ---
-            if (!isAnon) ...[
-              _sectionTitle('アカウント'),
-              const SizedBox(height: 10),
-              _settingCard(
-                icon: Icons.person_outline,
-                title: '認証方式',
-                subtitle: _linkedProvidersLabel(providers),
-              ),
-              const SizedBox(height: 24),
-            ],
-
-            // --- ヘルスケア連携 ---
-            _sectionTitle('ヘルスケア連携'),
-            const SizedBox(height: 10),
-            _settingCard(
-              icon: Icons.favorite_outline,
-              title: 'Apple Health / Google Fit',
-              subtitle: '睡眠・歩数の自動取得',
-              trailing:
-                  const Icon(Icons.chevron_right, color: Colors.black38),
-              onTap: () {
-                _showSnack('ヘルスケア連携は入力画面の「自動取得」から利用できます');
-              },
-            ),
-
-            const SizedBox(height: 24),
 
             // --- 通知設定 ---
             _sectionTitle('通知設定'),
@@ -450,24 +423,6 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
-  }
-
-  String _linkedProvidersLabel(List<String> providers) {
-    final labels = <String>[];
-    for (final p in providers) {
-      switch (p) {
-        case 'google.com':
-          labels.add('Google');
-          break;
-        case 'apple.com':
-          labels.add('Apple');
-          break;
-        case 'password':
-          labels.add('メール');
-          break;
-      }
-    }
-    return labels.isEmpty ? '匿名' : labels.join(' / ');
   }
 
   Widget _sectionTitle(String title) {
