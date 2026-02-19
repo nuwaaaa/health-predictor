@@ -24,6 +24,9 @@ def calculate_confidence(
     返却: 'low', 'medium', 'high'
     """
     # ベースレベル判定
+    # 設計書では「中 = 30〜59日 AND 不調5件以上」だが、
+    # 60日以上でも不調10件未満のケース（設計書の隙間）は
+    # elif の評価順により自然に「中」に分類される（意図通り）。
     if (
         days_collected >= config.CONFIDENCE_HIGH_DAYS
         and unhealthy_count >= config.CONFIDENCE_HIGH_UNHEALTHY

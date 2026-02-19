@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
@@ -147,7 +148,16 @@ class _SettingsPageState extends State<SettingsPage> {
       // 2. Firebase Auth のアカウント削除
       await widget.authService.deleteAccount();
 
-      // 3. 削除後は AuthWrapper が自動でログイン画面へ遷移
+      // 3. ローカルデータ削除（設計書 Section 15.2）
+      // Firestoreのオフラインキャッシュをクリア
+      try {
+        await FirebaseFirestore.instance.terminate();
+        await FirebaseFirestore.instance.clearPersistence();
+      } catch (_) {
+        // キャッシュクリア失敗は致命的でないため無視
+      }
+
+      // 4. 削除後は AuthWrapper が自動でログイン画面へ遷移
     } on FirebaseAuthException catch (e) {
       if (e.code == 'requires-recent-login') {
         _showSnack('再認証が必要です。再度お試しください。');

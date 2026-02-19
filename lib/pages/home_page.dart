@@ -97,6 +97,7 @@ class _HomePageState extends State<HomePage> {
               prediction: widget.prediction,
               isFallback: widget.isFallbackPrediction,
               status: widget.status,
+              onTap: () => widget.onSwitchTab(2),
             ),
 
             const SizedBox(height: 20),

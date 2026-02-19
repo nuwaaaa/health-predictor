@@ -7,12 +7,14 @@ class PredictionCard extends StatelessWidget {
   final Prediction? prediction;
   final bool isFallback;
   final ModelStatus status;
+  final VoidCallback? onTap;
 
   const PredictionCard({
     super.key,
     required this.prediction,
     this.isFallback = false,
     required this.status,
+    this.onTap,
   });
 
   @override
@@ -27,7 +29,11 @@ class PredictionCard extends StatelessWidget {
       return _buildWaitingCard();
     }
 
-    return _buildPredictionCard(context);
+    // 予測カードタップで分析タブへ遷移（設計書 Section 16）
+    final card = _buildPredictionCard(context);
+    return onTap != null
+        ? GestureDetector(onTap: onTap, child: card)
+        : card;
   }
 
   /// 学習中（14日未満）のカード

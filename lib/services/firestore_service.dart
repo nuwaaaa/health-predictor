@@ -221,7 +221,9 @@ class FirestoreService {
 
   /// ユーザーの全サブコレクションを削除
   /// predictions はセキュリティルールで write: false のため、
-  /// クライアント側からは削除できない（Cloud Functions で対応が必要）
+  /// クライアント側からは削除できない。
+  /// TODO: 設計書 Section 15.2 に従い Cloud Functions (onDelete トリガー)
+  ///       で predictions サブコレクションも自動削除する仕組みを追加する
   Future<void> deleteAllUserData() async {
     // クライアントから削除可能なコレクション
     final deletable = ['daily', 'model_status', 'feedback'];
