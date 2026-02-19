@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ----------------------------
+    // Helpers
+    // ----------------------------
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isDateKey(s) {
+      return s is string
+        && s.size() == 10
+        && s.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    function isIntInRange(v, min, max) {
+      return v is int && v >= min && v <= max;
+    }
+
+    // ----------------------------
+    // Rules
+    // ----------------------------
+
+    // デフォルト拒否
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ユーザー配下
+    match /users/{uid} {
+
+      // users/{uid} ドキュメント自体
+      allow read, write: if isOwner(uid);
+
+      // ----- 日次ログ -----
+      match /daily/{dateKey} {
+        allow read: if isOwner(uid);
+
+        // 作成・更新: オーナーのみ + フィールドレベルバリデーション
+        // アプリは set(merge: true) で部分更新するため、存在するフィールドのみ検証
+        allow create, update: if isOwner(uid)
+          && isDateKey(dateKey)
+          && ( !('moodScore' in request.resource.data) || isIntInRange(request.resource.data.moodScore, 1, 5) )
+          && ( !('stress' in request.resource.data) || request.resource.data.stress == null || isIntInRange(request.resource.data.stress, 1, 5) )
+          && ( !('steps' in request.resource.data) || request.resource.data.steps == null || (request.resource.data.steps is int && request.resource.data.steps >= 0 && request.resource.data.steps <= 200000) )
+          && ( !('sleep' in request.resource.data) || request.resource.data.sleep == null || request.resource.data.sleep is map );
+
+        // 削除: オーナーのみ
+        allow delete: if isOwner(uid);
+      }
+
+      // ----- 予測結果 -----
+      // バッチ（Cloud Run / Admin SDK）から書き込み、クライアントは読み取りのみ
+      match /predictions/{dateKey} {
+        allow read: if isOwner(uid);
+        allow write: if false;
+      }
+
+      // ----- モデル状態 -----
+      // daysCollected の更新はクライアント（体調入力トランザクション）からも行うため write を許可
+      match /model_status/{docId} {
+        allow read: if isOwner(uid);
+        allow write: if isOwner(uid);
+      }
+
+      // ----- フィードバック -----
+      match /feedback/{weekKey} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && ('result' in request.resource.data)
+          && request.resource.data.result in ['correct', 'incorrect', 'unknown'];
+        allow delete: if isOwner(uid);
+      }
+    }
+  }
+}
