@@ -9,6 +9,8 @@ class Prediction {
   final String? modelVersion; // 例: 'logistic_v1', 'lgbm_v1'
   final List<FeatureContribution> contributions; // 寄与度TOP3
   final List<Advice> advices; // 改善アドバイス（最大2件）
+  final bool provisional; // オンデマンド生成の暫定フラグ
+  final String? source; // 'batch', 'on_demand_edit', 'on_demand_input'
 
   Prediction({
     required this.dateKey,
@@ -19,6 +21,8 @@ class Prediction {
     this.modelVersion,
     this.contributions = const [],
     this.advices = const [],
+    this.provisional = false,
+    this.source,
   });
 
   factory Prediction.fromFirestore(String docId, Map<String, dynamic> data) {
@@ -41,29 +45,45 @@ class Prediction {
       advices: adviceRaw
           .map((e) => Advice.fromMap(e as Map<String, dynamic>))
           .toList(),
+      provisional: (data['provisional'] as bool?) ?? false,
+      source: data['source'] as String?,
     );
   }
 
-  /// 今日のリスクレベルラベル
+  /// 信頼度lowのとき確率を 0.15〜0.65 にクリップ（設計書 Section 11.2）
+  double? get displayPToday {
+    if (pToday == null) return null;
+    if (confidence == 'low') return pToday!.clamp(0.15, 0.65);
+    return pToday;
+  }
+
+  /// 3日リスクの表示用（同様にクリップ）
+  double? get displayP3d {
+    if (p3d == null) return null;
+    if (confidence == 'low') return p3d!.clamp(0.15, 0.65);
+    return p3d;
+  }
+
+  /// 今日のリスクレベルラベル（クリップ後の値で判定）
   String get riskLabel {
-    if (pToday == null) return '---';
-    final p = pToday!;
+    final p = displayPToday;
+    if (p == null) return '---';
     if (p >= 0.6) return '高め';
     if (p >= 0.4) return 'やや注意';
     if (p >= 0.2) return '低め';
     return '良好';
   }
 
-  /// リスクのパーセント表示
+  /// リスクのパーセント表示（クリップ後）
   String get riskPercent {
-    if (pToday == null) return '--%';
-    return '${(pToday! * 100).round()}%';
+    if (displayPToday == null) return '--%';
+    return '${(displayPToday! * 100).round()}%';
   }
 
-  /// 3日リスクのパーセント表示
+  /// 3日リスクのパーセント表示（クリップ後）
   String get risk3dPercent {
-    if (p3d == null) return '--%';
-    return '${(p3d! * 100).round()}%';
+    if (displayP3d == null) return '--%';
+    return '${(displayP3d! * 100).round()}%';
   }
 
   /// 信頼度の日本語ラベル
@@ -80,7 +100,9 @@ class Prediction {
 
   /// 信頼度が低い場合の注記テキスト
   String? get confidenceNote {
-    if (confidence == 'low') return 'まだ学習中の参考値です';
+    if (confidence == 'low') {
+      return '参考値です。データが増えるほど精度が上がります';
+    }
     return null;
   }
 }

@@ -167,16 +167,24 @@ def _process_user(db: firestore.Client, uid: str, today: str):
         recent_missing_rate=recent_missing_rate,
     )
 
-    # 不調基準の算出（直近14日の体調平均 → 閾値 = 平均 - 1）
+    # 不調基準の算出: max(mean14 - 1, mean14 - std14)
     recent_14 = df["moodScore"].dropna().tail(14)
     mood_mean_14 = float(recent_14.mean()) if len(recent_14) > 0 else None
-    unhealthy_threshold = round(mood_mean_14 - 1, 2) if mood_mean_14 is not None else None
+    if mood_mean_14 is not None and len(recent_14) >= 14:
+        std_14 = float(recent_14.std(ddof=0))
+        unhealthy_threshold = round(max(mood_mean_14 - 1, mood_mean_14 - std_14), 2)
+    else:
+        unhealthy_threshold = round(mood_mean_14 - 1, 2) if mood_mean_14 is not None else None
 
     model_type = today_result["model_type"]
     model_version = f"{model_type}_v1"
 
     # 改善アドバイス生成
-    advices = generate_advice(df, today_result["probability"])
+    advices = generate_advice(
+        df, today_result["probability"],
+        days_collected=days_collected,
+        unhealthy_count=unhealthy_count,
+    )
 
     # 特徴量寄与度TOP3
     contributions = today_result.get("contributions", [])
@@ -206,6 +214,22 @@ def _process_user(db: firestore.Client, uid: str, today: str):
         ready=True,
         mood_mean_14=mood_mean_14,
         unhealthy_threshold=unhealthy_threshold,
+    )
+
+    # バッチ評価ログを保存（設計書 Section 13.3）
+    _save_batch_log(
+        db=db,
+        uid=uid,
+        date_key=today,
+        days_collected=days_collected,
+        unhealthy_count=unhealthy_count,
+        model_type=model_type,
+        val_auc=today_result["auc"],
+        val_pr_auc=today_result["pr_auc"],
+        recent_missing_rate=recent_missing_rate,
+        mood_mean_14=mood_mean_14,
+        unhealthy_threshold=unhealthy_threshold,
+        df=df,
     )
 
     logger.info(
@@ -243,6 +267,8 @@ def _save_prediction(
         "confidence": confidence,
         "generatedAt": firestore.SERVER_TIMESTAMP,
         "modelVersion": model_version,
+        "source": "batch",
+        "provisional": False,
     }
     if p_today is not None:
         data["pToday"] = round(p_today, 4)
@@ -292,6 +318,55 @@ def _update_model_status(
         data["unhealthyThreshold"] = unhealthy_threshold
 
     status_ref.set(data, merge=True)
+
+
+def _save_batch_log(
+    db: firestore.Client,
+    uid: str,
+    date_key: str,
+    days_collected: int,
+    unhealthy_count: int,
+    model_type: str,
+    val_auc: float | None,
+    val_pr_auc: float | None,
+    recent_missing_rate: float,
+    mood_mean_14: float | None,
+    unhealthy_threshold: float | None,
+    df: pd.DataFrame,
+):
+    """バッチ評価ログを保存（設計書 Section 13.3）"""
+    log_ref = (
+        db.collection("users")
+        .document(uid)
+        .collection("batch_logs")
+        .document(date_key)
+    )
+
+    # 直近N日の平均睡眠・歩数
+    recent = df.tail(14)
+    mean_sleep = float(recent["sleep_hours"].dropna().mean()) if recent["sleep_hours"].dropna().any() else None
+    mean_steps = float(recent["steps"].dropna().mean()) if recent["steps"].dropna().any() else None
+
+    data = {
+        "trainDays": days_collected,
+        "positiveCount": unhealthy_count,
+        "modelType": model_type,
+        "valAuc": round(val_auc, 4) if val_auc is not None else None,
+        "valPrAuc": round(val_pr_auc, 4) if val_pr_auc is not None else None,
+        "missingRate": round(recent_missing_rate, 3),
+        "moodMean14": round(mood_mean_14, 2) if mood_mean_14 is not None else None,
+        "unhealthyThreshold": round(unhealthy_threshold, 2) if unhealthy_threshold is not None else None,
+        "executedAt": firestore.SERVER_TIMESTAMP,
+    }
+    if mean_sleep is not None:
+        data["meanSleep"] = round(mean_sleep, 1)
+    if mean_steps is not None:
+        data["meanSteps"] = round(mean_steps, 0)
+
+    try:
+        log_ref.set(data)
+    except Exception:
+        logger.warning("Failed to save batch log for user %s", uid)
 
 
 if __name__ == "__main__":

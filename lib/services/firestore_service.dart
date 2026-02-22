@@ -494,9 +494,25 @@ class FirestoreService {
     }
 
     // --- model_status 更新 ---
-    // テストデータの平均体調は約3.0（1-5ランダム）、不調閾値 = 平均 - 1
-    final moodMean14 = isReady ? 3.2 : null;
-    final unhealthyThreshold = isReady ? 2.2 : null;
+    // 直近14日の平均と標準偏差から閾値を計算: max(mean14-1, mean14-std14)
+    double? moodMean14;
+    double? unhealthyThreshold;
+    if (isReady && moodScores.length >= 14) {
+      final last14 = moodScores.sublist(moodScores.length - 14);
+      final mean14 = last14.reduce((a, b) => a + b) / last14.length;
+      double sumSq = 0;
+      for (final m in last14) {
+        sumSq += (m - mean14) * (m - mean14);
+      }
+      final std14 = sqrt(sumSq / last14.length);
+      moodMean14 = (mean14 * 100).roundToDouble() / 100;
+      final thresholdA = mean14 - 1;
+      final thresholdB = mean14 - std14;
+      unhealthyThreshold =
+          ((thresholdA > thresholdB ? thresholdA : thresholdB) * 100)
+                  .roundToDouble() /
+              100;
+    }
 
     final statusData = <String, dynamic>{
       'daysCollected': totalDays,

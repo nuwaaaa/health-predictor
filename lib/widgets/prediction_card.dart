@@ -112,8 +112,8 @@ class PredictionCard extends StatelessWidget {
   /// 予測結果カード
   Widget _buildPredictionCard(BuildContext context) {
     final pred = prediction!;
-    final pToday = pred.pToday!;
-    final riskColor = _riskColor(pToday);
+    final displayP = pred.displayPToday!;
+    final riskColor = _riskColor(displayP);
     final showP3d = pred.p3d != null;
 
     return Container(
@@ -135,9 +135,21 @@ class PredictionCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isFallback ? '直近の予測（${_formatDateKey(pred.dateKey)}）' : '今日の不調リスク',
+                      isFallback
+                          ? '直近の予測（${_formatDateKey(pred.dateKey)}）'
+                          : pred.provisional
+                              ? '今日の不調リスク（暫定）'
+                              : '今日の不調リスク',
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
+                    if (pred.provisional && !isFallback)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          '翌朝に正式版へ更新されます',
+                          style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                        ),
+                      ),
                     if (isFallback)
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
@@ -234,7 +246,7 @@ class PredictionCard extends StatelessWidget {
 
   /// 3日リスク表示
   Widget _threeDayRisk(Prediction pred) {
-    final p3d = pred.p3d!;
+    final p3d = pred.displayP3d!;
     final color = _riskColor(p3d);
     return Row(
       children: [
@@ -355,6 +367,10 @@ class PredictionCard extends StatelessWidget {
                 ],
               ),
             )),
+        Text(
+          '※ 因果関係ではなく傾向です',
+          style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+        ),
       ],
     );
   }

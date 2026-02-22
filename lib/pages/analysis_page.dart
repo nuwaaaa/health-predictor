@@ -325,53 +325,60 @@ class _AnalysisPageState extends State<AnalysisPage> {
         border: Border.all(color: Colors.black12),
       ),
       child: Column(
-        children: pred.contributions.map((c) {
-          final isUp = c.isRiskIncrease;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: isUp
-                        ? Colors.red.shade50
-                        : Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(8),
+        children: [
+          ...pred.contributions.map((c) {
+            final isUp = c.isRiskIncrease;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: isUp
+                          ? Colors.red.shade50
+                          : Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      isUp ? Icons.arrow_upward : Icons.arrow_downward,
+                      size: 18,
+                      color: isUp
+                          ? Colors.red.shade500
+                          : Colors.green.shade500,
+                    ),
                   ),
-                  child: Icon(
-                    isUp ? Icons.arrow_upward : Icons.arrow_downward,
-                    size: 18,
-                    color: isUp
-                        ? Colors.red.shade500
-                        : Colors.green.shade500,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(c.label,
-                          style: const TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.w600)),
-                      Text(
-                        isUp ? 'リスク増加方向' : 'リスク低下方向',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isUp
-                              ? Colors.red.shade400
-                              : Colors.green.shade400,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(c.label,
+                            style: const TextStyle(
+                                fontSize: 15, fontWeight: FontWeight.w600)),
+                        Text(
+                          isUp ? 'リスク増加方向' : 'リスク低下方向',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isUp
+                                ? Colors.red.shade400
+                                : Colors.green.shade400,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 4),
+          Text(
+            '※ 因果関係ではなく、あなたのデータにおける傾向です',
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+          ),
+        ],
       ),
     );
   }

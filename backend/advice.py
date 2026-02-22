@@ -14,6 +14,8 @@ def generate_advice(
     df: pd.DataFrame,
     p_today: float | None,
     risk_threshold: float = 0.3,
+    days_collected: int = 0,
+    unhealthy_count: int = 0,
 ) -> list[dict]:
     """個人データに基づく改善アドバイスを最大2件生成する。
 
@@ -86,9 +88,14 @@ def generate_advice(
                 high_bad_rate = (high_stress["moodScore"] <= mean_mood - 1).mean()
                 diff_pct = int(round((high_bad_rate - low_bad_rate) * 100))
                 if diff_pct > 5:
+                    # 具体的な数値は統計的に安定してから表示（設計書 Section 12）
+                    if unhealthy_count >= 10 and days_collected >= 60:
+                        msg = f"ストレスLv{rec_level}以下の日は不調率が{diff_pct}%低くなっています"
+                    else:
+                        msg = f"ストレスLv{rec_level}以下の日は不調率が低下する傾向があります"
                     advices.append({
                         "param": "stress",
-                        "message": f"ストレスLv{rec_level}以下の日は不調率が{diff_pct}%低くなっています",
+                        "message": msg,
                     })
 
     return advices[:2]
