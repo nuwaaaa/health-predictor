@@ -23,17 +23,43 @@ class DailyList extends StatelessWidget {
     }
   }
 
+  /// ログリストに直近4日（今日+過去3日）の未記入日を追加
+  List<DailyLog> _fillMissingEditableDays(List<DailyLog> original) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final existingKeys = original.map((l) => l.dateKey).toSet();
+
+    final filled = List<DailyLog>.from(original);
+    for (int i = 0; i <= 3; i++) {
+      final date = today.subtract(Duration(days: i));
+      final key =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      if (!existingKeys.contains(key)) {
+        filled.add(DailyLog(dateKey: key));
+      }
+    }
+
+    // 日付昇順でソート
+    filled.sort((a, b) => a.dateKey.compareTo(b.dateKey));
+    return filled;
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (logs.isEmpty) return const SizedBox.shrink();
+    final filledLogs = _fillMissingEditableDays(logs);
+    if (filledLogs.isEmpty) return const SizedBox.shrink();
 
-    final reversed = logs.reversed.toList(); // 新→古
+    final reversed = filledLogs.reversed.toList(); // 新→古
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: reversed.map((log) {
         final m = log.moodScore ?? 0;
-        final emoji = MoodSelector.emojiFor(m);
+        final isEmpty = log.moodScore == null &&
+            log.sleep == null &&
+            log.steps == null &&
+            log.stress == null;
+        final emoji = isEmpty ? '' : MoodSelector.emojiFor(m);
         final sleepText = log.sleep?.durationHours != null
             ? '${log.sleep!.durationHours!.toStringAsFixed(1)}h'
             : '-';
@@ -46,9 +72,13 @@ class DailyList extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isEmpty ? Colors.grey.shade50 : Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.black12),
+              border: Border.all(
+                color: isEmpty && editable
+                    ? Colors.orange.shade200
+                    : Colors.black12,
+              ),
             ),
             child: Row(
               children: [
@@ -60,13 +90,20 @@ class DailyList extends StatelessWidget {
                           const TextStyle(fontSize: 13, color: Colors.black54)),
                 ),
                 // 体調
-                Text('$emoji $m', style: const TextStyle(fontSize: 16)),
+                if (isEmpty)
+                  Text(editable ? '未入力' : '-',
+                      style:
+                          TextStyle(fontSize: 13, color: Colors.orange.shade600))
+                else
+                  Text('$emoji $m', style: const TextStyle(fontSize: 16)),
                 const Spacer(),
-                // 睡眠
-                _miniLabel('🛏️', sleepText),
-                const SizedBox(width: 12),
-                // 歩数
-                _miniLabel('👟', stepsText),
+                if (!isEmpty) ...[
+                  // 睡眠
+                  _miniLabel('🛏️', sleepText),
+                  const SizedBox(width: 12),
+                  // 歩数
+                  _miniLabel('👟', stepsText),
+                ],
                 if (onTap != null) ...[
                   const SizedBox(width: 8),
                   Icon(

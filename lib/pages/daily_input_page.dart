@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../models/daily_log.dart';
 import '../services/firestore_service.dart';
@@ -101,27 +102,73 @@ class _DailyInputPageState extends State<DailyInputPage> {
         ? (_bedTime ?? const TimeOfDay(hour: 23, minute: 0))
         : (_wakeTime ?? const TimeOfDay(hour: 7, minute: 0));
 
-    final picked = await showTimePicker(
+    TimeOfDay temp = initial;
+
+    await showCupertinoModalPopup<void>(
       context: context,
-      initialTime: initial,
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-          child: child!,
+      builder: (context) {
+        return Container(
+          height: 260,
+          color: CupertinoColors.systemBackground.resolveFrom(context),
+          child: Column(
+            children: [
+              // ヘッダー（キャンセル・完了）
+              Container(
+                height: 44,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: CupertinoColors.systemGroupedBackground
+                      .resolveFrom(context),
+                  border: const Border(
+                    bottom: BorderSide(color: Color(0xFFBCBBC1), width: 0.5),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      child: const Text('キャンセル'),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    Text(isBed ? '就寝時刻' : '起床時刻',
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600)),
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      child: const Text('完了'),
+                      onPressed: () {
+                        setState(() {
+                          _sleepFromAuto = false;
+                          if (isBed) {
+                            _bedTime = temp;
+                          } else {
+                            _wakeTime = temp;
+                          }
+                        });
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              // ピッカー本体
+              Expanded(
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.time,
+                  use24hFormat: true,
+                  initialDateTime: DateTime(
+                      2000, 1, 1, initial.hour, initial.minute),
+                  onDateTimeChanged: (dt) {
+                    temp = TimeOfDay(hour: dt.hour, minute: dt.minute);
+                  },
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
-
-    if (picked != null) {
-      setState(() {
-        _sleepFromAuto = false;
-        if (isBed) {
-          _bedTime = picked;
-        } else {
-          _wakeTime = picked;
-        }
-      });
-    }
   }
 
   /// HealthKit / Health Connect から歩数を自動取得
