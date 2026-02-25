@@ -49,13 +49,9 @@ def generate_advice(
         avg_bad_sleep = bad_sleep.mean()
         if avg_good_sleep - avg_bad_sleep > 0.3:
             rec_hours = round(avg_good_sleep, 1)
-            # 推奨就寝時刻 = 起床7:00想定 - 推奨睡眠時間
-            rec_bed_hour = int(24 + 7 - rec_hours) % 24
-            rec_bed_min = int((rec_hours % 1) * 60)
-            bed_time = f"{rec_bed_hour}:{rec_bed_min:02d}"
             advices.append({
                 "param": "sleep",
-                "message": f"あなたの好調日は平均{rec_hours}時間の睡眠です。今夜は{bed_time}頃までに就寝がおすすめです",
+                "message": f"{rec_hours}時間の睡眠をとった翌日は体調が安定する傾向があります",
             })
 
     # --- 歩数アドバイス ---
