@@ -437,12 +437,10 @@ class FirestoreService {
           final avgBadSleep = badSleepSum / badRows.length;
           if (avgGoodSleep - avgBadSleep > 0.3) {
             final recHours = (avgGoodSleep * 10).roundToDouble() / 10;
-            final bedHour = (24 + 7 - recHours.floor()) % 24;
-            final bedMin = ((recHours % 1) * 60).round();
             advices.add({
               'param': 'sleep',
               'message':
-                  'あなたの好調日は平均${recHours}時間の睡眠です。今夜は$bedHour:${bedMin.toString().padLeft(2, '0')}頃までに就寝がおすすめです',
+                  '${recHours}時間の睡眠をとった翌日は体調が安定する傾向があります',
             });
           }
 
