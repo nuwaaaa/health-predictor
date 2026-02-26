@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import '../models/daily_log.dart';
 import '../services/firestore_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/common_widgets.dart';
 import '../widgets/chart_7days.dart';
 import '../widgets/comparison_chart.dart';
 import '../widgets/daily_list.dart';
 import '../widgets/sleep_pattern_chart.dart';
 import 'daily_input_page.dart';
 
-/// データタブ: 期間切替、比較グラフ、睡眠パターン、日次一覧（編集付き）
+/// データタブ — Calm Blue デザイン
 class DataPage extends StatefulWidget {
   final FirestoreService service;
   final List<DailyLog> logs;
@@ -25,7 +27,7 @@ class DataPage extends StatefulWidget {
 }
 
 class _DataPageState extends State<DataPage> {
-  int _periodDays = 7; // 7 / 30 / 0(全期間)
+  int _periodDays = 7;
   List<DailyLog> _displayLogs = [];
   bool _loadingMore = false;
 
@@ -90,95 +92,82 @@ class _DataPageState extends State<DataPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('データ'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('データ')),
       body: RefreshIndicator(
         onRefresh: widget.onReload,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 18),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: AppSpacing.md),
 
-            // --- 期間切替 ---
-            Row(
-              children: [
-                _periodChip(7, '7日'),
-                const SizedBox(width: 8),
-                _periodChip(30, '30日'),
-                const SizedBox(width: 8),
-                _periodChip(0, '全期間'),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            if (_loadingMore)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: CircularProgressIndicator(),
-                ),
-              )
-            else ...[
-              // --- 体調グラフ ---
-              const Text('体調推移',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              Chart7Days(logs: _displayLogs),
-
-              const SizedBox(height: 24),
-
-              // --- 体調×特徴量 比較グラフ ---
-              const Text('体調と生活データの比較',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              ComparisonChart(logs: _displayLogs),
-
-              const SizedBox(height: 24),
-
-              // --- 睡眠パターン ---
-              const Text('睡眠パターン',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              SleepPatternChart(logs: _displayLogs),
-
-              const SizedBox(height: 24),
-
-              // --- 日次一覧 ---
-              const Text('日次一覧',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              DailyList(
-                logs: _displayLogs,
-                onTap: _openDailyEdit,
+              // --- 期間切替 ---
+              Row(
+                children: [
+                  _periodPill(7, '7日'),
+                  const SizedBox(width: AppSpacing.sm),
+                  _periodPill(30, '30日'),
+                  const SizedBox(width: AppSpacing.sm),
+                  _periodPill(0, '全期間'),
+                ],
               ),
-            ],
 
-            const SizedBox(height: 30),
-          ],
+              const SizedBox(height: AppSpacing.lg),
+
+              if (_loadingMore)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(AppSpacing.lg),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else ...[
+                // --- 体調グラフ ---
+                SectionHeader(title: '体調推移'),
+                const SizedBox(height: AppSpacing.sm),
+                AppCard(child: Chart7Days(logs: _displayLogs)),
+
+                const SizedBox(height: AppSpacing.lg),
+
+                // --- 体調×特徴量 比較グラフ ---
+                SectionHeader(title: '体調と生活データの比較'),
+                const SizedBox(height: AppSpacing.sm),
+                AppCard(child: ComparisonChart(logs: _displayLogs)),
+
+                const SizedBox(height: AppSpacing.lg),
+
+                // --- 睡眠パターン ---
+                SectionHeader(title: '睡眠パターン'),
+                const SizedBox(height: AppSpacing.sm),
+                AppCard(child: SleepPatternChart(logs: _displayLogs)),
+
+                const SizedBox(height: AppSpacing.lg),
+
+                // --- 日次一覧 ---
+                SectionHeader(title: '日次一覧'),
+                const SizedBox(height: AppSpacing.sm),
+                DailyList(
+                  logs: _displayLogs,
+                  onTap: _openDailyEdit,
+                ),
+              ],
+
+              const SizedBox(height: AppSpacing.xl),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
 
-  Widget _periodChip(int days, String label) {
+  Widget _periodPill(int days, String label) {
     final selected = _periodDays == days;
-    return ChoiceChip(
-      label: Text(label),
+    return AppPill(
+      label: label,
       selected: selected,
-      onSelected: (_) => _changePeriod(days),
-      selectedColor: Colors.blue.shade100,
-      labelStyle: TextStyle(
-        fontSize: 13,
-        fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-        color: selected ? Colors.blue.shade800 : Colors.black54,
-      ),
+      onTap: () => _changePeriod(days),
     );
   }
 }

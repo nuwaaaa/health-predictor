@@ -6,6 +6,7 @@ import 'pages/main_scaffold.dart';
 import 'pages/login_page.dart';
 import 'pages/onboarding_page.dart';
 import 'services/auth_service.dart';
+import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,10 +24,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: '体調予測',
-      theme: ThemeData(
-        colorSchemeSeed: Colors.blue,
-        useMaterial3: true,
-      ),
+      theme: buildCalmBlueTheme(),
       home: AuthWrapper(onboardingDone: onboardingDone),
     );
   }

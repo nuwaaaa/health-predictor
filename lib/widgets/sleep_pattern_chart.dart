@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/daily_log.dart';
+import '../theme/app_theme.dart';
 
 /// 睡眠パターン専用グラフ（要件書 Section 2.5）
-/// 就寝～起床をバー表示で可視化
-/// 推奨睡眠時間以上は緑系、未満はオレンジ系で色分け
 class SleepPatternChart extends StatelessWidget {
   final List<DailyLog> logs;
   final double recommendedHours;
@@ -22,22 +21,25 @@ class SleepPatternChart extends StatelessWidget {
     if (logsWithSleep.isEmpty) {
       return const SizedBox(
         height: 150,
-        child: Center(child: Text('睡眠データなし')),
+        child: Center(
+          child: Text('睡眠データなし', style: AppTextStyles.caption),
+        ),
       );
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 凡例
         Row(
           children: [
-            _legendDot(Colors.green.shade400, '${recommendedHours.toStringAsFixed(0)}h以上'),
+            _legendDot(AppColors.chartGreen,
+                '${recommendedHours.toStringAsFixed(0)}h以上'),
             const SizedBox(width: 16),
-            _legendDot(Colors.orange.shade400, '${recommendedHours.toStringAsFixed(0)}h未満'),
+            _legendDot(AppColors.chartOrange,
+                '${recommendedHours.toStringAsFixed(0)}h未満'),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.sm),
         ...logsWithSleep.map((log) => _sleepBar(log)),
       ],
     );
@@ -56,7 +58,7 @@ class SleepPatternChart extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.black54)),
+        Text(label, style: AppTextStyles.captionSmall),
       ],
     );
   }
@@ -65,11 +67,8 @@ class SleepPatternChart extends StatelessWidget {
     final sleep = log.sleep!;
     final dur = sleep.durationHours!;
     final isGood = dur >= recommendedHours;
-    final color = isGood ? Colors.green.shade400 : Colors.orange.shade400;
-
-    // バーの幅を最大12時間スケールで正規化
+    final color = isGood ? AppColors.chartGreen : AppColors.chartOrange;
     final barFraction = (dur / 12.0).clamp(0.0, 1.0);
-
     final bedStr = sleep.bedTime ?? '--:--';
     final wakeStr = sleep.wakeTime ?? '--:--';
     final mmdd = log.dateKey.substring(5);
@@ -80,10 +79,7 @@ class SleepPatternChart extends StatelessWidget {
         children: [
           SizedBox(
             width: 40,
-            child: Text(
-              mmdd,
-              style: const TextStyle(fontSize: 11, color: Colors.black54),
-            ),
+            child: Text(mmdd, style: AppTextStyles.captionSmall),
           ),
           const SizedBox(width: 4),
           Expanded(
@@ -94,7 +90,7 @@ class SleepPatternChart extends StatelessWidget {
                     Container(
                       height: 20,
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
+                        color: AppColors.divider,
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
@@ -130,7 +126,9 @@ class SleepPatternChart extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: isGood ? Colors.green.shade700 : Colors.orange.shade700,
+                color: isGood
+                    ? const Color(0xFF276749)
+                    : const Color(0xFF9C4221),
               ),
             ),
           ),

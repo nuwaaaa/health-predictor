@@ -3,14 +3,15 @@ import '../models/daily_log.dart';
 import '../models/model_status.dart';
 import '../models/prediction.dart';
 import '../services/firestore_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/common_widgets.dart';
 import '../widgets/mood_selector.dart';
 import '../widgets/chart_7days.dart';
 import '../widgets/status_banner.dart';
 import '../widgets/prediction_card.dart';
 import 'daily_input_page.dart';
 
-/// ホームタブ: 予測カード、体調入力、記録サマリー、ステータス、
-/// 要因/アドバイス要約、直近7日ミニカード
+/// ホームタブ — Calm Blue デザイン
 class HomePage extends StatefulWidget {
   final FirestoreService service;
   final DailyLog? todayLog;
@@ -78,89 +79,85 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ホーム'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('ホーム')),
       body: RefreshIndicator(
         onRefresh: widget.onReload,
         child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 18),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: AppSpacing.md),
 
-            // --- (1) 予測カード ---
-            PredictionCard(
-              prediction: widget.prediction,
-              isFallback: widget.isFallbackPrediction,
-              status: widget.status,
-              onTap: () => widget.onSwitchTab(2),
-            ),
-
-            const SizedBox(height: 20),
-
-            // --- (2) 体調入力 ---
-            const Text('今日の体調は？',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 14),
-            MoodSelector(
-              selected: widget.todayLog?.moodScore,
-              enabled: !_savingMood,
-              onSelect: _onMoodSelected,
-            ),
-            const SizedBox(height: 10),
-            if (_savingMood)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(8),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-              )
-            else
-              Center(
-                child: Text(
-                  widget.todayLog?.moodScore != null
-                      ? 'スコア：${widget.todayLog!.moodScore}'
-                      : '未入力',
-                  style: const TextStyle(fontSize: 16, color: Colors.black54),
-                ),
+              // --- (1) 予測カード ---
+              PredictionCard(
+                prediction: widget.prediction,
+                isFallback: widget.isFallbackPrediction,
+                status: widget.status,
+                onTap: () => widget.onSwitchTab(2),
               ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.lg),
 
-            // --- (3) 今日の記録サマリー ---
-            _todaySummaryCard(),
+              // --- (2) 体調入力 ---
+              Text('今日の体調は？', style: AppTextStyles.section),
+              const SizedBox(height: AppSpacing.sm),
+              MoodSelector(
+                selected: widget.todayLog?.moodScore,
+                enabled: !_savingMood,
+                onSelect: _onMoodSelected,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              if (_savingMood)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(AppSpacing.sm),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                )
+              else
+                Center(
+                  child: Text(
+                    widget.todayLog?.moodScore != null
+                        ? 'スコア：${widget.todayLog!.moodScore}'
+                        : '未入力',
+                    style: AppTextStyles.caption,
+                  ),
+                ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
 
-            // --- (4) ステータスバナー ---
-            StatusBanner(status: widget.status),
+              // --- (3) 今日の記録サマリー ---
+              _todaySummaryCard(),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.md),
 
-            // --- (5) 要因TOP3・アドバイス（要約） → もっと見る → 分析タブ ---
-            if (widget.prediction != null &&
-                widget.prediction!.pToday != null &&
-                (widget.prediction!.contributions.isNotEmpty ||
-                    widget.prediction!.advices.isNotEmpty)) ...[
-              _summaryInsights(),
-              const SizedBox(height: 20),
+              // --- (4) ステータスバナー ---
+              StatusBanner(status: widget.status),
+
+              const SizedBox(height: AppSpacing.lg),
+
+              // --- (5) 要因TOP3・アドバイス（要約）→ もっと見る ---
+              if (widget.prediction != null &&
+                  widget.prediction!.pToday != null &&
+                  (widget.prediction!.contributions.isNotEmpty ||
+                      widget.prediction!.advices.isNotEmpty)) ...[
+                _summaryInsights(),
+                const SizedBox(height: AppSpacing.lg),
+              ],
+
+              // --- (6) 直近7日ミニカード → データへ ---
+              _mini7DaysSection(),
+
+              const SizedBox(height: AppSpacing.xl),
             ],
-
-            // --- (6) 直近7日ミニカード → データへ ---
-            _mini7DaysSection(),
-
-            const SizedBox(height: 30),
-          ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -168,21 +165,21 @@ class _HomePageState extends State<HomePage> {
   /// 要因・アドバイスの要約（ホーム用）
   Widget _summaryInsights() {
     final pred = widget.prediction!;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.shade100),
-      ),
+    return AppCard(
+      onTap: () => widget.onSwitchTab(2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (pred.contributions.isNotEmpty) ...[
-            const Text('予測の主な要因',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 6),
+            const Text(
+              '予測の主な要因',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textMain,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
             ...pred.contributions.take(3).map((c) => Padding(
                   padding: const EdgeInsets.only(bottom: 2),
                   child: Row(
@@ -197,22 +194,24 @@ class _HomePageState extends State<HomePage> {
                             : Colors.green.shade400,
                       ),
                       const SizedBox(width: 4),
-                      Text(c.label, style: const TextStyle(fontSize: 13)),
+                      Text(c.label,
+                          style: AppTextStyles.caption.copyWith(
+                              color: AppColors.textMain)),
                     ],
                   ),
                 )),
           ],
           if (pred.advices.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
                 Icon(Icons.lightbulb_outline,
-                    size: 14, color: Colors.amber.shade700),
+                    size: 14, color: AppColors.chartOrange),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     pred.advices.first.message,
-                    style: const TextStyle(fontSize: 12),
+                    style: AppTextStyles.captionSmall,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -220,139 +219,95 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ],
-          const SizedBox(height: 10),
-          GestureDetector(
-            onTap: () => widget.onSwitchTab(2),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text('もっと見る',
-                    style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.blue.shade700,
-                        fontWeight: FontWeight.w600)),
-                Icon(Icons.chevron_right,
-                    size: 18, color: Colors.blue.shade700),
-              ],
-            ),
+          const SizedBox(height: AppSpacing.sm),
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text(
+                'もっと見る',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Icon(Icons.chevron_right, size: 18, color: AppColors.primary),
+            ],
           ),
         ],
       ),
     );
   }
 
-  /// 直近7日ミニセクション + 「データへ」リンク
+  /// 直近7日ミニセクション
   Widget _mini7DaysSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            const Text('直近7日',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const Spacer(),
-            GestureDetector(
-              onTap: () => widget.onSwitchTab(1),
-              child: Row(
-                children: [
-                  Text('データへ',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.blue.shade700,
-                          fontWeight: FontWeight.w600)),
-                  Icon(Icons.chevron_right,
-                      size: 18, color: Colors.blue.shade700),
-                ],
-              ),
-            ),
-          ],
+        SectionHeader(
+          title: '直近7日',
+          actionLabel: 'データへ',
+          onAction: () => widget.onSwitchTab(1),
         ),
-        const SizedBox(height: 10),
-        Chart7Days(logs: widget.last7),
+        const SizedBox(height: AppSpacing.sm),
+        AppCard(
+          child: Chart7Days(logs: widget.last7),
+        ),
       ],
     );
   }
 
-  /// 今日の睡眠・歩数・ストレスのサマリーカード
+  /// 今日の記録サマリー
   Widget _todaySummaryCard() {
     final log = widget.todayLog;
     final hasSleep = log?.sleep?.durationHours != null;
     final hasSteps = log?.steps != null;
     final hasStress = log?.stress != null;
 
-    return GestureDetector(
+    return AppCard(
       onTap: _openDailyInput,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.black12),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('今日の記録',
-                      style:
-                          TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _summaryChip(
-                        '睡眠',
-                        hasSleep
-                            ? '${log!.sleep!.durationHours!.toStringAsFixed(1)}h'
-                            : '未入力',
-                        hasSleep,
-                      ),
-                      const SizedBox(width: 14),
-                      _summaryChip(
-                        '歩数',
-                        hasSteps ? '${log!.steps}歩' : '未入力',
-                        hasSteps,
-                      ),
-                      const SizedBox(width: 14),
-                      _summaryChip(
-                        'ストレス',
-                        hasStress ? 'Lv${log!.stress}' : '未入力',
-                        hasStress,
-                      ),
-                    ],
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '今日の記録',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textMain,
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                MetricChipsRow(
+                  chips: [
+                    MetricChipData(
+                      label: '睡眠',
+                      value: hasSleep
+                          ? '${log!.sleep!.durationHours!.toStringAsFixed(1)}h'
+                          : '未入力',
+                      filled: hasSleep,
+                    ),
+                    MetricChipData(
+                      label: '歩数',
+                      value: hasSteps ? '${log!.steps}歩' : '未入力',
+                      filled: hasSteps,
+                    ),
+                    MetricChipData(
+                      label: 'ストレス',
+                      value: hasStress ? 'Lv${log!.stress}' : '未入力',
+                      filled: hasStress,
+                    ),
+                  ],
+                ),
+              ],
             ),
-            const Icon(Icons.chevron_right, color: Colors.black38),
-          ],
-        ),
+          ),
+          const Icon(Icons.chevron_right, color: AppColors.textSub),
+        ],
       ),
-    );
-  }
-
-  Widget _summaryChip(String label, String text, bool filled) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: filled ? Colors.black54 : Colors.black26,
-          ),
-        ),
-        const SizedBox(width: 3),
-        Text(
-          text,
-          style: TextStyle(
-            fontSize: 13,
-            color: filled ? Colors.black87 : Colors.black38,
-          ),
-        ),
-      ],
     );
   }
 }

@@ -4,6 +4,7 @@ import '../models/model_status.dart';
 import '../models/prediction.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../theme/app_theme.dart';
 import 'home_page.dart';
 import 'data_page.dart';
 import 'analysis_page.dart';
@@ -43,7 +44,6 @@ class MainScaffoldState extends State<MainScaffold> {
     setState(() => _loading = true);
     final errors = <String>[];
 
-    // 各クエリを個別にtry-catchして、1つの失敗で全体が止まるのを防ぐ
     DailyLog? todayLog;
     ModelStatus status = ModelStatus();
     List<DailyLog> last7 = [];
@@ -74,7 +74,6 @@ class MainScaffoldState extends State<MainScaffold> {
       errors.add('今日の予測: $e');
     }
 
-    // 今日の予測がない場合、直近の予測をフォールバック表示
     if (prediction == null) {
       try {
         prediction = await _service.getLatestPrediction();
@@ -101,7 +100,6 @@ class MainScaffoldState extends State<MainScaffold> {
     setState(() => _loading = false);
   }
 
-  /// タブ切替（外部から呼べるように公開）
   void switchTab(int index) {
     setState(() => _currentIndex = index);
   }
@@ -142,31 +140,43 @@ class MainScaffoldState extends State<MainScaffold> {
                 ),
               ],
             ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: switchTab,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'ホーム',
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.card,
+          border: Border(
+            top: BorderSide(color: AppColors.divider, width: 0.5),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart),
-            label: 'データ',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.search_outlined),
-            selectedIcon: Icon(Icons.search),
-            label: '分析',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: '設定',
-          ),
-        ],
+        ),
+        child: NavigationBar(
+          backgroundColor: AppColors.card,
+          surfaceTintColor: Colors.transparent,
+          indicatorColor: AppColors.primaryTint,
+          selectedIndex: _currentIndex,
+          onDestinationSelected: switchTab,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined, color: AppColors.textSub),
+              selectedIcon: Icon(Icons.home, color: AppColors.primary),
+              label: 'ホーム',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.bar_chart_outlined, color: AppColors.textSub),
+              selectedIcon: Icon(Icons.bar_chart, color: AppColors.primary),
+              label: 'データ',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.search_outlined, color: AppColors.textSub),
+              selectedIcon: Icon(Icons.search, color: AppColors.primary),
+              label: '分析',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined, color: AppColors.textSub),
+              selectedIcon: Icon(Icons.settings, color: AppColors.primary),
+              label: '設定',
+            ),
+          ],
+        ),
       ),
     );
   }

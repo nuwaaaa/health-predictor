@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 class MoodSelector extends StatelessWidget {
   final int? selected;
@@ -69,15 +70,27 @@ class _MoodTile extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.blue.shade100 : Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(12),
+            color: isSelected ? AppColors.primaryTint : AppColors.background,
+            borderRadius: BorderRadius.circular(AppRadii.button),
             border: Border.all(
-              color: isSelected ? Colors.blue : Colors.transparent,
-              width: 2,
+              color: isSelected ? AppColors.primary : AppColors.divider,
+              width: isSelected ? 2 : 1,
             ),
           ),
-          child: Center(
-            child: Text(emoji, style: const TextStyle(fontSize: 26)),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 26)),
+              const SizedBox(height: 2),
+              Text(
+                '$value',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  color: isSelected ? AppColors.primary : AppColors.textSub,
+                ),
+              ),
+            ],
           ),
         ),
       ),

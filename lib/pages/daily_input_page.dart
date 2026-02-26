@@ -3,13 +3,11 @@ import 'package:flutter/material.dart';
 import '../models/daily_log.dart';
 import '../services/firestore_service.dart';
 import '../services/health_data_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/common_widgets.dart';
 import '../widgets/mood_selector.dart';
 
 /// 日次データ入力・編集画面
-///
-/// - dateKey == null → 今日の詳細入力（睡眠・歩数・ストレスのみ、体調はホームで入力済み）
-/// - dateKey != null → 過去データ編集（体調・睡眠・歩数・ストレス全項目）
-/// - readOnly == true → 閲覧のみ（4日以上前）
 class DailyInputPage extends StatefulWidget {
   final FirestoreService service;
   final DailyLog? todayLog;
@@ -112,7 +110,6 @@ class _DailyInputPageState extends State<DailyInputPage> {
           color: CupertinoColors.systemBackground.resolveFrom(context),
           child: Column(
             children: [
-              // ヘッダー（キャンセル・完了）
               Container(
                 height: 44,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -152,7 +149,6 @@ class _DailyInputPageState extends State<DailyInputPage> {
                   ],
                 ),
               ),
-              // ピッカー本体
               Expanded(
                 child: CupertinoDatePicker(
                   mode: CupertinoDatePickerMode.time,
@@ -171,7 +167,6 @@ class _DailyInputPageState extends State<DailyInputPage> {
     );
   }
 
-  /// HealthKit / Health Connect から歩数を自動取得
   Future<void> _importSteps() async {
     setState(() => _importingSteps = true);
     try {
@@ -207,7 +202,6 @@ class _DailyInputPageState extends State<DailyInputPage> {
     }
   }
 
-  /// HealthKit / Health Connect から睡眠データを自動取得
   Future<void> _importSleep() async {
     setState(() => _importingSleep = true);
     try {
@@ -254,12 +248,10 @@ class _DailyInputPageState extends State<DailyInputPage> {
     try {
       final dateKey = _isEditingPast ? _targetDateKey : null;
 
-      // 体調スコア（過去データ編集時のみ）
       if (_isEditingPast && _moodScore != null) {
         await widget.service.saveMoodScoreForDate(_targetDateKey, _moodScore!);
       }
 
-      // 睡眠
       if (_bedTime != null && _wakeTime != null) {
         final bed = _formatTime(_bedTime!);
         final wake = _formatTime(_wakeTime!);
@@ -278,7 +270,6 @@ class _DailyInputPageState extends State<DailyInputPage> {
         }
       }
 
-      // 歩数
       final stepsText = _stepsController.text.trim();
       if (stepsText.isNotEmpty) {
         final steps = int.tryParse(stepsText);
@@ -293,7 +284,6 @@ class _DailyInputPageState extends State<DailyInputPage> {
         );
       }
 
-      // ストレス
       if (_stress != null) {
         await widget.service.saveStress(_stress!, dateKeyOverride: dateKey);
       }
@@ -353,16 +343,14 @@ class _DailyInputPageState extends State<DailyInputPage> {
       appBar: AppBar(title: Text(title)),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- 体調スコア（過去データ編集 or 閲覧時のみ表示）---
+              // --- 体調スコア ---
               if (_isEditingPast || isReadOnly) ...[
-                const Text('体調スコア',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
+                Text('体調スコア', style: AppTextStyles.section),
+                const SizedBox(height: AppSpacing.sm),
                 IgnorePointer(
                   ignoring: isReadOnly,
                   child: Opacity(
@@ -374,15 +362,13 @@ class _DailyInputPageState extends State<DailyInputPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: AppSpacing.lg),
               ],
 
               // --- 睡眠 ---
               Row(
                 children: [
-                  const Text('睡眠',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text('睡眠', style: AppTextStyles.section),
                   const Spacer(),
                   if (!isReadOnly && !_isEditingPast)
                     _autoImportButton(
@@ -393,7 +379,7 @@ class _DailyInputPageState extends State<DailyInputPage> {
                     ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.sm),
               IgnorePointer(
                 ignoring: isReadOnly,
                 child: Opacity(
@@ -407,7 +393,7 @@ class _DailyInputPageState extends State<DailyInputPage> {
                           onTap: () => _pickTime(true),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: _timeButton(
                           label: '起床',
@@ -420,25 +406,23 @@ class _DailyInputPageState extends State<DailyInputPage> {
                 ),
               ),
               if (dur != null) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 Text(
                   '睡眠時間：${dur.toStringAsFixed(1)} 時間',
                   style: TextStyle(
                     fontSize: 15,
-                    color: dur < 6 ? Colors.red : Colors.black87,
+                    color: dur < 6 ? AppColors.destructive : AppColors.textMain,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
 
-              const SizedBox(height: 28),
+              const SizedBox(height: AppSpacing.lg),
 
               // --- 歩数 ---
               Row(
                 children: [
-                  const Text('歩数',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text('歩数', style: AppTextStyles.section),
                   const Spacer(),
                   if (!isReadOnly && !_isEditingPast)
                     _autoImportButton(
@@ -449,7 +433,7 @@ class _DailyInputPageState extends State<DailyInputPage> {
                     ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.sm),
               IgnorePointer(
                 ignoring: isReadOnly,
                 child: Opacity(
@@ -462,22 +446,19 @@ class _DailyInputPageState extends State<DailyInputPage> {
                         setState(() => _stepsFromAuto = false);
                       }
                     },
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       hintText: '例: 8000',
                       suffixText: '歩',
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: AppSpacing.lg),
 
-              // --- ストレス（任意）---
-              const Text('ストレス（任意）',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
+              // --- ストレス ---
+              Text('ストレス（任意）', style: AppTextStyles.section),
+              const SizedBox(height: AppSpacing.sm),
               IgnorePointer(
                 ignoring: isReadOnly,
                 child: Opacity(
@@ -500,13 +481,15 @@ class _DailyInputPageState extends State<DailyInputPage> {
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               decoration: BoxDecoration(
                                 color: selected
-                                    ? Colors.red.shade100
-                                    : Colors.grey.shade200,
-                                borderRadius: BorderRadius.circular(12),
+                                    ? AppColors.cautionSoft
+                                    : AppColors.background,
+                                borderRadius:
+                                    BorderRadius.circular(AppRadii.button),
                                 border: Border.all(
-                                  color:
-                                      selected ? Colors.red : Colors.transparent,
-                                  width: 2,
+                                  color: selected
+                                      ? AppColors.chartOrange
+                                      : AppColors.divider,
+                                  width: selected ? 2 : 1,
                                 ),
                               ),
                               child: Center(
@@ -517,6 +500,9 @@ class _DailyInputPageState extends State<DailyInputPage> {
                                     fontWeight: selected
                                         ? FontWeight.bold
                                         : FontWeight.normal,
+                                    color: selected
+                                        ? AppColors.textMain
+                                        : AppColors.textSub,
                                   ),
                                 ),
                               ),
@@ -528,48 +514,30 @@ class _DailyInputPageState extends State<DailyInputPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 4),
-              const Row(
+              const SizedBox(height: AppSpacing.xs),
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('低い',
-                      style: TextStyle(fontSize: 11, color: Colors.black45)),
-                  Text('高い',
-                      style: TextStyle(fontSize: 11, color: Colors.black45)),
+                  Text('低い', style: AppTextStyles.captionSmall),
+                  Text('高い', style: AppTextStyles.captionSmall),
                 ],
               ),
 
-              const SizedBox(height: 36),
+              const SizedBox(height: AppSpacing.xl),
 
-              // --- 保存 or 閲覧のみ表示 ---
+              // --- 保存 ---
               if (isReadOnly)
-                const Center(
+                Center(
                   child: Text(
                     '4日以上前のデータは編集できません',
-                    style: TextStyle(fontSize: 14, color: Colors.black45),
+                    style: AppTextStyles.caption,
                   ),
                 )
               else
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _saving ? null : _save,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: _saving
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2),
-                          )
-                        : const Text('保存する', style: TextStyle(fontSize: 16)),
-                  ),
+                PrimaryButton(
+                  label: '保存する',
+                  loading: _saving,
+                  onPressed: _save,
                 ),
             ],
           ),
@@ -578,7 +546,6 @@ class _DailyInputPageState extends State<DailyInputPage> {
     );
   }
 
-  /// 自動取得ボタン
   Widget _autoImportButton({
     required String label,
     required bool loading,
@@ -590,10 +557,10 @@ class _DailyInputPageState extends State<DailyInputPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isAuto ? Colors.green.shade50 : Colors.blue.shade50,
-          borderRadius: BorderRadius.circular(16),
+          color: isAuto ? AppColors.chartGreen.withAlpha(30) : AppColors.primaryTint,
+          borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(
-            color: isAuto ? Colors.green.shade300 : Colors.blue.shade200,
+            color: isAuto ? AppColors.chartGreen : AppColors.primary.withAlpha(80),
           ),
         ),
         child: Row(
@@ -606,15 +573,19 @@ class _DailyInputPageState extends State<DailyInputPage> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             else if (isAuto)
-              Icon(Icons.check_circle, size: 14, color: Colors.green.shade600)
+              Icon(Icons.check_circle, size: 14,
+                  color: const Color(0xFF276749))
             else
-              Icon(Icons.download_rounded, size: 14, color: Colors.blue.shade600),
+              Icon(Icons.download_rounded, size: 14,
+                  color: AppColors.primary),
             const SizedBox(width: 4),
             Text(
               isAuto ? '取得済み' : label,
               style: TextStyle(
                 fontSize: 12,
-                color: isAuto ? Colors.green.shade700 : Colors.blue.shade700,
+                color: isAuto
+                    ? const Color(0xFF276749)
+                    : AppColors.primary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -634,18 +605,21 @@ class _DailyInputPageState extends State<DailyInputPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.black12),
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(AppRadii.button),
+          border: Border.all(color: AppColors.divider),
         ),
         child: Column(
           children: [
-            Text(label,
-                style: const TextStyle(fontSize: 12, color: Colors.black54)),
+            Text(label, style: AppTextStyles.captionSmall),
             const SizedBox(height: 4),
             Text(
               time != null ? _formatTime(time) : '--:--',
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textMain,
+              ),
             ),
           ],
         ),

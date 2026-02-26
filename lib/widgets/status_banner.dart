@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/model_status.dart';
+import '../theme/app_theme.dart';
 
 class StatusBanner extends StatelessWidget {
   final ModelStatus status;
@@ -12,43 +13,53 @@ class StatusBanner extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: ready ? Colors.green.shade50 : Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: ready ? Colors.green.shade200 : Colors.orange.shade200,
-        ),
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        boxShadow: AppShadows.card,
       ),
       child: Column(
         children: [
-          Text(
-            status.statusLabel,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                ready ? Icons.check_circle_outline : Icons.hourglass_top,
+                size: 18,
+                color: ready ? AppColors.chartGreen : AppColors.chartOrange,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                status.statusLabel,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMain,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             '${status.daysCollected} / ${status.daysRequired} 日記録済み',
-            style: const TextStyle(fontSize: 13, color: Colors.black54),
+            style: AppTextStyles.captionSmall,
           ),
           if (ready) ...[
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.sm,
               children: [
                 _infoPill(
                   'モデル',
                   status.modelType == 'lightgbm' ? 'LightGBM' : 'ロジスティック',
                 ),
-                const SizedBox(width: 10),
                 _infoPill('信頼度', status.confidenceLevelLabel),
-                if (status.recentMissingRate > 0) ...[
-                  const SizedBox(width: 10),
+                if (status.recentMissingRate > 0)
                   _infoPill(
                     '欠損率',
                     '${(status.recentMissingRate * 100).round()}%',
                   ),
-                ],
               ],
             ),
           ],
@@ -59,14 +70,14 @@ class StatusBanner extends StatelessWidget {
 
   Widget _infoPill(String label, String value) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withAlpha(180),
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Text(
         '$label: $value',
-        style: const TextStyle(fontSize: 11, color: Colors.black54),
+        style: AppTextStyles.captionSmall,
       ),
     );
   }

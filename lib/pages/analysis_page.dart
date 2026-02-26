@@ -3,8 +3,10 @@ import '../models/daily_log.dart';
 import '../models/model_status.dart';
 import '../models/prediction.dart';
 import '../services/firestore_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/common_widgets.dart';
 
-/// 分析タブ: 要因TOP3、アドバイス、週次フィードバック、モデル情報
+/// 分析タブ — Calm Blue デザイン
 class AnalysisPage extends StatefulWidget {
   final FirestoreService service;
   final Prediction? prediction;
@@ -48,15 +50,10 @@ class _AnalysisPageState extends State<AnalysisPage> {
       if (latest == _currentWeekKey && mounted) {
         setState(() => _alreadySubmittedWeek = latest);
       }
-    } catch (_) {
-      // フィードバック確認失敗は無視（権限エラー等）
-    }
+    } catch (_) {}
   }
 
-  /// バックエンドがアドバイスを生成していない場合のフォールバック
-  /// 直近のログデータから好調日・不調日を比較しアドバイスを生成
   Future<void> _computeClientAdvice() async {
-    // バックエンドのアドバイスがあれば不要
     final pred = widget.prediction;
     if (pred != null && pred.advices.isNotEmpty) return;
 
@@ -81,7 +78,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
       final advices = <Advice>[];
 
-      // --- 睡眠アドバイス ---
       final goodSleep = goodDays
           .where((l) => l.sleep?.durationHours != null)
           .map((l) => l.sleep!.durationHours!)
@@ -103,7 +99,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
         }
       }
 
-      // --- 歩数アドバイス ---
       final goodSteps = goodDays
           .where((l) => l.steps != null)
           .map((l) => l.steps!.toDouble())
@@ -124,7 +119,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
         }
       }
 
-      // --- ストレスアドバイス ---
       final goodStress = goodDays
           .where((l) => l.stress != null)
           .map((l) => l.stress!.toDouble())
@@ -152,9 +146,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
           _clientAdvices = advices.length > 2 ? advices.sublist(0, 2) : advices;
         });
       }
-    } catch (_) {
-      // フォールバック計算失敗は無視
-    }
+    } catch (_) {}
   }
 
   Future<void> _submitFeedback(String result) async {
@@ -189,64 +181,67 @@ class _AnalysisPageState extends State<AnalysisPage> {
     final status = widget.status;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('分析'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('分析')),
       body: !status.ready
           ? _buildNotReady()
           : SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 18),
+                  const SizedBox(height: AppSpacing.md),
 
-          // --- 不調の基準 ---
-          _sectionTitle('あなたの「不調」の基準'),
-          const SizedBox(height: 10),
-          _unhealthyThresholdCard(),
+                  // --- 不調の基準 ---
+                  SectionHeader(title: 'あなたの「不調」の基準'),
+                  const SizedBox(height: AppSpacing.sm),
+                  _unhealthyThresholdCard(),
 
-          const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.lg),
 
-          // --- 要因 TOP3 ---
-          _sectionTitle('予測に影響した要因 TOP3'),
-          const SizedBox(height: 10),
-          if (pred != null && pred.contributions.isNotEmpty)
-            _contributionsCard(pred)
-          else
-            _emptyCard('予測データがありません'),
+                  // --- 要因 TOP3 ---
+                  SectionHeader(title: '予測に影響した要因 TOP3'),
+                  const SizedBox(height: AppSpacing.sm),
+                  if (pred != null && pred.contributions.isNotEmpty)
+                    _contributionsCard(pred)
+                  else
+                    const EmptyState(
+                      icon: Icons.analytics_outlined,
+                      message: '予測データがありません',
+                    ),
 
-          const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.lg),
 
-          // --- アドバイス ---
-          _sectionTitle('改善アドバイス'),
-          const SizedBox(height: 10),
-          if (pred != null && pred.advices.isNotEmpty)
-            _adviceCard(pred)
-          else if (_clientAdvices.isNotEmpty)
-            _clientAdviceCard()
-          else
-            _emptyCard('データが増えるとアドバイスが表示されます'),
+                  // --- アドバイス ---
+                  SectionHeader(title: '改善アドバイス'),
+                  const SizedBox(height: AppSpacing.sm),
+                  if (pred != null && pred.advices.isNotEmpty)
+                    _adviceCard(pred.advices)
+                  else if (_clientAdvices.isNotEmpty)
+                    _adviceCard(_clientAdvices)
+                  else
+                    const EmptyState(
+                      icon: Icons.lightbulb_outline,
+                      message: 'データが増えるとアドバイスが表示されます',
+                    ),
 
-          const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.lg),
 
-          // --- 週次フィードバック ---
-          _sectionTitle('週次フィードバック'),
-          const SizedBox(height: 10),
-          _feedbackCard(),
+                  // --- 週次フィードバック ---
+                  SectionHeader(title: '週次フィードバック'),
+                  const SizedBox(height: AppSpacing.sm),
+                  _feedbackCard(),
 
-          const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.lg),
 
-          // --- モデル情報 ---
-          _sectionTitle('モデル情報'),
-          const SizedBox(height: 10),
-          _modelInfoCard(),
+                  // --- モデル情報 ---
+                  SectionHeader(title: 'モデル情報'),
+                  const SizedBox(height: AppSpacing.sm),
+                  _modelInfoCard(),
 
-          const SizedBox(height: 30),
-        ],
-      ),
-    ),
+                  const SizedBox(height: AppSpacing.xl),
+                ],
+              ),
+            ),
     );
   }
 
@@ -256,30 +251,26 @@ class _AnalysisPageState extends State<AnalysisPage> {
     final threshold = status.unhealthyThreshold;
 
     if (mean14 == null || threshold == null) {
-      return _emptyCard('不調基準はまだ算出されていません');
+      return const EmptyState(
+        icon: Icons.info_outline,
+        message: '不調基準はまだ算出されていません',
+      );
     }
 
-    // 直近30日の不調日数（概算: unhealthyCountを表示）
     final unhealthyCount = status.unhealthyCount;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.shade100),
-      ),
+    return AccentCard(
+      accentColor: AppColors.primary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _infoRow('普段の体調', '${mean14.toStringAsFixed(1)}（直近14日の平均）'),
           _infoRow('不調ライン', '${threshold.toStringAsFixed(1)} 以下'),
           _infoRow('不調日数', '$unhealthyCount 日（累計）'),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             'この基準はあなたの入力データから毎日自動で更新されます。',
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            style: AppTextStyles.captionSmall,
           ),
         ],
       ),
@@ -293,14 +284,13 @@ class _AnalysisPageState extends State<AnalysisPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.model_training, size: 56, color: Colors.grey),
-            const SizedBox(height: 20),
-            const Text('データを集めています',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
+            const Icon(Icons.model_training, size: 56, color: AppColors.textSub),
+            const SizedBox(height: AppSpacing.lg),
+            const Text('データを集めています', style: AppTextStyles.section),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               'あと ${widget.status.remainingDays} 日で予測が始まります',
-              style: const TextStyle(fontSize: 14, color: Colors.black54),
+              style: AppTextStyles.caption,
             ),
           ],
         ),
@@ -308,26 +298,14 @@ class _AnalysisPageState extends State<AnalysisPage> {
     );
   }
 
-  Widget _sectionTitle(String title) {
-    return Text(title,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold));
-  }
-
   Widget _contributionsCard(Prediction pred) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black12),
-      ),
+    return AppCard(
       child: Column(
         children: [
           ...pred.contributions.map((c) {
             final isUp = c.isRiskIncrease;
             return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
               child: Row(
                 children: [
                   Container(
@@ -337,7 +315,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
                       color: isUp
                           ? Colors.red.shade50
                           : Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppRadii.button),
                     ),
                     child: Icon(
                       isUp ? Icons.arrow_upward : Icons.arrow_downward,
@@ -347,14 +325,16 @@ class _AnalysisPageState extends State<AnalysisPage> {
                           : Colors.green.shade500,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(c.label,
                             style: const TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.w600)),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textMain)),
                         Text(
                           isUp ? 'リスク増加方向' : 'リスク低下方向',
                           style: TextStyle(
@@ -371,74 +351,34 @@ class _AnalysisPageState extends State<AnalysisPage> {
               ),
             );
           }),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             '※ 因果関係ではなく、あなたのデータにおける傾向です',
-            style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+            style: AppTextStyles.captionSmall,
           ),
         ],
       ),
     );
   }
 
-  Widget _adviceCard(Prediction pred) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.amber.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber.shade200),
-      ),
+  Widget _adviceCard(List<Advice> advices) {
+    return AccentCard(
+      accentColor: AppColors.chartOrange,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: pred.advices.map((a) {
+        children: advices.map((a) {
           return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(Icons.lightbulb_outline,
-                    size: 18, color: Colors.amber.shade700),
-                const SizedBox(width: 10),
+                    size: 18, color: AppColors.chartOrange),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
                     a.message,
-                    style: const TextStyle(fontSize: 14, height: 1.5),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _clientAdviceCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.amber.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: _clientAdvices.map((a) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.lightbulb_outline,
-                    size: 18, color: Colors.amber.shade700),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    a.message,
-                    style: const TextStyle(fontSize: 14, height: 1.5),
+                    style: AppTextStyles.body.copyWith(fontSize: 14),
                   ),
                 ),
               ],
@@ -454,53 +394,44 @@ class _AnalysisPageState extends State<AnalysisPage> {
         _feedbackSubmitted || _alreadySubmittedWeek != null;
 
     if (alreadyDone) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.green.shade50,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.green.shade200),
-        ),
+      return AppCard(
         child: Row(
           children: [
-            Icon(Icons.check_circle, size: 20, color: Colors.green.shade500),
-            const SizedBox(width: 10),
-            const Text('今週のフィードバック済み',
-                style: TextStyle(fontSize: 14)),
+            Icon(Icons.check_circle, size: 20, color: AppColors.chartGreen),
+            const SizedBox(width: AppSpacing.sm),
+            const Text('今週のフィードバック済み', style: AppTextStyles.caption),
           ],
         ),
       );
     }
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black12),
-      ),
+    return AppCard(
       child: Column(
         children: [
-          const Text('先週の予報、実際はどうでした？',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 14),
+          const Text(
+            '先週の予報、実際はどうでした？',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textMain,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
           Row(
             children: [
               Expanded(
                 child: _fbButton('当たった', Icons.check_circle_outline,
-                    Colors.green, 'correct'),
+                    AppColors.chartGreen, 'correct'),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: _fbButton(
                     '外れた', Icons.cancel_outlined, Colors.red, 'incorrect'),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: _fbButton(
-                    'わからない', Icons.help_outline, Colors.grey, 'unknown'),
+                child: _fbButton('わからない', Icons.help_outline,
+                    AppColors.textSub, 'unknown'),
               ),
             ],
           ),
@@ -517,8 +448,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
           color: color.withAlpha(20),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withAlpha(80)),
+          borderRadius: BorderRadius.circular(AppRadii.button),
+          border: Border.all(color: color.withAlpha(60)),
         ),
         child: Column(
           children: [
@@ -538,14 +469,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
     final modelLabel =
         status.modelType == 'lightgbm' ? 'LightGBM' : 'ロジスティック回帰';
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black12),
-      ),
+    return AppCard(
       child: Column(
         children: [
           _infoRow('使用モデル', modelLabel),
@@ -562,32 +486,17 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
   Widget _infoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
         children: [
-          Text(label,
-              style: const TextStyle(fontSize: 14, color: Colors.black54)),
+          Text(label, style: AppTextStyles.caption),
           const Spacer(),
           Text(value,
-              style:
-                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMain)),
         ],
-      ),
-    );
-  }
-
-  Widget _emptyCard(String message) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black12),
-      ),
-      child: Center(
-        child: Text(message,
-            style: const TextStyle(fontSize: 14, color: Colors.black45)),
       ),
     );
   }

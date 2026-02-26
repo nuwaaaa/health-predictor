@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../models/daily_log.dart';
+import '../theme/app_theme.dart';
 
 class Chart7Days extends StatelessWidget {
   final List<DailyLog> logs;
@@ -32,14 +33,15 @@ class Chart7Days extends StatelessWidget {
     if (logs.isEmpty) {
       return const SizedBox(
         height: 200,
-        child: Center(child: Text('まだ履歴がありません')),
+        child: Center(
+          child: Text('まだ履歴がありません', style: AppTextStyles.caption),
+        ),
       );
     }
 
     final maxX = (logs.length - 1).toDouble();
     final showMA = logs.length > 7;
 
-    // 横軸ラベルの間引き
     int labelInterval;
     if (logs.length <= 10) {
       labelInterval = 1;
@@ -60,9 +62,16 @@ class Chart7Days extends StatelessWidget {
             maxX: maxX + 0.6,
             minY: 1,
             maxY: 5,
-            gridData: const FlGridData(show: true),
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              horizontalInterval: 1,
+              getDrawingHorizontalLine: (_) => FlLine(
+                color: AppColors.chartGrid,
+                strokeWidth: 0.5,
+              ),
+            ),
             borderData: FlBorderData(show: false),
-            // ツールチップ: 小数第1位まで表示
             lineTouchData: LineTouchData(
               touchTooltipData: LineTouchTooltipData(
                 getTooltipItems: (touchedSpots) {
@@ -70,7 +79,7 @@ class Chart7Days extends StatelessWidget {
                     return LineTooltipItem(
                       spot.y.toStringAsFixed(1),
                       TextStyle(
-                        color: spot.bar.color ?? Colors.blue,
+                        color: spot.bar.color ?? AppColors.chartBlue,
                         fontWeight: FontWeight.bold,
                       ),
                     );
@@ -83,8 +92,17 @@ class Chart7Days extends StatelessWidget {
                   const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               rightTitles:
                   const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              leftTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: true, reservedSize: 28),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 28,
+                  getTitlesWidget: (value, meta) {
+                    return Text(
+                      value.toInt().toString(),
+                      style: AppTextStyles.captionSmall,
+                    );
+                  },
+                ),
               ),
               bottomTitles: AxisTitles(
                 sideTitles: SideTitles(
@@ -108,30 +126,37 @@ class Chart7Days extends StatelessWidget {
 
                     return Padding(
                       padding: const EdgeInsets.only(top: 6),
-                      child: Text(label, style: const TextStyle(fontSize: 10)),
+                      child: Text(label, style: AppTextStyles.captionSmall),
                     );
                   },
                 ),
               ),
             ),
             lineBarsData: [
-              // 日次データ
               LineChartBarData(
                 isCurved: true,
-                barWidth: showMA ? 1.5 : 3,
-                color: showMA ? Colors.blue.withAlpha(120) : Colors.blue,
-                dotData: FlDotData(show: logs.length <= 31),
+                barWidth: showMA ? 1.5 : 2.5,
+                color: showMA
+                    ? AppColors.chartBlue.withAlpha(100)
+                    : AppColors.chartBlue,
+                dotData: FlDotData(
+                  show: logs.length <= 31,
+                  getDotPainter: (spot, __, ___, ____) => FlDotCirclePainter(
+                    radius: 3,
+                    color: AppColors.chartBlue,
+                    strokeWidth: 0,
+                  ),
+                ),
                 spots: [
                   for (int i = 0; i < logs.length; i++)
                     FlSpot(i.toDouble(), (logs[i].moodScore ?? 3).toDouble()),
                 ],
               ),
-              // 7日移動平均（30日以上で表示）
               if (showMA)
                 LineChartBarData(
                   isCurved: true,
-                  barWidth: 3,
-                  color: Colors.blue.withAlpha(200),
+                  barWidth: 2.5,
+                  color: AppColors.chartBlue,
                   dotData: const FlDotData(show: false),
                   spots: calcMovingAverage(logs),
                 ),

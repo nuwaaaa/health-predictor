@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import '../models/daily_log.dart';
+import '../theme/app_theme.dart';
 import 'mood_selector.dart';
 
 class DailyList extends StatelessWidget {
   final List<DailyLog> logs;
-
-  /// 行タップ時のコールバック。(dateKey, editable) を渡す。
   final void Function(String dateKey, bool editable)? onTap;
 
   const DailyList({super.key, required this.logs, this.onTap});
 
-  /// 直近3日以内（今日含む）なら編集可能
   static bool isEditable(String dateKey) {
     try {
       final date = DateTime.parse(dateKey);
@@ -23,7 +21,6 @@ class DailyList extends StatelessWidget {
     }
   }
 
-  /// ログリストに直近4日（今日+過去3日）の未記入日を追加
   List<DailyLog> _fillMissingEditableDays(List<DailyLog> original) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -39,7 +36,6 @@ class DailyList extends StatelessWidget {
       }
     }
 
-    // 日付昇順でソート
     filled.sort((a, b) => a.dateKey.compareTo(b.dateKey));
     return filled;
   }
@@ -49,7 +45,7 @@ class DailyList extends StatelessWidget {
     final filledLogs = _fillMissingEditableDays(logs);
     if (filledLogs.isEmpty) return const SizedBox.shrink();
 
-    final reversed = filledLogs.reversed.toList(); // 新→古
+    final reversed = filledLogs.reversed.toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -69,47 +65,51 @@ class DailyList extends StatelessWidget {
         return GestureDetector(
           onTap: onTap != null ? () => onTap!(log.dateKey, editable) : null,
           child: Container(
-            margin: const EdgeInsets.only(bottom: 8),
+            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: isEmpty ? Colors.grey.shade50 : Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              color: isEmpty ? AppColors.background : AppColors.card,
+              borderRadius: BorderRadius.circular(AppRadii.button),
               border: Border.all(
                 color: isEmpty && editable
-                    ? Colors.orange.shade200
-                    : Colors.black12,
+                    ? AppColors.cautionSoft2
+                    : AppColors.divider,
               ),
             ),
             child: Row(
               children: [
-                // 日付
                 SizedBox(
                   width: 90,
-                  child: Text(log.dateKey,
-                      style:
-                          const TextStyle(fontSize: 13, color: Colors.black54)),
+                  child: Text(log.dateKey, style: AppTextStyles.captionSmall),
                 ),
-                // 体調
                 if (isEmpty)
-                  Text(editable ? '未入力' : '-',
-                      style:
-                          TextStyle(fontSize: 13, color: Colors.orange.shade600))
+                  Text(
+                    editable ? '未入力' : '-',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: editable
+                          ? AppColors.chartOrange
+                          : AppColors.textSub,
+                    ),
+                  )
                 else
-                  Text('$emoji $m', style: const TextStyle(fontSize: 16)),
+                  Text('$emoji $m',
+                      style: const TextStyle(
+                          fontSize: 16, color: AppColors.textMain)),
                 const Spacer(),
                 if (!isEmpty) ...[
-                  // 睡眠
                   _miniLabel('🛏️', sleepText),
                   const SizedBox(width: 12),
-                  // 歩数
                   _miniLabel('👟', stepsText),
                 ],
                 if (onTap != null) ...[
                   const SizedBox(width: 8),
                   Icon(
-                    editable ? Icons.edit_outlined : Icons.visibility_outlined,
+                    editable
+                        ? Icons.edit_outlined
+                        : Icons.visibility_outlined,
                     size: 16,
-                    color: editable ? Colors.blue.shade400 : Colors.black26,
+                    color: editable ? AppColors.primary : AppColors.textSub,
                   ),
                 ],
               ],
@@ -126,7 +126,7 @@ class DailyList extends StatelessWidget {
       children: [
         Text(icon, style: const TextStyle(fontSize: 12)),
         const SizedBox(width: 3),
-        Text(text, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+        Text(text, style: AppTextStyles.captionSmall),
       ],
     );
   }
