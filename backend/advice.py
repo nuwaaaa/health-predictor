@@ -1,7 +1,7 @@
 """改善アドバイス生成
 
 要件定義書 Section 2.3 に基づく。
-- リスクが高い場合、今日～明日に変えられる行動に限定
+- 今日～明日に変えられる行動に限定
 - 個人データの好調日・不調日の統計量から推奨値を自動算出
 - 最大2件のアドバイスを生成
 - 対象: 睡眠時間、歩数、ストレス（曜日・過去の体調は対象外）
@@ -13,7 +13,6 @@ import pandas as pd
 def generate_advice(
     df: pd.DataFrame,
     p_today: float | None,
-    risk_threshold: float = 0.3,
     days_collected: int = 0,
     unhealthy_count: int = 0,
 ) -> list[dict]:
