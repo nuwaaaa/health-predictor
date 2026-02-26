@@ -458,22 +458,27 @@ AUCが良くても確率のスケールがズレていると「外れた感」�
 
 ### Firestore 保存
 
-`predictions/{date_key}` に `advice` フィールドを追加：
+`predictions/{date_key}` に `advices` フィールドを追加：
 
 ```json
 {
-  "advice": [
+  "advices": [
     {
-      "feature": "sleep_hours",
-      "message": "7.2時間の睡眠をとった翌日は体調が安定する傾向があります",
-      "detail": {
-        "targetValue": 7.2
-      },
-      "priority": 1
+      "param": "sleep",
+      "message": "7.2時間の睡眠をとった翌日は体調が安定する傾向があります"
+    },
+    {
+      "param": "steps",
+      "message": "8,500歩以上の日は体調が安定する傾向があります"
     }
   ]
 }
 ```
+
+- `param`: 対象パラメータ識別子（`sleep` / `steps` / `stress`）
+- `message`: 推奨値を埋め込んだ表示用メッセージ（そのままUIに表示）
+- 推奨値はメッセージ文字列に直接埋め込む設計（構造化フィールド不要、表示ロジックをシンプルに保つ）
+- 優先度はバックエンドで算出順に並べ替え済みのため、配列順=表示順
 
 ### 表示ルール
 
@@ -492,7 +497,7 @@ AUCが良くても確率のスケールがズレていると「外れた感」�
 |不調10件未満 OR 全体60日未満 |数値なし。「低下する傾向があります」と幅で表現|
 |不調10件以上 AND 全体60日以上|具体的な数値（「不調率が30%低下」）を表示 |
 
-- 睡眠の推奨値（`targetValue`）は好調日のデータが10日以上あれば表示可能
+- 睡眠の推奨値は好調日のデータが10日以上あれば `message` に数値を埋め込んで表示
 
 -----
 
@@ -533,21 +538,25 @@ shap_values = explainer.shap_values(X_today)
 ```json
 {
   "contributions": [
-    {"feature": "sleep_hours", "label": "睡眠時間", "value": -0.35, "direction": "negative"},
-    {"feature": "mood_t1", "label": "前日の体調", "value": 0.28, "direction": "positive"},
-    {"feature": "steps_t1", "label": "昨日の歩数", "value": -0.15, "direction": "negative"}
+    {"feature": "sleep_hours_filled", "value": -0.35},
+    {"feature": "mood_lag1", "value": 0.28},
+    {"feature": "steps_t1", "value": -0.15}
   ]
 }
 ```
 
+- `feature`: 特徴量の内部名（クライアント側でラベル変換テーブルを用いて日本語表示名に変換）
 - `value`: 寄与度（正=リスク増加方向、負=リスク低下方向）
+- `label` / `direction` はペイロード最小化のためFirestoreに保存せず、クライアント側で算出する設計
+  - `label`: Flutter側のラベル対応マップで変換（下記テーブル参照）
+  - `direction`: `value > 0` → リスク増加、`value < 0` → リスク低下
 - 上位3件のみ保存（UIの見やすさ優先）
 
 ### 表示方針
 
 - 「今日の予測に影響した要因 TOP3」として表示
 - 正方向（リスク増加）は赤系、負方向（リスク低下）は緑系で色分け
-- ユーザー向けラベル（`sleep_hours` → 「睡眠時間」）に変換して表示
+- ユーザー向けラベルはクライアント側（Flutter `FeatureContribution.label` getter）で変換して表示
 - 小さく**「※ 因果関係ではなく、あなたのデータにおける傾向です」**と注記を入れる（ヘルスケアアプリの信頼性向上）
 
 ### 特徴量のユーザー向けラベル対応表
