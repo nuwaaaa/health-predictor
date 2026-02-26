@@ -189,6 +189,9 @@ def _process_user(db: firestore.Client, uid: str, today: str):
     # 特徴量寄与度TOP3
     contributions = today_result.get("contributions", [])
 
+    # クライアント側推論用モデルパラメータ（ロジスティック回帰のみ）
+    model_params = today_result.get("model_params")
+
     # 予測結果を Firestore に保存
     _save_prediction(
         db=db,
@@ -214,6 +217,7 @@ def _process_user(db: firestore.Client, uid: str, today: str):
         ready=True,
         mood_mean_14=mood_mean_14,
         unhealthy_threshold=unhealthy_threshold,
+        model_params=model_params,
     )
 
     # バッチ評価ログを保存（設計書 Section 13.3）
@@ -293,6 +297,7 @@ def _update_model_status(
     ready: bool,
     mood_mean_14: float | None = None,
     unhealthy_threshold: float | None = None,
+    model_params: dict | None = None,
 ):
     """model_status を更新"""
     status_ref = (
@@ -316,6 +321,8 @@ def _update_model_status(
         data["moodMean14"] = round(mood_mean_14, 2)
     if unhealthy_threshold is not None:
         data["unhealthyThreshold"] = unhealthy_threshold
+    if model_params is not None:
+        data["modelParams"] = model_params
 
     status_ref.set(data, merge=True)
 

@@ -9,6 +9,7 @@ class PredictionCard extends StatelessWidget {
   final bool isFallback;
   final ModelStatus status;
   final VoidCallback? onTap;
+  final String? titleOverride;
 
   const PredictionCard({
     super.key,
@@ -16,6 +17,7 @@ class PredictionCard extends StatelessWidget {
     this.isFallback = false,
     required this.status,
     this.onTap,
+    this.titleOverride,
   });
 
   @override
@@ -118,18 +120,29 @@ class PredictionCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isFallback
-                          ? '直近の予測（${_formatDateKey(pred.dateKey)}）'
-                          : pred.provisional
-                              ? '今日の不調リスク（暫定）'
-                              : '今日の不調リスク',
+                      titleOverride ??
+                          (isFallback
+                              ? '直近の予測（${_formatDateKey(pred.dateKey)}）'
+                              : pred.provisional
+                                  ? '今日の不調リスク（暫定）'
+                                  : '今日の不調リスク'),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: AppColors.textMain,
                       ),
                     ),
-                    if (pred.provisional && !isFallback)
+                    if (titleOverride != null && pred.provisional)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 2),
+                        child: Text(
+                          '今日の入力データに基づく予測です',
+                          style: AppTextStyles.captionSmall,
+                        ),
+                      ),
+                    if (titleOverride == null &&
+                        pred.provisional &&
+                        !isFallback)
                       const Padding(
                         padding: EdgeInsets.only(top: 2),
                         child: Text(
@@ -137,7 +150,7 @@ class PredictionCard extends StatelessWidget {
                           style: AppTextStyles.captionSmall,
                         ),
                       ),
-                    if (isFallback)
+                    if (isFallback && titleOverride == null)
                       const Padding(
                         padding: EdgeInsets.only(top: 2),
                         child: Text(
@@ -181,8 +194,8 @@ class PredictionCard extends StatelessWidget {
             ],
           ),
 
-          // 不調基準の要約
-          if (status.unhealthyThreshold != null) ...[
+          // 不調基準の要約（明日カードでは省略）
+          if (titleOverride == null && status.unhealthyThreshold != null) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(
               'あなたの基準: 体調 ${status.unhealthyThreshold!.toStringAsFixed(1)} 以下の日',
@@ -218,8 +231,8 @@ class PredictionCard extends StatelessWidget {
             _adviceSection(pred),
           ],
 
-          // 3日リスク
-          if (showP3d) ...[
+          // 3日リスク（明日カードでは省略）
+          if (titleOverride == null && showP3d) ...[
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
               child: Divider(color: AppColors.divider, height: 1),
@@ -227,8 +240,8 @@ class PredictionCard extends StatelessWidget {
             _threeDayRisk(pred),
           ],
 
-          // 3日リスク未開放
-          if (!showP3d && status.daysCollected >= 14) ...[
+          // 3日リスク未開放（明日カードでは省略）
+          if (titleOverride == null && !showP3d && status.daysCollected >= 14) ...[
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
               child: Divider(color: AppColors.divider, height: 1),

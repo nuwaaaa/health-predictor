@@ -1,3 +1,38 @@
+/// クライアント側推論用モデルパラメータ（ロジスティック回帰）
+class ModelParams {
+  final List<double> coefficients;
+  final double intercept;
+  final List<double> scalerMean;
+  final List<double> scalerScale;
+  final List<String> featureColumns;
+
+  ModelParams({
+    required this.coefficients,
+    required this.intercept,
+    required this.scalerMean,
+    required this.scalerScale,
+    required this.featureColumns,
+  });
+
+  factory ModelParams.fromFirestore(Map<String, dynamic> data) {
+    return ModelParams(
+      coefficients: (data['coefficients'] as List<dynamic>)
+          .map((e) => (e as num).toDouble())
+          .toList(),
+      intercept: (data['intercept'] as num).toDouble(),
+      scalerMean: (data['scalerMean'] as List<dynamic>)
+          .map((e) => (e as num).toDouble())
+          .toList(),
+      scalerScale: (data['scalerScale'] as List<dynamic>)
+          .map((e) => (e as num).toDouble())
+          .toList(),
+      featureColumns: (data['featureColumns'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
+    );
+  }
+}
+
 /// モデル状態のデータクラス
 /// Firestore: users/{uid}/model_status/current
 class ModelStatus {
@@ -10,6 +45,7 @@ class ModelStatus {
   final String confidenceLevel; // 'low', 'medium', 'high'
   final double? moodMean14; // 直近14日の体調平均
   final double? unhealthyThreshold; // 不調閾値（moodMean14 - 1）
+  final ModelParams? modelParams; // クライアント側推論用（logisticのみ）
 
   ModelStatus({
     this.daysCollected = 0,
@@ -21,9 +57,20 @@ class ModelStatus {
     this.confidenceLevel = 'low',
     this.moodMean14,
     this.unhealthyThreshold,
+    this.modelParams,
   });
 
   factory ModelStatus.fromFirestore(Map<String, dynamic> data) {
+    ModelParams? params;
+    if (data['modelParams'] is Map<String, dynamic>) {
+      try {
+        params = ModelParams.fromFirestore(
+            data['modelParams'] as Map<String, dynamic>);
+      } catch (_) {
+        // パース失敗時はnull（クライアント予測無効化）
+      }
+    }
+
     return ModelStatus(
       daysCollected: (data['daysCollected'] as int?) ?? 0,
       daysRequired: (data['daysRequired'] as int?) ?? 14,
@@ -34,6 +81,7 @@ class ModelStatus {
       confidenceLevel: (data['confidenceLevel'] as String?) ?? 'low',
       moodMean14: (data['moodMean14'] as num?)?.toDouble(),
       unhealthyThreshold: (data['unhealthyThreshold'] as num?)?.toDouble(),
+      modelParams: params,
     );
   }
 

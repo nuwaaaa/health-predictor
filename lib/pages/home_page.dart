@@ -17,6 +17,7 @@ class HomePage extends StatefulWidget {
   final DailyLog? todayLog;
   final ModelStatus status;
   final Prediction? prediction;
+  final Prediction? tomorrowPrediction;
   final bool isFallbackPrediction;
   final List<DailyLog> last7;
   final Future<void> Function() onReload;
@@ -28,6 +29,7 @@ class HomePage extends StatefulWidget {
     required this.todayLog,
     required this.status,
     required this.prediction,
+    this.tomorrowPrediction,
     this.isFallbackPrediction = false,
     required this.last7,
     required this.onReload,
@@ -90,13 +92,25 @@ class _HomePageState extends State<HomePage> {
             children: [
               const SizedBox(height: AppSpacing.md),
 
-              // --- (1) 予測カード ---
+              // --- (1) 今日の予測カード ---
               PredictionCard(
                 prediction: widget.prediction,
                 isFallback: widget.isFallbackPrediction,
                 status: widget.status,
                 onTap: () => widget.onSwitchTab(2),
               ),
+
+              // --- (1b) 明日の予測カード ---
+              if (widget.tomorrowPrediction != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                PredictionCard(
+                  prediction: widget.tomorrowPrediction,
+                  isFallback: false,
+                  status: widget.status,
+                  titleOverride: '明日の不調リスク',
+                  onTap: () => widget.onSwitchTab(2),
+                ),
+              ],
 
               const SizedBox(height: AppSpacing.lg),
 

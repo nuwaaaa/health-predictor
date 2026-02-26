@@ -4,6 +4,7 @@ import '../models/model_status.dart';
 import '../models/prediction.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../services/tomorrow_predictor.dart';
 import '../theme/app_theme.dart';
 import 'home_page.dart';
 import 'data_page.dart';
@@ -28,8 +29,9 @@ class MainScaffoldState extends State<MainScaffold> {
   DailyLog? _todayLog;
   ModelStatus _status = ModelStatus();
   Prediction? _prediction;
+  Prediction? _tomorrowPrediction;
   bool _isFallbackPrediction = false;
-  List<DailyLog> _last7 = [];
+  List<DailyLog> _recentLogs = [];
 
   @override
   void initState() {
@@ -46,7 +48,7 @@ class MainScaffoldState extends State<MainScaffold> {
 
     DailyLog? todayLog;
     ModelStatus status = ModelStatus();
-    List<DailyLog> last7 = [];
+    List<DailyLog> recentLogs = [];
     Prediction? prediction;
     bool isFallback = false;
 
@@ -63,9 +65,9 @@ class MainScaffoldState extends State<MainScaffold> {
     }
 
     try {
-      last7 = await _service.getLastNDays(7);
+      recentLogs = await _service.getLastNDays(14);
     } catch (e) {
-      errors.add('直近7日: $e');
+      errors.add('直近ログ: $e');
     }
 
     try {
@@ -83,11 +85,25 @@ class MainScaffoldState extends State<MainScaffold> {
       }
     }
 
+    // 明日の予測をクライアント側で算出
+    Prediction? tomorrowPrediction;
+    if (status.modelParams != null &&
+        status.modelType == 'logistic' &&
+        todayLog?.moodScore != null) {
+      tomorrowPrediction = TomorrowPredictor.predict(
+        todayLog: todayLog!,
+        recentLogs: recentLogs,
+        modelParams: status.modelParams!,
+        confidence: status.confidenceLevel,
+      );
+    }
+
     setState(() {
       _todayLog = todayLog;
       _status = status;
-      _last7 = last7;
+      _recentLogs = recentLogs;
       _prediction = prediction;
+      _tomorrowPrediction = tomorrowPrediction;
       _isFallbackPrediction = isFallback;
     });
 
@@ -104,6 +120,12 @@ class MainScaffoldState extends State<MainScaffold> {
     setState(() => _currentIndex = index);
   }
 
+  /// 直近7日分（チャート・DataPage用）
+  List<DailyLog> get _last7 {
+    if (_recentLogs.length <= 7) return _recentLogs;
+    return _recentLogs.sublist(_recentLogs.length - 7);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -117,6 +139,7 @@ class MainScaffoldState extends State<MainScaffold> {
                   todayLog: _todayLog,
                   status: _status,
                   prediction: _prediction,
+                  tomorrowPrediction: _tomorrowPrediction,
                   isFallbackPrediction: _isFallbackPrediction,
                   last7: _last7,
                   onReload: _loadAll,

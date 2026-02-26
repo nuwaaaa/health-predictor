@@ -156,12 +156,24 @@ def train_and_predict(
         except Exception as e:
             logger.warning("LightGBM training failed: %s", e)
 
+    # クライアント側推論用にモデルパラメータを保存（ロジスティック回帰のみ）
+    model_params = None
+    if best_model_type == "logistic":
+        model_params = {
+            "coefficients": lr_model.coef_[0].tolist(),
+            "intercept": float(lr_model.intercept_[0]),
+            "scalerMean": scaler.mean_.tolist(),
+            "scalerScale": scaler.scale_.tolist(),
+            "featureColumns": list(feature_cols),
+        }
+
     return {
         "probability": best_prob,
         "model_type": best_model_type,
         "auc": best_auc,
         "pr_auc": best_pr_auc,
         "contributions": lr_contributions,
+        "model_params": model_params,
     }
 
 
