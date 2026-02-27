@@ -22,3 +22,4 @@ samples, guidance on mobile development, and a full API reference.
 
 ### Do
 - I feel that many technical terms are used in the language displayed within the app, so I will make the expressions more user-friendly and easier to understand.
+- Consider whether the forecast target should be today, tomorrow, or both.
