@@ -14,3 +14,11 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+## Random Notes (Free Zone)
+
+### Did
+- I made some UI improvements.
+
+### Do
+- I feel that many technical terms are used in the language displayed within the app, so I will make the expressions more user-friendly and easier to understand.
