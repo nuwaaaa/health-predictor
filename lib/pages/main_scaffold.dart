@@ -153,6 +153,7 @@ class MainScaffoldState extends State<MainScaffold> {
                 AnalysisPage(
                   service: _service,
                   prediction: _prediction,
+                  tomorrowPrediction: _tomorrowPrediction,
                   isFallbackPrediction: _isFallbackPrediction,
                   status: _status,
                 ),

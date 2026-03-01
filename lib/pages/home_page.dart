@@ -100,6 +100,18 @@ class _HomePageState extends State<HomePage> {
                 onTap: () => widget.onSwitchTab(2),
               ),
 
+              // --- (1a) 3日間リスクカード ---
+              if (widget.prediction != null &&
+                  widget.status.ready) ...[
+                if (widget.prediction!.p3d != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _threeDayRiskCard(widget.prediction!),
+                ] else if (widget.status.daysCollected >= 14) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _threeDayLockedCard(),
+                ],
+              ],
+
               // --- (1b) 明日の予測カード ---
               if (widget.tomorrowPrediction != null) ...[
                 const SizedBox(height: AppSpacing.sm),
@@ -269,6 +281,66 @@ class _HomePageState extends State<HomePage> {
         ),
       ],
     );
+  }
+
+  /// 3日間リスクカード（独立表示）
+  Widget _threeDayRiskCard(Prediction pred) {
+    final p3d = pred.displayP3d!;
+    final color = _riskColor(p3d);
+    return AppCard(
+      child: Row(
+        children: [
+          const Icon(Icons.calendar_today, size: 18, color: AppColors.textSub),
+          const SizedBox(width: 8),
+          const Text(
+            '3日間リスク',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textMain,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            pred.risk3dPercent,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 3日間リスク未開放カード
+  Widget _threeDayLockedCard() {
+    final need60 = widget.status.daysCollected < 60;
+    String message;
+    if (need60) {
+      message = '3日予測はあと ${60 - widget.status.daysCollected} 日で開放';
+    } else if (widget.status.unhealthyCount < 10) {
+      message = '3日予測：準備中';
+    } else {
+      message = '3日予測：まもなく開放';
+    }
+    return AppCard(
+      child: Row(
+        children: [
+          const Icon(Icons.lock_outline, size: 16, color: AppColors.textSub),
+          const SizedBox(width: 8),
+          Text(message, style: AppTextStyles.captionSmall),
+        ],
+      ),
+    );
+  }
+
+  Color _riskColor(double p) {
+    if (p >= 0.6) return Colors.red.shade700;
+    if (p >= 0.4) return Colors.orange.shade700;
+    if (p >= 0.2) return Colors.amber.shade700;
+    return AppColors.chartGreen;
   }
 
   /// 今日の記録サマリー

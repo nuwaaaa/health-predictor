@@ -9,6 +9,7 @@ import '../widgets/common_widgets.dart';
 class AnalysisPage extends StatefulWidget {
   final FirestoreService service;
   final Prediction? prediction;
+  final Prediction? tomorrowPrediction;
   final bool isFallbackPrediction;
   final ModelStatus status;
 
@@ -16,6 +17,7 @@ class AnalysisPage extends StatefulWidget {
     super.key,
     required this.service,
     required this.prediction,
+    this.tomorrowPrediction,
     this.isFallbackPrediction = false,
     required this.status,
   });
@@ -197,8 +199,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
                   const SizedBox(height: AppSpacing.lg),
 
-                  // --- 要因 TOP3 ---
-                  SectionHeader(title: '予測に影響した要因 TOP3'),
+                  // --- 今日の要因 TOP3 ---
+                  SectionHeader(title: '今日の予測に影響した要因 TOP3'),
                   const SizedBox(height: AppSpacing.sm),
                   if (pred != null && pred.contributions.isNotEmpty)
                     _contributionsCard(pred)
@@ -206,6 +208,20 @@ class _AnalysisPageState extends State<AnalysisPage> {
                     const EmptyState(
                       icon: Icons.analytics_outlined,
                       message: '予測データがありません',
+                    ),
+
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // --- 明日の要因 TOP3 ---
+                  SectionHeader(title: '明日の予測に影響した要因 TOP3'),
+                  const SizedBox(height: AppSpacing.sm),
+                  if (widget.tomorrowPrediction != null &&
+                      widget.tomorrowPrediction!.contributions.isNotEmpty)
+                    _contributionsCard(widget.tomorrowPrediction!)
+                  else
+                    const EmptyState(
+                      icon: Icons.analytics_outlined,
+                      message: '明日の予測データがありません',
                     ),
 
                   const SizedBox(height: AppSpacing.lg),

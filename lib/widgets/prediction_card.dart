@@ -99,7 +99,6 @@ class PredictionCard extends StatelessWidget {
     final pred = prediction!;
     final displayP = pred.displayPToday!;
     final riskColor = _riskColor(displayP);
-    final showP3d = pred.p3d != null;
 
     return Container(
       width: double.infinity,
@@ -216,8 +215,8 @@ class PredictionCard extends StatelessWidget {
             ),
           ],
 
-          // 特徴量寄与度TOP3
-          if (pred.contributions.isNotEmpty) ...[
+          // 特徴量寄与度TOP3（明日カードでは省略 → 分析タブに表示）
+          if (titleOverride == null && pred.contributions.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
             _contributionsSection(pred),
           ],
@@ -231,64 +230,9 @@ class PredictionCard extends StatelessWidget {
             _adviceSection(pred),
           ],
 
-          // 3日リスク（明日カードでは省略）
-          if (titleOverride == null && showP3d) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-              child: Divider(color: AppColors.divider, height: 1),
-            ),
-            _threeDayRisk(pred),
-          ],
-
-          // 3日リスク未開放（明日カードでは省略）
-          if (titleOverride == null && !showP3d && status.daysCollected >= 14) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-              child: Divider(color: AppColors.divider, height: 1),
-            ),
-            _threeDayLocked(),
-          ],
+          // 3日リスクはホーム画面で独立カードとして表示するため、ここでは省略
         ],
       ),
-    );
-  }
-
-  Widget _threeDayRisk(Prediction pred) {
-    final p3d = pred.displayP3d!;
-    final color = _riskColor(p3d);
-    return Row(
-      children: [
-        const Icon(Icons.calendar_today, size: 16, color: AppColors.textSub),
-        const SizedBox(width: 8),
-        const Text('3日間リスク', style: AppTextStyles.caption),
-        const Spacer(),
-        Text(
-          pred.risk3dPercent,
-          style: TextStyle(
-            fontSize: 20, fontWeight: FontWeight.bold, color: color,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _threeDayLocked() {
-    final need60 = status.daysCollected < 60;
-    final needUnhealthy = status.unhealthyCount < 10;
-    String message;
-    if (need60) {
-      message = '3日予測はあと ${60 - status.daysCollected} 日で開放';
-    } else if (needUnhealthy) {
-      message = '3日予測：準備中';
-    } else {
-      message = '3日予測：まもなく開放';
-    }
-    return Row(
-      children: [
-        const Icon(Icons.lock_outline, size: 16, color: AppColors.textSub),
-        const SizedBox(width: 8),
-        Text(message, style: AppTextStyles.captionSmall),
-      ],
     );
   }
 
