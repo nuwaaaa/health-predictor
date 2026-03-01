@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/daily_log.dart';
 import '../models/model_status.dart';
 import '../models/prediction.dart';
@@ -482,12 +483,11 @@ class FirestoreService {
         predData['p3d'] = p3d;
       }
 
-      // predictions はセキュリティルールで write: false の場合があるため try-catch
       try {
         final todayPredRef = _predictionsCol.doc(todayKey());
         await todayPredRef.set(predData);
-      } catch (_) {
-        // 本番ルール適用時は predictions 書き込み不可（正常動作）
+      } catch (e) {
+        debugPrint('predictions 書き込み失敗: $e');
       }
     }
 

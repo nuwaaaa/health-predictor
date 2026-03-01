@@ -56,10 +56,12 @@ service cloud.firestore {
       }
 
       // ----- 予測結果 -----
-      // バッチ（Cloud Run / Admin SDK）から書き込み、クライアントは読み取りのみ
+      // 本番: Cloud Run バッチ（Admin SDK）から書き込み
+      // 開発: seedTestData からクライアント書き込み
       match /predictions/{dateKey} {
         allow read: if isOwner(uid);
-        allow write: if false;
+        allow create, update: if isOwner(uid);
+        allow delete: if isOwner(uid);
       }
 
       // ----- モデル状態 -----
