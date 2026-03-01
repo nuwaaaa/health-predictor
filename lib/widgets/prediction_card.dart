@@ -215,22 +215,7 @@ class PredictionCard extends StatelessWidget {
             ),
           ],
 
-          // 特徴量寄与度TOP3（明日カードでは省略 → 分析タブに表示）
-          if (titleOverride == null && pred.contributions.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.md),
-            _contributionsSection(pred),
-          ],
-
-          // 改善アドバイス
-          if (pred.advices.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-              child: Divider(color: AppColors.divider, height: 1),
-            ),
-            _adviceSection(pred),
-          ],
-
-          // 3日リスクはホーム画面で独立カードとして表示するため、ここでは省略
+          // 要因・アドバイス・3日リスクは分析タブ / 独立カードに移動済み
         ],
       ),
     );
@@ -267,80 +252,6 @@ class PredictionCard extends StatelessWidget {
         style: TextStyle(
             fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
       ),
-    );
-  }
-
-  Widget _contributionsSection(Prediction pred) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('予測の主な要因', style: AppTextStyles.captionSmall),
-        const SizedBox(height: AppSpacing.xs),
-        ...pred.contributions.map((c) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                children: [
-                  Icon(
-                    c.isRiskIncrease ? Icons.arrow_upward : Icons.arrow_downward,
-                    size: 14,
-                    color: c.isRiskIncrease
-                        ? Colors.red.shade400
-                        : Colors.green.shade400,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    c.label,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: c.isRiskIncrease
-                          ? Colors.red.shade700
-                          : Colors.green.shade700,
-                    ),
-                  ),
-                ],
-              ),
-            )),
-        Text(
-          '※ 因果関係ではなく傾向です',
-          style: AppTextStyles.captionSmall.copyWith(fontSize: 10),
-        ),
-      ],
-    );
-  }
-
-  Widget _adviceSection(Prediction pred) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.lightbulb_outline, size: 16, color: AppColors.chartOrange),
-            const SizedBox(width: 6),
-            Text(
-              '改善アドバイス',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.chartOrange,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        ...pred.advices.map((a) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('・', style: TextStyle(color: AppColors.textSub)),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(a.message, style: AppTextStyles.caption.copyWith(color: AppColors.textMain)),
-                  ),
-                ],
-              ),
-            )),
-      ],
     );
   }
 

@@ -100,18 +100,6 @@ class _HomePageState extends State<HomePage> {
                 onTap: () => widget.onSwitchTab(2),
               ),
 
-              // --- (1a) 3日間リスクカード ---
-              if (widget.prediction != null &&
-                  widget.status.ready) ...[
-                if (widget.prediction!.p3d != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  _threeDayRiskCard(widget.prediction!),
-                ] else if (widget.status.daysCollected >= 14) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  _threeDayLockedCard(),
-                ],
-              ],
-
               // --- (1b) 明日の予測カード ---
               if (widget.tomorrowPrediction != null) ...[
                 const SizedBox(height: AppSpacing.sm),
@@ -122,6 +110,18 @@ class _HomePageState extends State<HomePage> {
                   titleOverride: '明日の不調リスク',
                   onTap: () => widget.onSwitchTab(2),
                 ),
+              ],
+
+              // --- (1c) 3日間リスクカード ---
+              if (widget.prediction != null &&
+                  widget.status.ready) ...[
+                if (widget.prediction!.p3d != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _threeDayRiskCard(widget.prediction!),
+                ] else if (widget.status.daysCollected >= 14) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _threeDayLockedCard(),
+                ],
               ],
 
               const SizedBox(height: AppSpacing.lg),
