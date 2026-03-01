@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../models/daily_log.dart';
 import '../models/model_status.dart';
 import '../models/prediction.dart';
 import '../services/firestore_service.dart';
@@ -94,7 +93,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
           advices.add(Advice(
             param: 'sleep',
             message:
-                '${recHours}時間の睡眠をとった翌日は体調が安定する傾向があります',
+                '$recHours時間の睡眠をとった翌日は体調が安定する傾向があります',
           ));
         }
       }
@@ -114,7 +113,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
           final threshold = (avgGood / 1000).round() * 1000;
           advices.add(Advice(
             param: 'steps',
-            message: '${threshold}歩以上の日は体調が安定する傾向があります',
+            message: '$threshold歩以上の日は体調が安定する傾向があります',
           ));
         }
       }

@@ -221,13 +221,10 @@ class FirestoreService {
   // --- アカウント削除 ---
 
   /// ユーザーの全サブコレクションを削除
-  /// predictions はセキュリティルールで write: false のため、
-  /// クライアント側からは削除できない。
   /// TODO: 設計書 Section 15.2 に従い Cloud Functions (onDelete トリガー)
   ///       で predictions サブコレクションも自動削除する仕組みを追加する
   Future<void> deleteAllUserData() async {
-    // クライアントから削除可能なコレクション
-    final deletable = ['daily', 'model_status', 'feedback'];
+    final deletable = ['daily', 'model_status', 'feedback', 'predictions'];
     for (final name in deletable) {
       final col = _userDoc.collection(name);
       final docs = await col.get();
@@ -441,7 +438,7 @@ class FirestoreService {
             advices.add({
               'param': 'sleep',
               'message':
-                  '${recHours}時間の睡眠をとった翌日は体調が安定する傾向があります',
+                  '$recHours時間の睡眠をとった翌日は体調が安定する傾向があります',
             });
           }
 
@@ -461,7 +458,7 @@ class FirestoreService {
             advices.add({
               'param': 'steps',
               'message':
-                  '${threshold}歩以上の日は体調が安定する傾向があります',
+                  '$threshold歩以上の日は体調が安定する傾向があります',
             });
           }
         }
@@ -488,6 +485,7 @@ class FirestoreService {
         await todayPredRef.set(predData);
       } catch (e) {
         debugPrint('predictions 書き込み失敗: $e');
+        rethrow;
       }
     }
 

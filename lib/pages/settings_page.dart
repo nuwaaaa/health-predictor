@@ -217,7 +217,7 @@ class _SettingsPageState extends State<SettingsPage> {
       await widget.service.seedTestData(totalDays: days);
       await widget.onReload();
       if (mounted) {
-        _showSnack('${days}日分のテストデータを作成しました');
+        _showSnack('$days日分のテストデータを作成しました');
       }
     } catch (e) {
       if (mounted) _showSnack('作成失敗: $e');

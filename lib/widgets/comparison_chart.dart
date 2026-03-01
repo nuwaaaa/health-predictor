@@ -47,7 +47,7 @@ class _ComparisonChartState extends State<ComparisonChart> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DropdownButtonFormField<String>(
-          value: _selectedFeature,
+          initialValue: _selectedFeature,
           decoration: const InputDecoration(
             labelText: '比較する特徴量',
             isDense: true,
