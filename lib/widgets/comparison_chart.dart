@@ -49,7 +49,7 @@ class _ComparisonChartState extends State<ComparisonChart> {
         DropdownButtonFormField<String>(
           initialValue: _selectedFeature,
           decoration: const InputDecoration(
-            labelText: '比較する特徴量',
+            labelText: '比較する生活データ',
             isDense: true,
           ),
           items: _featureOptions.entries

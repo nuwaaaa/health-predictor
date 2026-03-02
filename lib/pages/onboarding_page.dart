@@ -48,7 +48,7 @@ class OnboardingPage extends StatelessWidget {
               _infoRow(
                 icon: Icons.lock_outline,
                 title: 'どこに保存されるか',
-                description: 'あなた専用のクラウド領域\n（他のユーザーからは見えません）',
+                description: 'あなた専用のクラウド\n（インターネット上の安全な保管場所）',
               ),
               const SizedBox(height: 24),
               _infoRow(

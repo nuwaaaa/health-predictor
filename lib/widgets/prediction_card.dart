@@ -49,7 +49,7 @@ class PredictionCard extends StatelessWidget {
         children: [
           const Icon(Icons.model_training, size: 40, color: AppColors.textSub),
           const SizedBox(height: AppSpacing.sm),
-          const Text('予測モデル学習中', style: AppTextStyles.section),
+          const Text('あなた専用のモデルを作成中', style: AppTextStyles.section),
           const SizedBox(height: AppSpacing.sm),
           Text(
             'あと ${status.remainingDays} 日で予測開始',
@@ -108,9 +108,7 @@ class PredictionCard extends StatelessWidget {
         ? '3日以内の不調リスク'
         : isFallback
             ? '直近の予測（${_formatDateKey(pred.dateKey)}）'
-            : pred.provisional
-                ? '今日の不調リスク（暫定）'
-                : '今日の不調リスク';
+            : '今日の不調リスク';
 
     return Container(
       width: double.infinity,
@@ -153,7 +151,7 @@ class PredictionCard extends StatelessWidget {
                       const Padding(
                         padding: EdgeInsets.only(top: 2),
                         child: Text(
-                          '翌朝に正式版へ更新されます',
+                          '翌朝により正確な予測に更新されます',
                           style: AppTextStyles.captionSmall,
                         ),
                       ),

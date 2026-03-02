@@ -241,8 +241,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
                   const SizedBox(height: AppSpacing.lg),
 
-                  // --- 週次フィードバック ---
-                  SectionHeader(title: '週次フィードバック'),
+                  // --- 今週のふりかえり ---
+                  SectionHeader(title: '今週のふりかえり'),
                   const SizedBox(height: AppSpacing.sm),
                   _feedbackCard(),
 
@@ -280,8 +280,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _infoRow('普段の体調', '${mean14.toStringAsFixed(1)}（直近14日の平均）'),
-          _infoRow('不調ライン', '${threshold.toStringAsFixed(1)} 以下'),
-          _infoRow('不調日数', '$unhealthyCount 日（累計）'),
+          _infoRow('不調の基準', '${threshold.toStringAsFixed(1)} 以下'),
+          _infoRow('不調日数', '$unhealthyCount 日（合計）'),
           const SizedBox(height: AppSpacing.sm),
           Text(
             'この基準はあなたの入力データから毎日自動で更新されます。',
@@ -351,7 +351,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textMain)),
                         Text(
-                          isUp ? 'リスク増加方向' : 'リスク低下方向',
+                          isUp ? '不調になりやすい' : '調子が良くなりやすい',
                           style: TextStyle(
                             fontSize: 12,
                             color: isUp
@@ -368,7 +368,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
           }),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            '※ 因果関係ではなく、あなたのデータにおける傾向です',
+            '※ 原因を示すものではなく、あなたのデータから見える傾向です',
             style: AppTextStyles.captionSmall,
           ),
         ],
@@ -414,7 +414,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
           children: [
             Icon(Icons.check_circle, size: 20, color: AppColors.chartGreen),
             const SizedBox(width: AppSpacing.sm),
-            const Text('今週のフィードバック済み', style: AppTextStyles.caption),
+            const Text('今週のふりかえり済み', style: AppTextStyles.caption),
           ],
         ),
       );

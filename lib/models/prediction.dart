@@ -111,7 +111,7 @@ class Prediction {
   /// 信頼度が低い場合の注記テキスト
   String? get confidenceNote {
     if (confidence == 'low') {
-      return '参考値です。データが増えるほど精度が上がります';
+      return 'データが増えるほど精度が上がります';
     }
     return null;
   }
@@ -138,15 +138,15 @@ class FeatureContribution {
       'mood_ma3': '体調(3日平均)',
       'mood_ma7': '体調(7日平均)',
       'mood_delta1': '体調の変化',
-      'mood_dev14': '体調(14日偏差)',
+      'mood_dev14': '体調(2週間のばらつき)',
       'sleep_hours_filled': '睡眠時間',
-      'sleep_missing': '睡眠データ欠損',
-      'sleep_dev': '睡眠(偏差)',
+      'sleep_missing': '睡眠データなし',
+      'sleep_dev': '睡眠(ばらつき)',
       'steps_filled': '歩数',
-      'steps_missing': '歩数データ欠損',
-      'steps_dev': '歩数(偏差)',
+      'steps_missing': '歩数データなし',
+      'steps_dev': '歩数(ばらつき)',
       'stress_filled': 'ストレス',
-      'stress_missing': 'ストレス欠損',
+      'stress_missing': 'ストレス未入力',
       'day_of_week': '曜日',
       'is_weekend': '休日',
     };

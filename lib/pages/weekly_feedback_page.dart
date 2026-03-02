@@ -59,7 +59,7 @@ class _WeeklyFeedbackPageState extends State<WeeklyFeedbackPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('週次フィードバック')),
+      appBar: AppBar(title: const Text('今週のふりかえり')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
