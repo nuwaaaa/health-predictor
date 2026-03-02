@@ -194,7 +194,7 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           _seedOption(context, 7, '7日（学習中）'),
           _seedOption(context, 30, '30日（今日リスクのみ）'),
-          _seedOption(context, 100, '100日（3日リスクも表示）'),
+          _seedOption(context, 100, '100日（3日以内リスクも表示）'),
         ],
       ),
     );

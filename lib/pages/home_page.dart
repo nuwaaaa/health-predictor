@@ -112,12 +112,18 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
 
-              // --- (1c) 3日間リスクカード ---
+              // --- (1c) 3日以内リスクカード ---
               if (widget.prediction != null &&
                   widget.status.ready) ...[
                 if (widget.prediction!.p3d != null) ...[
                   const SizedBox(height: AppSpacing.sm),
-                  _threeDayRiskCard(widget.prediction!),
+                  PredictionCard(
+                    prediction: widget.prediction,
+                    isFallback: false,
+                    status: widget.status,
+                    isP3d: true,
+                    onTap: () => widget.onSwitchTab(2),
+                  ),
                 ] else if (widget.status.daysCollected >= 14) ...[
                   const SizedBox(height: AppSpacing.sm),
                   _threeDayLockedCard(),
@@ -168,99 +174,13 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: AppSpacing.lg),
 
-              // --- (5) 要因TOP3・アドバイス（要約）→ もっと見る ---
-              if (widget.prediction != null &&
-                  widget.prediction!.pToday != null &&
-                  (widget.prediction!.contributions.isNotEmpty ||
-                      widget.prediction!.advices.isNotEmpty)) ...[
-                _summaryInsights(),
-                const SizedBox(height: AppSpacing.lg),
-              ],
-
-              // --- (6) 直近7日ミニカード → データへ ---
+              // --- (5) 直近7日ミニカード → データへ ---
               _mini7DaysSection(),
 
               const SizedBox(height: AppSpacing.xl),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  /// 要因・アドバイスの要約（ホーム用）
-  Widget _summaryInsights() {
-    final pred = widget.prediction!;
-    return AppCard(
-      onTap: () => widget.onSwitchTab(2),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (pred.contributions.isNotEmpty) ...[
-            const Text(
-              '予測の主な要因',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textMain,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            ...pred.contributions.take(3).map((c) => Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
-                  child: Row(
-                    children: [
-                      Icon(
-                        c.isRiskIncrease
-                            ? Icons.arrow_upward
-                            : Icons.arrow_downward,
-                        size: 14,
-                        color: c.isRiskIncrease
-                            ? Colors.red.shade400
-                            : Colors.green.shade400,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(c.label,
-                          style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textMain)),
-                    ],
-                  ),
-                )),
-          ],
-          if (pred.advices.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: [
-                Icon(Icons.lightbulb_outline,
-                    size: 14, color: AppColors.chartOrange),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    pred.advices.first.message,
-                    style: AppTextStyles.captionSmall,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ],
-          const SizedBox(height: AppSpacing.sm),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text(
-                'もっと見る',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Icon(Icons.chevron_right, size: 18, color: AppColors.primary),
-            ],
-          ),
-        ],
       ),
     );
   }
@@ -283,47 +203,16 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// 3日間リスクカード（独立表示）
-  Widget _threeDayRiskCard(Prediction pred) {
-    final p3d = pred.displayP3d!;
-    final color = _riskColor(p3d);
-    return AppCard(
-      child: Row(
-        children: [
-          const Icon(Icons.calendar_today, size: 18, color: AppColors.textSub),
-          const SizedBox(width: 8),
-          const Text(
-            '3日間リスク',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textMain,
-            ),
-          ),
-          const Spacer(),
-          Text(
-            pred.risk3dPercent,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 3日間リスク未開放カード
+  /// 3日以内リスク未開放カード
   Widget _threeDayLockedCard() {
     final need60 = widget.status.daysCollected < 60;
     String message;
     if (need60) {
-      message = '3日予測はあと ${60 - widget.status.daysCollected} 日で開放';
+      message = '3日以内予測はあと ${60 - widget.status.daysCollected} 日で開放';
     } else if (widget.status.unhealthyCount < 10) {
-      message = '3日予測：準備中';
+      message = '3日以内予測：準備中';
     } else {
-      message = '3日予測：まもなく開放';
+      message = '3日以内予測：まもなく開放';
     }
     return AppCard(
       child: Row(
@@ -334,13 +223,6 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
-  }
-
-  Color _riskColor(double p) {
-    if (p >= 0.6) return Colors.red.shade700;
-    if (p >= 0.4) return Colors.orange.shade700;
-    if (p >= 0.2) return Colors.amber.shade700;
-    return AppColors.chartGreen;
   }
 
   /// 今日の記録サマリー

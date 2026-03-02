@@ -74,6 +74,16 @@ class Prediction {
     return '良好';
   }
 
+  /// 3日以内リスクのレベルラベル（クリップ後の値で判定）
+  String get risk3dLabel {
+    final p = displayP3d;
+    if (p == null) return '---';
+    if (p >= 0.6) return '高め';
+    if (p >= 0.4) return 'やや注意';
+    if (p >= 0.2) return '低め';
+    return '良好';
+  }
+
   /// リスクのパーセント表示（クリップ後）
   String get riskPercent {
     if (displayPToday == null) return '--%';
