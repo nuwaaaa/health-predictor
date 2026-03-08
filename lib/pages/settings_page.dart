@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -42,8 +44,11 @@ class _SettingsPageState extends State<SettingsPage> {
         setState(() {});
       }
     } on FirebaseAuthException catch (e) {
+      developer.log('Google連携エラー: code=${e.code}, message=${e.message}',
+          name: 'SettingsPage');
       _showSnack(_linkErrorMessage(e.code));
     } catch (e) {
+      developer.log('Google連携エラー(不明): $e', name: 'SettingsPage');
       _showSnack('連携失敗: $e');
     } finally {
       if (mounted) setState(() => _linking = false);
@@ -59,8 +64,11 @@ class _SettingsPageState extends State<SettingsPage> {
         setState(() {});
       }
     } on FirebaseAuthException catch (e) {
+      developer.log('Apple連携エラー: code=${e.code}, message=${e.message}',
+          name: 'SettingsPage');
       _showSnack(_linkErrorMessage(e.code));
     } catch (e) {
+      developer.log('Apple連携エラー(不明): $e', name: 'SettingsPage');
       _showSnack('連携失敗: $e');
     } finally {
       if (mounted) setState(() => _linking = false);
@@ -101,8 +109,15 @@ class _SettingsPageState extends State<SettingsPage> {
         return 'このメールアドレスは既に使用されています';
       case 'provider-already-linked':
         return 'この認証方式は既に連携済みです';
+      case 'user-cancelled':
+      case 'web-context-cancelled':
+        return '連携がキャンセルされました';
+      case 'network-request-failed':
+        return 'ネットワーク接続を確認してください';
+      case 'invalid-credential':
+        return '認証情報が無効です。再度お試しください';
       default:
-        return '連携エラーが発生しました';
+        return '連携エラーが発生しました（$code）';
     }
   }
 
