@@ -12,7 +12,20 @@
           "package_name": "com.example.health_predictor"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "480274101583-br5ansrtfq02j93slv28k7da4c6u810k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.health_predictor",
+            "certificate_hash": "a464f4024225a843c4c52b09976414e5ce35dfe7"
+          }
+        },
+        {
+          "client_id": "480274101583-k0valnurb3a5f7uicv9i2u0v1mppmmff.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDoJisLbT7GBZPEgVCcyYQwW3XJQbs0bY0"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "480274101583-k0valnurb3a5f7uicv9i2u0v1mppmmff.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "480274101583-oggcshriol3hqqfgfmlj5klrmh4i8ecj.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.healthPredictor"
+              }
+            }
+          ]
         }
       }
     }
