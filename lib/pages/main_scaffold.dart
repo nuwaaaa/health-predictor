@@ -43,6 +43,7 @@ class MainScaffoldState extends State<MainScaffold> {
   }
 
   Future<void> _loadAll() async {
+    if (!mounted) return;
     setState(() => _loading = true);
     final errors = <String>[];
 
@@ -98,6 +99,7 @@ class MainScaffoldState extends State<MainScaffold> {
       );
     }
 
+    if (!mounted) return;
     setState(() {
       _todayLog = todayLog;
       _status = status;
@@ -105,15 +107,14 @@ class MainScaffoldState extends State<MainScaffold> {
       _prediction = prediction;
       _tomorrowPrediction = tomorrowPrediction;
       _isFallbackPrediction = isFallback;
+      _loading = false;
     });
 
-    if (errors.isNotEmpty && mounted) {
+    if (errors.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('読み込み失敗: ${errors.first}')),
       );
     }
-
-    setState(() => _loading = false);
   }
 
   void switchTab(int index) {
