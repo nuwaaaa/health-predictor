@@ -192,6 +192,11 @@ class _AnalysisPageState extends State<AnalysisPage> {
                 children: [
                   const SizedBox(height: AppSpacing.md),
 
+                  // --- 予測サマリー ---
+                  _predictionSummary(),
+
+                  const SizedBox(height: AppSpacing.lg),
+
                   // --- 不調の基準 ---
                   SectionHeader(title: 'あなたの「不調」の基準'),
                   const SizedBox(height: AppSpacing.sm),
@@ -260,6 +265,72 @@ class _AnalysisPageState extends State<AnalysisPage> {
     );
   }
 
+  Widget _predictionSummary() {
+    final today = widget.prediction;
+    final tomorrow = widget.tomorrowPrediction;
+
+    if (today == null && tomorrow == null) {
+      return const SizedBox.shrink();
+    }
+
+    return AppCard(
+      child: Row(
+        children: [
+          if (today != null)
+            Expanded(child: _summaryColumn('今日', today)),
+          if (today != null && tomorrow != null)
+            Container(
+              width: 1,
+              height: 48,
+              color: AppColors.divider,
+              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            ),
+          if (tomorrow != null)
+            Expanded(child: _summaryColumn('明日', tomorrow)),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryColumn(String label, Prediction pred) {
+    final riskLabel = pred.riskLabel;
+    final color = _riskColor(riskLabel);
+
+    return Column(
+      children: [
+        Text(label, style: AppTextStyles.caption),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          riskLabel,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
+        Text(
+          pred.riskPercent,
+          style: TextStyle(fontSize: 12, color: color),
+        ),
+      ],
+    );
+  }
+
+  Color _riskColor(String riskLabel) {
+    switch (riskLabel) {
+      case '高め':
+        return Colors.red.shade500;
+      case 'やや注意':
+        return AppColors.chartOrange;
+      case '低め':
+        return AppColors.chartGreen;
+      case '良好':
+        return AppColors.primary;
+      default:
+        return AppColors.textSub;
+    }
+  }
+
   Widget _unhealthyThresholdCard() {
     final status = widget.status;
     final mean14 = status.moodMean14;
@@ -314,10 +385,21 @@ class _AnalysisPageState extends State<AnalysisPage> {
   }
 
   Widget _contributionsCard(Prediction pred) {
+    final filtered = pred.contributions
+        .where((c) => !c.feature.endsWith('_missing'))
+        .toList();
+
+    if (filtered.isEmpty) {
+      return const EmptyState(
+        icon: Icons.analytics_outlined,
+        message: '表示できる要因がありません',
+      );
+    }
+
     return AppCard(
       child: Column(
         children: [
-          ...pred.contributions.map((c) {
+          ...filtered.map((c) {
             final isUp = c.isRiskIncrease;
             return Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -333,7 +415,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
                       borderRadius: BorderRadius.circular(AppRadii.button),
                     ),
                     child: Icon(
-                      isUp ? Icons.arrow_upward : Icons.arrow_downward,
+                      isUp ? Icons.arrow_downward : Icons.arrow_upward,
                       size: 18,
                       color: isUp
                           ? Colors.red.shade500
