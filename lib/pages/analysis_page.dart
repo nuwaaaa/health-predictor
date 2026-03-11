@@ -396,11 +396,13 @@ class _AnalysisPageState extends State<AnalysisPage> {
       );
     }
 
+    final top3 = filtered.length > 3 ? filtered.sublist(0, 3) : filtered;
+
     return AppCard(
       child: Column(
         children: [
-          ...filtered.map((c) {
-            final isUp = c.isRiskIncrease;
+          ...top3.map((c) {
+            final isBad = c.isRiskIncrease;
             return Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.sm),
               child: Row(
@@ -409,15 +411,15 @@ class _AnalysisPageState extends State<AnalysisPage> {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: isUp
+                      color: isBad
                           ? Colors.red.shade50
                           : Colors.green.shade50,
                       borderRadius: BorderRadius.circular(AppRadii.button),
                     ),
                     child: Icon(
-                      isUp ? Icons.arrow_downward : Icons.arrow_upward,
+                      isBad ? Icons.arrow_upward : Icons.arrow_downward,
                       size: 18,
-                      color: isUp
+                      color: isBad
                           ? Colors.red.shade500
                           : Colors.green.shade500,
                     ),
@@ -433,10 +435,10 @@ class _AnalysisPageState extends State<AnalysisPage> {
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textMain)),
                         Text(
-                          isUp ? '不調になりやすい' : '調子が良くなりやすい',
+                          isBad ? '不調になりやすい' : '調子が良くなりやすい',
                           style: TextStyle(
                             fontSize: 12,
-                            color: isUp
+                            color: isBad
                                 ? Colors.red.shade400
                                 : Colors.green.shade400,
                           ),
