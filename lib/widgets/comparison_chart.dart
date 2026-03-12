@@ -16,6 +16,20 @@ class ComparisonChart extends StatefulWidget {
 
 class _ComparisonChartState extends State<ComparisonChart> {
   String _selectedFeature = 'sleep';
+  List<double?>? _cachedFeatureValues;
+  String? _cachedFeatureKey;
+  int? _cachedLogsLength;
+
+  List<double?> _getFeatureValues(List<DailyLog> logs) {
+    final key = '$_selectedFeature:${logs.length}';
+    if (_cachedFeatureKey == key && _cachedLogsLength == logs.length && _cachedFeatureValues != null) {
+      return _cachedFeatureValues!;
+    }
+    _cachedFeatureValues = _computeFeatureValues(logs);
+    _cachedFeatureKey = key;
+    _cachedLogsLength = logs.length;
+    return _cachedFeatureValues!;
+  }
 
   static const _featureOptions = <String, String>{
     'sleep': '睡眠時間',
@@ -227,7 +241,7 @@ class _ComparisonChartState extends State<ComparisonChart> {
   Widget _buildChart() {
     final logs = widget.logs;
     final maxX = (logs.length - 1).toDouble();
-    final featureValues = _computeFeatureValues(logs);
+    final featureValues = _getFeatureValues(logs);
     final validValues = featureValues.whereType<double>().toList();
     if (validValues.isEmpty) {
       return const Center(

@@ -29,6 +29,7 @@ class AnalysisPage extends StatefulWidget {
 class _AnalysisPageState extends State<AnalysisPage> {
   bool _feedbackSubmitted = false;
   bool _feedbackSaving = false;
+  bool _feedbackLoading = true;
   String? _alreadySubmittedWeek;
   List<Advice> _clientAdvices = [];
 
@@ -51,7 +52,9 @@ class _AnalysisPageState extends State<AnalysisPage> {
       if (latest == _currentWeekKey && mounted) {
         setState(() => _alreadySubmittedWeek = latest);
       }
-    } catch (_) {}
+    } catch (_) {} finally {
+      if (mounted) setState(() => _feedbackLoading = false);
+    }
   }
 
   Future<void> _computeClientAdvice() async {
@@ -491,6 +494,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
   Widget _feedbackCard() {
     final alreadyDone =
         _feedbackSubmitted || _alreadySubmittedWeek != null;
+    final disabled = _feedbackLoading || _feedbackSaving;
 
     if (alreadyDone) {
       return AppCard(
@@ -542,7 +546,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
   Widget _fbButton(
       String label, IconData icon, Color color, String result) {
     return GestureDetector(
-      onTap: _feedbackSaving ? null : () => _submitFeedback(result),
+      onTap: (_feedbackLoading || _feedbackSaving) ? null : () => _submitFeedback(result),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(

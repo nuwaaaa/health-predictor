@@ -19,7 +19,7 @@ class MainScaffold extends StatefulWidget {
   State<MainScaffold> createState() => MainScaffoldState();
 }
 
-class MainScaffoldState extends State<MainScaffold> {
+class MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver {
   final _authService = AuthService();
   late final FirestoreService _service;
 
@@ -36,10 +36,24 @@ class MainScaffoldState extends State<MainScaffold> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final uid = _authService.uid;
     if (uid == null) return;
     _service = FirestoreService(uid: uid);
     _loadAll();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !_loading) {
+      _loadAll();
+    }
   }
 
   Future<void> _loadAll() async {
@@ -111,8 +125,9 @@ class MainScaffoldState extends State<MainScaffold> {
     });
 
     if (errors.isNotEmpty) {
+      debugPrint('読み込みエラー: $errors');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('読み込み失敗: ${errors.first}')),
+        const SnackBar(content: Text('データの読み込みに失敗しました')),
       );
     }
   }

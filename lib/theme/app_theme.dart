@@ -23,6 +23,12 @@ class AppColors {
   static const chartOrange = Color(0xFFE8A87C);
   static const chartGreen = Color(0xFF7EC8A8);
   static const chartGrid = Color(0xFFE6ECF3);
+
+  // Confidence badge
+  static const confidenceHighBg = Color(0xFFD4EDDA);
+  static const confidenceHighText = Color(0xFF276749);
+  static const confidenceMedBg = Color(0xFFFFF3CD);
+  static const confidenceMedText = Color(0xFF856404);
 }
 
 class AppTextStyles {

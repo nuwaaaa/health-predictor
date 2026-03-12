@@ -233,13 +233,13 @@ class PredictionCard extends StatelessWidget {
     String label;
     switch (confidence) {
       case 'high':
-        bgColor = const Color(0xFFD4EDDA);
-        textColor = const Color(0xFF276749);
+        bgColor = AppColors.confidenceHighBg;
+        textColor = AppColors.confidenceHighText;
         label = '信頼度：高';
         break;
       case 'medium':
-        bgColor = const Color(0xFFFFF3CD);
-        textColor = const Color(0xFF856404);
+        bgColor = AppColors.confidenceMedBg;
+        textColor = AppColors.confidenceMedText;
         label = '信頼度：中';
         break;
       default:

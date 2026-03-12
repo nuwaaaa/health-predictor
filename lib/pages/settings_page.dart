@@ -1,6 +1,6 @@
 import 'dart:developer' as developer;
 
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kDebugMode, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -49,7 +49,7 @@ class _SettingsPageState extends State<SettingsPage> {
       _showSnack(_linkErrorMessage(e.code));
     } catch (e) {
       developer.log('Google連携エラー(不明): $e', name: 'SettingsPage');
-      _showSnack('連携失敗: $e');
+      _showSnack('連携に失敗しました。しばらくしてから再度お試しください');
     } finally {
       if (mounted) setState(() => _linking = false);
     }
@@ -69,7 +69,7 @@ class _SettingsPageState extends State<SettingsPage> {
       _showSnack(_linkErrorMessage(e.code));
     } catch (e) {
       developer.log('Apple連携エラー(不明): $e', name: 'SettingsPage');
-      _showSnack('連携失敗: $e');
+      _showSnack('連携に失敗しました。しばらくしてから再度お試しください');
     } finally {
       if (mounted) setState(() => _linking = false);
     }
@@ -95,7 +95,7 @@ class _SettingsPageState extends State<SettingsPage> {
     } on FirebaseAuthException catch (e) {
       _showSnack(_linkErrorMessage(e.code));
     } catch (e) {
-      _showSnack('連携失敗: $e');
+      _showSnack('連携に失敗しました。しばらくしてから再度お試しください');
     } finally {
       if (mounted) setState(() => _linking = false);
     }
@@ -167,10 +167,11 @@ class _SettingsPageState extends State<SettingsPage> {
       if (e.code == 'requires-recent-login') {
         _showSnack('再認証が必要です。再度お試しください。');
       } else {
-        _showSnack('削除失敗: ${e.message}');
+        _showSnack('削除に失敗しました。しばらくしてから再度お試しください');
       }
     } catch (e) {
-      _showSnack('削除失敗: $e');
+      developer.log('アカウント削除エラー: $e', name: 'SettingsPage');
+      _showSnack('削除に失敗しました。しばらくしてから再度お試しください');
     } finally {
       if (mounted) setState(() => _deleting = false);
     }
@@ -235,7 +236,8 @@ class _SettingsPageState extends State<SettingsPage> {
         _showSnack('$days日分のテストデータを作成しました');
       }
     } catch (e) {
-      if (mounted) _showSnack('作成失敗: $e');
+      developer.log('テストデータ作成失敗: $e', name: 'SettingsPage');
+      if (mounted) _showSnack('テストデータの作成に失敗しました');
     } finally {
       if (mounted) setState(() => _seeding = false);
     }
@@ -341,6 +343,19 @@ class _SettingsPageState extends State<SettingsPage> {
               subtitle: '収集されたデータを確認・管理',
               trailing: Text('準備中', style: AppTextStyles.captionSmall),
             ),
+            const SizedBox(height: AppSpacing.sm),
+            _settingCard(
+              icon: Icons.description_outlined,
+              title: 'プライバシーポリシー',
+              subtitle: 'データの取り扱いについて',
+              trailing: const Icon(Icons.open_in_new, size: 18, color: AppColors.textSub),
+              onTap: () {
+                // TODO: プライバシーポリシーURLが確定したら更新する
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('プライバシーポリシーは準備中です')),
+                );
+              },
+            ),
 
             const SizedBox(height: AppSpacing.lg),
 
@@ -368,18 +383,20 @@ class _SettingsPageState extends State<SettingsPage> {
 
             const SizedBox(height: AppSpacing.lg),
 
-            // --- 開発用 ---
-            SectionHeader(title: '開発用'),
-            const SizedBox(height: AppSpacing.sm),
-            _settingCard(
-              icon: Icons.bug_report_outlined,
-              title: 'テストデータ作成',
-              subtitle: '開発・デバッグ用のサンプルデータを生成',
-              trailing: _seeding
-                  ? const _SmallSpinner()
-                  : const Icon(Icons.chevron_right, color: AppColors.textSub),
-              onTap: _seeding ? null : _showSeedDialog,
-            ),
+            // --- 開発用（デバッグビルドのみ） ---
+            if (kDebugMode) ...[
+              SectionHeader(title: '開発用'),
+              const SizedBox(height: AppSpacing.sm),
+              _settingCard(
+                icon: Icons.bug_report_outlined,
+                title: 'テストデータ作成',
+                subtitle: '開発・デバッグ用のサンプルデータを生成',
+                trailing: _seeding
+                    ? const _SmallSpinner()
+                    : const Icon(Icons.chevron_right, color: AppColors.textSub),
+                onTap: _seeding ? null : _showSeedDialog,
+              ),
+            ],
 
             const SizedBox(height: AppSpacing.xl),
           ],

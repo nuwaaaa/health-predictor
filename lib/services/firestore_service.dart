@@ -224,7 +224,7 @@ class FirestoreService {
   /// TODO: 設計書 Section 15.2 に従い Cloud Functions (onDelete トリガー)
   ///       で predictions サブコレクションも自動削除する仕組みを追加する
   Future<void> deleteAllUserData() async {
-    final deletable = ['daily', 'model_status', 'feedback', 'predictions'];
+    final deletable = ['daily', 'model_status', 'feedback', 'predictions', 'batch_logs'];
     for (final name in deletable) {
       final col = _userDoc.collection(name);
       final docs = await col.get();

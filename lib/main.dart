@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'pages/main_scaffold.dart';
 import 'pages/login_page.dart';
 import 'pages/onboarding_page.dart';
 import 'services/auth_service.dart';
+import 'services/migration_service.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
+  await MigrationService.runMigrations();
   final onboardingDone = await OnboardingPage.isCompleted();
   runApp(MyApp(onboardingDone: onboardingDone));
 }
