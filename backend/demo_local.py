@@ -120,6 +120,11 @@ def main():
     if p_today is not None:
         print(f"\n  不調確率: {p_today * 100:.1f}%")
         print(f"  モデル:   {model_type}")
+        cv_pr_auc_mean = result_today.get("cv_pr_auc_mean")
+        cv_pr_auc_std = result_today.get("cv_pr_auc_std")
+        cv_folds = result_today.get("cv_folds", 0)
+        if cv_pr_auc_mean is not None:
+            print(f"  CV PR-AUC: {cv_pr_auc_mean:.3f}±{cv_pr_auc_std:.3f} ({cv_folds} folds)")
         if auc is not None:
             print(f"  ROC-AUC:  {auc:.3f}")
         if pr_auc is not None:
@@ -144,6 +149,11 @@ def main():
         if p_3d is not None:
             print(f"\n  3日不調確率: {p_3d * 100:.1f}%")
             print(f"  モデル:     {result_3d['model_type']}")
+            cv_mean_3d = result_3d.get("cv_pr_auc_mean")
+            cv_std_3d = result_3d.get("cv_pr_auc_std")
+            cv_folds_3d = result_3d.get("cv_folds", 0)
+            if cv_mean_3d is not None:
+                print(f"  CV PR-AUC: {cv_mean_3d:.3f}±{cv_std_3d:.3f} ({cv_folds_3d} folds)")
             if result_3d["auc"] is not None:
                 print(f"  ROC-AUC:   {result_3d['auc']:.3f}")
             if result_3d["pr_auc"] is not None:

@@ -230,6 +230,9 @@ def _process_user(db: firestore.Client, uid: str, today: str):
         model_type=model_type,
         val_auc=today_result["auc"],
         val_pr_auc=today_result["pr_auc"],
+        cv_pr_auc_mean=today_result.get("cv_pr_auc_mean"),
+        cv_pr_auc_std=today_result.get("cv_pr_auc_std"),
+        cv_folds=today_result.get("cv_folds", 0),
         recent_missing_rate=recent_missing_rate,
         mood_mean_14=mood_mean_14,
         unhealthy_threshold=unhealthy_threshold,
@@ -237,14 +240,15 @@ def _process_user(db: firestore.Client, uid: str, today: str):
     )
 
     logger.info(
-        "User %s: pToday=%.3f, p3d=%s, model=%s, confidence=%s, auc=%s, pr_auc=%s",
+        "User %s: pToday=%.3f, p3d=%s, model=%s, confidence=%s, cv_pr_auc=%.3f±%.3f (%d folds)",
         uid,
         today_result["probability"] or 0,
         f"{p3d:.3f}" if p3d is not None else "N/A",
         model_type,
         confidence_level,
-        today_result["auc"],
-        today_result["pr_auc"],
+        today_result.get("cv_pr_auc_mean") or 0,
+        today_result.get("cv_pr_auc_std") or 0,
+        today_result.get("cv_folds", 0),
     )
 
 
@@ -336,6 +340,9 @@ def _save_batch_log(
     model_type: str,
     val_auc: float | None,
     val_pr_auc: float | None,
+    cv_pr_auc_mean: float | None,
+    cv_pr_auc_std: float | None,
+    cv_folds: int,
     recent_missing_rate: float,
     mood_mean_14: float | None,
     unhealthy_threshold: float | None,
@@ -360,6 +367,9 @@ def _save_batch_log(
         "modelType": model_type,
         "valAuc": round(val_auc, 4) if val_auc is not None else None,
         "valPrAuc": round(val_pr_auc, 4) if val_pr_auc is not None else None,
+        "cvPrAucMean": round(cv_pr_auc_mean, 4) if cv_pr_auc_mean is not None else None,
+        "cvPrAucStd": round(cv_pr_auc_std, 4) if cv_pr_auc_std is not None else None,
+        "cvFolds": cv_folds,
         "missingRate": round(recent_missing_rate, 3),
         "moodMean14": round(mood_mean_14, 2) if mood_mean_14 is not None else None,
         "unhealthyThreshold": round(unhealthy_threshold, 2) if unhealthy_threshold is not None else None,

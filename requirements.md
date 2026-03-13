@@ -124,7 +124,7 @@
 |データベース |Firebase Firestore      |
 |バッチ処理  |Cloud Run（Python）       |
 |初期モデル  |ロジスティック回帰（scikit-learn） |
-|拡張モデル  |LightGBM（条件達成後、AUCで自動比較）|
+|拡張モデル  |LightGBM（条件達成後、PR-AUCで自動比較）|
 
 -----
 
@@ -148,7 +148,8 @@
 ### モデル選択
 
 - 60日未満: ロジスティック回帰のみ
-- 60日以上: ロジスティック回帰とLightGBMを両方学習し、検証AUCが高い方を自動採用
+- 60日以上: ロジスティック回帰とLightGBMを両方学習し、Expanding Window TSCVでのPR-AUC平均が高い方を自動採用
+- 検証方式: Expanding Window TSCV（fold数はデータ量に応じて可変: 2/3/5fold）
 - 少量データではシンプルなモデルの方が安定するケースが多いため、自動比較方式を採用
 
 ### ハイパーパラメータ・正則化の段階設計

@@ -3,8 +3,8 @@
 設計書 Section 10 に基づく。
 - 初期: ロジスティック回帰（scikit-learn）
 - 条件達成後: LightGBM と両方学習し、検証スコアで自動選択
-- 検証: 直近14日をテスト、残りをトレーニング（時系列分割）
-- 指標: AUC
+- 検証: Expanding Window TSCV（fold数はデータ量に応じて可変）
+- 指標: PR-AUC（モデル選択）、ROC-AUC（ログ出力）
 """
 
 import logging
@@ -35,167 +35,285 @@ def train_and_predict(
             "model_type": "logistic" or "lightgbm",
             "auc": float or None,
             "pr_auc": float or None,
+            "cv_pr_auc_mean": float or None,
+            "cv_pr_auc_std": float or None,
+            "cv_folds": int,
+            "contributions": list[dict],
+            "model_params": dict or None,
         }
     """
     # 学習可能な行のみ抽出
     valid = df.dropna(subset=[target_col] + feature_cols).copy()
 
     if len(valid) < config.MIN_DAYS_TODAY:
-        return {"probability": None, "model_type": "logistic", "auc": None, "pr_auc": None}
+        return _empty_result()
 
     X = valid[feature_cols].values
     y = valid[target_col].values.astype(int)
 
     # 正例が0件の場合は予測不可（確率0を返す）
     if y.sum() == 0:
-        return {"probability": 0.0, "model_type": "logistic", "auc": None, "pr_auc": None}
+        return _empty_result(probability=0.0)
 
-    # 最新行が予測対象（最終行）
-    # 検証: データ量に応じた分割（設計書 Section 10）
-    n_test = _calc_validation_days(days_collected, len(valid))
+    # --- TSCV でモデル評価 ---
+    lr_cv = _tscv_evaluate_lr(X, y, days_collected)
+    lgb_cv = None
 
-    X_train, X_test = X[:-n_test], X[-n_test:]
-    y_train, y_test = y[:-n_test], y[-n_test:]
-
-    # 学習データに正例がない場合
-    if y_train.sum() == 0:
-        # 全データで学習（検証スキップ）
-        X_train, y_train = X, y
-        X_test, y_test = None, None
-
-    # スケーリング（ロジスティック回帰の収束改善）
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test) if X_test is not None else None
-    X_last_scaled = scaler.transform(X[-1:])
-
-    # --- ロジスティック回帰 ---
-    # データ量に応じた正則化強度（要件書 Section 5）
-    if days_collected < 60:
-        lr_C = 0.1  # 強正則化
-    elif days_collected < 150:
-        lr_C = 0.5  # やや強
-    else:
-        lr_C = 1.0  # 標準
-
-    lr_model = LogisticRegression(C=lr_C, max_iter=1000, random_state=42)
-    lr_model.fit(X_train_scaled, y_train)
-    lr_prob = float(lr_model.predict_proba(X_last_scaled)[:, 1][0])
-    lr_test_proba = lr_model.predict_proba(X_test_scaled)[:, 1] if X_test_scaled is not None else None
-    lr_auc = _safe_auc(y_test, lr_test_proba)
-    lr_pr_auc = _safe_pr_auc(y_test, lr_test_proba)
-
-    # 特徴量寄与度（標準化済み係数 × 特徴量値）
-    lr_contributions = _calc_lr_contributions(lr_model, scaler, X[-1:], feature_cols)
-
-    best_model_type = "logistic"
-    best_prob = lr_prob
-    best_auc = lr_auc
-    best_pr_auc = lr_pr_auc
-
-    # --- LightGBM（条件達成時のみ）---
     if (
         days_collected >= config.LGBM_MIN_DAYS
         and unhealthy_count >= config.LGBM_MIN_UNHEALTHY
     ):
-        try:
-            import lightgbm as lgb
+        lgb_cv = _tscv_evaluate_lgb(X, y, days_collected)
 
-            # データ量に応じたハイパーパラメータ（設計書 Section 10）
-            # 60-149日 / 150-299日 / 300日以上 の3段階
-            if days_collected < 150:
-                lgb_params = dict(max_depth=3, num_leaves=8, n_estimators=100, min_child_samples=5, learning_rate=0.1)
-            elif days_collected < 300:
-                lgb_params = dict(max_depth=4, num_leaves=16, n_estimators=150, min_child_samples=5, learning_rate=0.05)
-            else:
-                lgb_params = dict(max_depth=5, num_leaves=31, n_estimators=200, min_child_samples=3, learning_rate=0.05)
-
-            lgb_model = lgb.LGBMClassifier(
-                **lgb_params,
-                random_state=42,
-                verbose=-1,
+    # --- モデル選択（PR-AUCの平均で比較）---
+    best_model_type = "logistic"
+    if lgb_cv is not None and lgb_cv["pr_auc_mean"] is not None:
+        if lr_cv["pr_auc_mean"] is None or lgb_cv["pr_auc_mean"] > lr_cv["pr_auc_mean"]:
+            best_model_type = "lightgbm"
+            logger.info(
+                "LightGBM selected (CV PR-AUC: %.3f±%.3f, %d folds > LR CV PR-AUC: %s, %d folds)",
+                lgb_cv["pr_auc_mean"],
+                lgb_cv["pr_auc_std"],
+                lgb_cv["valid_folds"],
+                f"{lr_cv['pr_auc_mean']:.3f}±{lr_cv['pr_auc_std']:.3f}" if lr_cv["pr_auc_mean"] is not None else "N/A",
+                lr_cv["valid_folds"],
             )
-            lgb_model.fit(X_train, y_train)
-            lgb_prob = float(lgb_model.predict_proba(X[-1:])[:, 1][0])
-            lgb_test_proba = lgb_model.predict_proba(X_test)[:, 1] if X_test is not None else None
-            lgb_auc = _safe_auc(y_test, lgb_test_proba)
-            lgb_pr_auc = _safe_pr_auc(y_test, lgb_test_proba)
+        else:
+            logger.info(
+                "Logistic selected (CV PR-AUC: %s, %d folds >= LGBM CV PR-AUC: %.3f±%.3f, %d folds)",
+                f"{lr_cv['pr_auc_mean']:.3f}±{lr_cv['pr_auc_std']:.3f}" if lr_cv["pr_auc_mean"] is not None else "N/A",
+                lr_cv["valid_folds"],
+                lgb_cv["pr_auc_mean"],
+                lgb_cv["pr_auc_std"],
+                lgb_cv["valid_folds"],
+            )
 
-            # AUCで比較して良い方を採用
-            if lgb_auc is not None and lr_auc is not None:
-                if lgb_auc > lr_auc:
-                    best_model_type = "lightgbm"
-                    best_prob = lgb_prob
-                    best_auc = lgb_auc
-                    best_pr_auc = lgb_pr_auc
-                    logger.info(
-                        "LightGBM selected (AUC: %.3f, PR-AUC: %s > LR AUC: %.3f, PR-AUC: %s)",
-                        lgb_auc,
-                        f"{lgb_pr_auc:.3f}" if lgb_pr_auc else "N/A",
-                        lr_auc,
-                        f"{lr_pr_auc:.3f}" if lr_pr_auc else "N/A",
-                    )
-                else:
-                    logger.info(
-                        "Logistic selected (AUC: %.3f, PR-AUC: %s >= LGBM AUC: %.3f, PR-AUC: %s)",
-                        lr_auc,
-                        f"{lr_pr_auc:.3f}" if lr_pr_auc else "N/A",
-                        lgb_auc,
-                        f"{lgb_pr_auc:.3f}" if lgb_pr_auc else "N/A",
-                    )
-            elif lgb_auc is not None:
-                best_model_type = "lightgbm"
-                best_prob = lgb_prob
-                best_auc = lgb_auc
-                best_pr_auc = lgb_pr_auc
+    # --- 選択されたモデルで全データ学習 → 最終予測 ---
+    selected_cv = lgb_cv if best_model_type == "lightgbm" else lr_cv
 
-            # LightGBMが採用された場合、SHAP寄与度を計算
-            if best_model_type == "lightgbm":
-                lr_contributions = _calc_lgb_contributions(lgb_model, X[-1:], feature_cols)
-
-        except Exception as e:
-            logger.warning("LightGBM training failed: %s", e)
-
-    # クライアント側推論用にモデルパラメータを保存（ロジスティック回帰のみ）
-    model_params = None
     if best_model_type == "logistic":
-        model_params = {
-            "coefficients": lr_model.coef_[0].tolist(),
-            "intercept": float(lr_model.intercept_[0]),
-            "scalerMean": scaler.mean_.tolist(),
-            "scalerScale": scaler.scale_.tolist(),
-            "featureColumns": list(feature_cols),
-        }
+        prob, contributions, model_params = _final_train_lr(X, y, days_collected, feature_cols)
+    else:
+        prob, contributions, model_params = _final_train_lgb(X, y, days_collected, feature_cols)
 
     return {
-        "probability": best_prob,
+        "probability": prob,
         "model_type": best_model_type,
-        "auc": best_auc,
-        "pr_auc": best_pr_auc,
-        "contributions": lr_contributions,
+        "auc": selected_cv["auc_mean"],
+        "pr_auc": selected_cv["pr_auc_mean"],
+        "cv_pr_auc_mean": selected_cv["pr_auc_mean"],
+        "cv_pr_auc_std": selected_cv["pr_auc_std"],
+        "cv_folds": selected_cv["valid_folds"],
+        "contributions": contributions,
         "model_params": model_params,
     }
 
 
-def _calc_validation_days(days_collected: int, n_valid_rows: int) -> int:
-    """データ量に応じた検証日数を算出（設計書 Section 10）。
+def _empty_result(probability=None) -> dict:
+    return {
+        "probability": probability,
+        "model_type": "logistic",
+        "auc": None,
+        "pr_auc": None,
+        "cv_pr_auc_mean": None,
+        "cv_pr_auc_std": None,
+        "cv_folds": 0,
+        "contributions": [],
+        "model_params": None,
+    }
 
-    - 14-29日: 20%（最低3日）
-    - 30-99日: 7日
-    - 100日以上: 14日
-    最大でもデータの1/3を超えないようにする。
+
+# ---------------------------------------------------------------------------
+# TSCV (Expanding Window)
+# ---------------------------------------------------------------------------
+
+def _generate_tscv_splits(n_samples: int, days_collected: int) -> list[tuple[int, int]]:
+    """Expanding Window TSCVのfold境界を生成する。
+
+    返却: [(train_end, test_end), ...] のリスト
+    train=[0:train_end], test=[train_end:test_end]
     """
     if days_collected < 30:
-        n_test = max(3, int(n_valid_rows * 0.2))
+        n_folds = config.TSCV_FOLDS_SMALL
+        n_test = max(3, int(n_samples * 0.2))
     elif days_collected < 100:
-        n_test = 7
+        n_folds = config.TSCV_FOLDS_MEDIUM
+        n_test = config.TSCV_TEST_DAYS_MEDIUM
     else:
-        n_test = 14
+        n_folds = config.TSCV_FOLDS_LARGE
+        n_test = config.TSCV_TEST_DAYS_LARGE
 
-    # データの1/3を超えない & 最低1日
-    n_test = min(n_test, n_valid_rows // 3)
-    return max(n_test, 1)
+    # テスト期間がデータの1/3を超えないように調整
+    n_test = min(n_test, n_samples // 3)
+    n_test = max(n_test, 1)
 
+    splits = []
+    for i in range(n_folds):
+        test_end = n_samples - i * n_test
+        train_end = test_end - n_test
+        if train_end < config.MIN_DAYS_TODAY:
+            break
+        splits.append((train_end, test_end))
+
+    # 時系列順に並べ替え（古いfoldから）
+    splits.reverse()
+    return splits
+
+
+def _tscv_evaluate_lr(
+    X: np.ndarray, y: np.ndarray, days_collected: int,
+) -> dict:
+    """ロジスティック回帰のTSCV評価"""
+    splits = _generate_tscv_splits(len(X), days_collected)
+    pr_aucs = []
+    roc_aucs = []
+
+    lr_C = _get_lr_regularization(days_collected)
+
+    for train_end, test_end in splits:
+        X_train, y_train = X[:train_end], y[:train_end]
+        X_test, y_test = X[train_end:test_end], y[train_end:test_end]
+
+        # 正例が train/test どちらかに0件ならスキップ
+        if y_train.sum() == 0 or y_test.sum() == 0 or len(np.unique(y_test)) < 2:
+            continue
+
+        scaler = StandardScaler()
+        X_train_s = scaler.fit_transform(X_train)
+        X_test_s = scaler.transform(X_test)
+
+        model = LogisticRegression(C=lr_C, max_iter=1000, random_state=42)
+        model.fit(X_train_s, y_train)
+        y_score = model.predict_proba(X_test_s)[:, 1]
+
+        pr_auc = _safe_pr_auc(y_test, y_score)
+        roc_auc = _safe_auc(y_test, y_score)
+        if pr_auc is not None:
+            pr_aucs.append(pr_auc)
+        if roc_auc is not None:
+            roc_aucs.append(roc_auc)
+
+    return _aggregate_cv_results(pr_aucs, roc_aucs, len(splits))
+
+
+def _tscv_evaluate_lgb(
+    X: np.ndarray, y: np.ndarray, days_collected: int,
+) -> dict | None:
+    """LightGBMのTSCV評価"""
+    try:
+        import lightgbm as lgb
+    except Exception:
+        return None
+
+    splits = _generate_tscv_splits(len(X), days_collected)
+    pr_aucs = []
+    roc_aucs = []
+
+    lgb_params = _get_lgb_params(days_collected)
+
+    for train_end, test_end in splits:
+        X_train, y_train = X[:train_end], y[:train_end]
+        X_test, y_test = X[train_end:test_end], y[train_end:test_end]
+
+        if y_train.sum() == 0 or y_test.sum() == 0 or len(np.unique(y_test)) < 2:
+            continue
+
+        try:
+            model = lgb.LGBMClassifier(**lgb_params, random_state=42, verbose=-1)
+            model.fit(X_train, y_train)
+            y_score = model.predict_proba(X_test)[:, 1]
+
+            pr_auc = _safe_pr_auc(y_test, y_score)
+            roc_auc = _safe_auc(y_test, y_score)
+            if pr_auc is not None:
+                pr_aucs.append(pr_auc)
+            if roc_auc is not None:
+                roc_aucs.append(roc_auc)
+        except Exception as e:
+            logger.warning("LightGBM fold failed: %s", e)
+
+    return _aggregate_cv_results(pr_aucs, roc_aucs, len(splits))
+
+
+def _aggregate_cv_results(
+    pr_aucs: list[float], roc_aucs: list[float], total_folds: int,
+) -> dict:
+    return {
+        "pr_auc_mean": float(np.mean(pr_aucs)) if pr_aucs else None,
+        "pr_auc_std": float(np.std(pr_aucs)) if pr_aucs else None,
+        "auc_mean": float(np.mean(roc_aucs)) if roc_aucs else None,
+        "auc_std": float(np.std(roc_aucs)) if roc_aucs else None,
+        "valid_folds": len(pr_aucs),
+        "total_folds": total_folds,
+    }
+
+
+# ---------------------------------------------------------------------------
+# 最終学習（全データで学習 → 最終行を予測）
+# ---------------------------------------------------------------------------
+
+def _final_train_lr(
+    X: np.ndarray, y: np.ndarray, days_collected: int, feature_cols: list[str],
+) -> tuple[float, list[dict], dict]:
+    """全データでLR学習 → 最終行の予測確率・寄与度・モデルパラメータを返却"""
+    lr_C = _get_lr_regularization(days_collected)
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    X_last_scaled = scaler.transform(X[-1:])
+
+    model = LogisticRegression(C=lr_C, max_iter=1000, random_state=42)
+    model.fit(X_scaled, y)
+    prob = float(model.predict_proba(X_last_scaled)[:, 1][0])
+    contributions = _calc_lr_contributions(model, scaler, X[-1:], feature_cols)
+    model_params = {
+        "coefficients": model.coef_[0].tolist(),
+        "intercept": float(model.intercept_[0]),
+        "scalerMean": scaler.mean_.tolist(),
+        "scalerScale": scaler.scale_.tolist(),
+        "featureColumns": list(feature_cols),
+    }
+    return prob, contributions, model_params
+
+
+def _final_train_lgb(
+    X: np.ndarray, y: np.ndarray, days_collected: int, feature_cols: list[str],
+) -> tuple[float, list[dict], None]:
+    """全データでLightGBM学習 → 最終行の予測確率・寄与度を返却"""
+    import lightgbm as lgb
+
+    lgb_params = _get_lgb_params(days_collected)
+    model = lgb.LGBMClassifier(**lgb_params, random_state=42, verbose=-1)
+    model.fit(X, y)
+    prob = float(model.predict_proba(X[-1:])[:, 1][0])
+    contributions = _calc_lgb_contributions(model, X[-1:], feature_cols)
+    return prob, contributions, None
+
+
+# ---------------------------------------------------------------------------
+# ハイパーパラメータ
+# ---------------------------------------------------------------------------
+
+def _get_lr_regularization(days_collected: int) -> float:
+    if days_collected < 60:
+        return 0.1
+    elif days_collected < 150:
+        return 0.5
+    else:
+        return 1.0
+
+
+def _get_lgb_params(days_collected: int) -> dict:
+    if days_collected < 150:
+        return dict(max_depth=3, num_leaves=8, n_estimators=100, min_child_samples=5, learning_rate=0.1)
+    elif days_collected < 300:
+        return dict(max_depth=4, num_leaves=16, n_estimators=150, min_child_samples=5, learning_rate=0.05)
+    else:
+        return dict(max_depth=5, num_leaves=31, n_estimators=200, min_child_samples=3, learning_rate=0.05)
+
+
+# ---------------------------------------------------------------------------
+# メトリクス
+# ---------------------------------------------------------------------------
 
 def _safe_auc(y_true, y_score) -> float | None:
     """ROC-AUCを安全に計算する。正例/負例のどちらかが0件の場合はNoneを返す。"""
@@ -220,6 +338,10 @@ def _safe_pr_auc(y_true, y_score) -> float | None:
     except ValueError:
         return None
 
+
+# ---------------------------------------------------------------------------
+# 寄与度計算
+# ---------------------------------------------------------------------------
 
 def _calc_lr_contributions(
     model: LogisticRegression,
