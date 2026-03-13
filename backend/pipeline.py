@@ -87,15 +87,11 @@ def _process_user(db: firestore.Client, uid: str, today: str):
     rows = []
     for doc in docs:
         data = doc.to_dict()
-        mood = data.get("moodScore")
-        if mood is None:
-            continue
-
         sleep_data = data.get("sleep", {})
         rows.append(
             {
                 "date_key": doc.id,
-                "moodScore": mood,
+                "moodScore": data.get("moodScore"),  # Noneも含める（欠損率算出のため）
                 "sleep_hours": sleep_data.get("durationHours"),
                 "steps": data.get("steps"),
                 "stress": data.get("stress"),
@@ -103,11 +99,15 @@ def _process_user(db: firestore.Client, uid: str, today: str):
         )
 
     if not rows:
-        logger.info("No mood data for user %s", uid)
+        logger.info("No data for user %s", uid)
         return
 
     df = pd.DataFrame(rows).sort_values("date_key").reset_index(drop=True)
-    days_collected = len(df)
+    # moodScore が1件もない場合はスキップ
+    if df["moodScore"].dropna().empty:
+        logger.info("No mood data for user %s", uid)
+        return
+    days_collected = int(df["moodScore"].notna().sum())
 
     # 14日未満は予測を生成しない
     if days_collected < config.MIN_DAYS_TODAY:

@@ -73,7 +73,7 @@ class TomorrowPredictor {
     );
   }
 
-  /// 明日 (D+1) の予測に必要な15特徴量をマップで構築する。
+  /// 明日 (D+1) の予測に必要な16特徴量をマップで構築する。
   ///
   /// 「data(D) → risk(D+1)」の関係:
   ///   mood_lag1  = mood(D)       ... 今日の体調
@@ -95,9 +95,11 @@ class TomorrowPredictor {
     }
     if (moodScores.isEmpty) return null;
 
-    // --- 曜日特徴量 ---
+    // --- 曜日特徴量（sin/cosエンコーディング）---
     final tomorrow = DateTime.now().add(const Duration(days: 1));
-    final dayOfWeek = (tomorrow.weekday - 1).toDouble(); // 0=Mon..6=Sun
+    final dow = (tomorrow.weekday - 1).toDouble(); // 0=Mon..6=Sun
+    final daySin = sin(2 * pi * dow / 7);
+    final dayCos = cos(2 * pi * dow / 7);
     final isWeekend =
         (tomorrow.weekday == 6 || tomorrow.weekday == 7) ? 1.0 : 0.0;
 
@@ -166,7 +168,8 @@ class TomorrowPredictor {
     }
 
     return {
-      'day_of_week': dayOfWeek,
+      'day_sin': daySin,
+      'day_cos': dayCos,
       'is_weekend': isWeekend,
       'mood_lag1': moodLag1,
       'mood_ma3': moodMa3,

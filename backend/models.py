@@ -190,7 +190,7 @@ def _tscv_evaluate_lr(
         X_train_s = scaler.fit_transform(X_train)
         X_test_s = scaler.transform(X_test)
 
-        model = LogisticRegression(C=lr_C, max_iter=1000, random_state=42)
+        model = LogisticRegression(C=lr_C, max_iter=1000, random_state=42, class_weight="balanced")
         model.fit(X_train_s, y_train)
         y_score = model.predict_proba(X_test_s)[:, 1]
 
@@ -235,7 +235,7 @@ def _tscv_evaluate_lgb(
             continue
 
         try:
-            model = lgb.LGBMClassifier(**lgb_params, random_state=42, verbose=-1)
+            model = lgb.LGBMClassifier(**lgb_params, is_unbalance=True, random_state=42, verbose=-1)
             model.fit(X_train, y_train)
             y_score = model.predict_proba(X_test)[:, 1]
 
@@ -276,13 +276,22 @@ def _aggregate_cv_results(
 def _weighted_mean_std(
     values_weights: list[tuple[float, int]],
 ) -> tuple[float | None, float | None]:
-    """(value, weight) のリストから重み付け平均と重み付き標準偏差を返す。"""
+    """(value, weight) のリストから重み付け平均と重み付き標準偏差を返す。
+
+    ベッセル補正（N/(N-1)相当）を適用し、fold数が少ない場合の
+    標準偏差過小評価を防止する。
+    """
     if not values_weights:
         return None, None
     values = np.array([v for v, _ in values_weights])
     weights = np.array([w for _, w in values_weights], dtype=float)
     mean = float(np.average(values, weights=weights))
-    std = float(np.sqrt(np.average((values - mean) ** 2, weights=weights)))
+    variance = float(np.average((values - mean) ** 2, weights=weights))
+    # ベッセル補正: N/(N-1) に相当する重み付き版
+    n = len(values)
+    if n > 1:
+        variance *= n / (n - 1)
+    std = float(np.sqrt(variance))
     return mean, std
 
 
@@ -293,14 +302,19 @@ def _weighted_mean_std(
 def _final_train_lr(
     X: np.ndarray, y: np.ndarray, days_collected: int, feature_cols: list[str],
 ) -> tuple[float, list[dict], dict]:
-    """全データでLR学習 → 最終行の予測確率・寄与度・モデルパラメータを返却"""
+    """最終行を除いたデータでLR学習 → 最終行の予測確率・寄与度・モデルパラメータを返却"""
     lr_C = _get_lr_regularization(days_collected)
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+    # 最終行（予測対象）を学習・スケーラーfitから除外してリーケージを防止
+    X_train = X[:-1]
+    y_train = y[:-1]
+    X_train_scaled = scaler.fit_transform(X_train)
     X_last_scaled = scaler.transform(X[-1:])
 
-    model = LogisticRegression(C=lr_C, max_iter=1000, random_state=42)
-    model.fit(X_scaled, y)
+    model = LogisticRegression(
+        C=lr_C, max_iter=1000, random_state=42, class_weight="balanced",
+    )
+    model.fit(X_train_scaled, y_train)
     prob = float(model.predict_proba(X_last_scaled)[:, 1][0])
     contributions = _calc_lr_contributions(model, scaler, X[-1:], feature_cols)
     model_params = {
@@ -316,12 +330,15 @@ def _final_train_lr(
 def _final_train_lgb(
     X: np.ndarray, y: np.ndarray, days_collected: int, feature_cols: list[str],
 ) -> tuple[float, list[dict], None]:
-    """全データでLightGBM学習 → 最終行の予測確率・寄与度を返却"""
+    """最終行を除いたデータでLightGBM学習 → 最終行の予測確率・寄与度を返却"""
     import lightgbm as lgb
 
     lgb_params = _get_lgb_params(days_collected)
-    model = lgb.LGBMClassifier(**lgb_params, random_state=42, verbose=-1)
-    model.fit(X, y)
+    # 最終行（予測対象）を学習から除外してリーケージを防止
+    X_train = X[:-1]
+    y_train = y[:-1]
+    model = lgb.LGBMClassifier(**lgb_params, is_unbalance=True, random_state=42, verbose=-1)
+    model.fit(X_train, y_train)
     prob = float(model.predict_proba(X[-1:])[:, 1][0])
     contributions = _calc_lgb_contributions(model, X[-1:], feature_cols)
     return prob, contributions, None

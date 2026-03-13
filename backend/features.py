@@ -18,10 +18,13 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = df.copy().sort_values("date_key").reset_index(drop=True)
 
-    # --- 曜日・休日フラグ ---
+    # --- 曜日特徴量 ---
+    # sin/cosエンコーディング: 円環上の座標に変換し、曜日の周期性を表現
     df["date"] = pd.to_datetime(df["date_key"])
-    df["day_of_week"] = df["date"].dt.dayofweek  # 0=Mon, 6=Sun
-    df["is_weekend"] = df["day_of_week"].isin([5, 6]).astype(int)
+    dow = df["date"].dt.dayofweek  # 0=Mon, 6=Sun
+    df["day_sin"] = np.sin(2 * np.pi * dow / 7)
+    df["day_cos"] = np.cos(2 * np.pi * dow / 7)
+    df["is_weekend"] = dow.isin([5, 6]).astype(int)
 
     # --- 体調の時系列特徴量（t-1 以前のみ使用）---
     df["mood_lag1"] = df["moodScore"].shift(1)  # mood(t-1)
@@ -41,8 +44,9 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     # 睡眠は当日起床分 (date_key=t) を使用可能
     df["sleep_hours_filled"] = _fill_missing(df["sleep_hours"], window=7)
     df["sleep_missing"] = df["sleep_hours"].isna().astype(int)
-    sleep_mean = df["sleep_hours"].rolling(window=7, min_periods=1).mean()
-    df["sleep_dev"] = df["sleep_hours_filled"] - sleep_mean
+    # shift(1)で前日までの移動平均を使い、当日値の自己参照を防止
+    sleep_mean = df["sleep_hours"].shift(1).rolling(window=7, min_periods=1).mean()
+    df["sleep_dev"] = df["sleep_hours_filled"] - _fill_missing(sleep_mean, window=7)
 
     # --- 歩数特徴量 ---
     # 歩数は t-1 を使用（当日はまだ増えるため）
@@ -50,7 +54,7 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     df["steps_filled"] = _fill_missing(df["steps_lag1"], window=7)
     df["steps_missing"] = df["steps_lag1"].isna().astype(int)
     steps_mean = df["steps"].shift(1).rolling(window=7, min_periods=1).mean()
-    df["steps_dev"] = df["steps_filled"] - steps_mean
+    df["steps_dev"] = df["steps_filled"] - _fill_missing(steps_mean, window=7)
 
     # --- ストレス特徴量（任意入力）---
     df["stress_lag1"] = df["stress"].shift(1)
@@ -63,7 +67,8 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
 def get_feature_columns() -> list[str]:
     """モデルに入力する特徴量カラムのリスト"""
     return [
-        "day_of_week",
+        "day_sin",
+        "day_cos",
         "is_weekend",
         "mood_lag1",
         "mood_ma3",
@@ -82,6 +87,9 @@ def get_feature_columns() -> list[str]:
 
 
 def _fill_missing(series: pd.Series, window: int = 7) -> pd.Series:
-    """過去N日平均で欠損を補完する。"""
+    """過去N日平均で欠損を補完する。最終フォールバックはグローバル平均。"""
     rolling_mean = series.rolling(window=window, min_periods=1).mean()
-    return series.fillna(rolling_mean).fillna(0)
+    global_mean = series.mean()
+    # NaN→ローリング平均→グローバル平均の順で補完（0埋めを回避）
+    fallback = global_mean if pd.notna(global_mean) else 0
+    return series.fillna(rolling_mean).fillna(fallback)

@@ -604,7 +604,8 @@ shap_values = explainer.shap_values(X_today)
 |mood_dev14       |体調(2週間のばらつき) |t-1時点の14日平均との偏差  |
 |stress_filled    |ストレス         |t-1の値、欠損時は過去7日平均 |
 |stress_missing   |ストレス未入力      |欠損フラグ（0 or 1）    |
-|day_of_week      |曜日           |0(月)〜6(日)        |
+|day_sin          |曜日（周期sin）     |sin(2π×dow/7)     |
+|day_cos          |曜日（周期cos）     |cos(2π×dow/7)     |
 |is_weekend       |休日かどうか       |土日=1             |
 
 -----
@@ -649,7 +650,8 @@ shap_values = explainer.shap_values(X_today)
 |mood_dev14       |体調(2週間のばらつき)|-4〜+4  |0を中心に表示    |
 |sleep_dev        |睡眠(ばらつき)  |-6〜+6h   |0を中心に表示    |
 |steps_dev        |歩数(ばらつき)  |動的       |0を中心に表示    |
-|day_of_week      |曜日        |0(月)〜6(日)|           |
+|day_sin          |曜日(周期)    |-1〜+1   |           |
+|day_cos          |曜日(周期)    |-1〜+1   |           |
 |is_weekend       |休日        |0 or 1   |           |
 
 **スケール自動調整ルール：**
@@ -1047,7 +1049,7 @@ users/{uid}/model_status/current
     "intercept": -0.5,
     "scalerMean": [2.5, 0.29, 3.2, ...],
     "scalerScale": [2.0, 0.45, 1.0, ...],
-    "featureColumns": ["day_of_week", "is_weekend", "mood_lag1", ...]
+    "featureColumns": ["day_sin", "day_cos", "is_weekend", "mood_lag1", ...]
   }
 }
 ```
@@ -1452,3 +1454,10 @@ App Store / Google Play 審査ガイドラインで、アカウント作成機�
 |2026-03-13|CV分散対策: テスト正例2件未満のfoldをスキップ（Section 10）          |正例が少なすぎるfoldはPR-AUCのノイズが大きすぎるため除外                              |
 |2026-03-13|CV分散対策: テスト正例数による重み付け平均を導入（Section 10）         |信頼性の高いfold（正例が多い）の影響を大きくし、CV平均の安定性を向上                         |
 |2026-03-13|CV分散対策: 1σルールによるモデル選択（Section 10）                |LightGBMがLRの平均+1σを超えない限りシンプルなLRを維持する安全側の戦略                    |
+|2026-03-13|最終行リーケージ修正（Section 10）                              |予測対象行を学習データ・スケーラーfitから除外。予測精度の過大評価を防止                          |
+|2026-03-13|class_weight="balanced" / is_unbalance=True 追加（Section 10）  |クラス不均衡（不調率20%前後）に対応し、少数派の検出力を向上                                |
+|2026-03-13|欠損率計算の修正（Section 15）                                  |moodScore=Noneの日もDFに含め、信頼度ダウングレードを実質的に機能させる                     |
+|2026-03-13|欠損値の0埋め→グローバル平均埋めに変更（Section 6）                  |0は「値なし」ではなく特定の意味（歩数0=歩いてない）を持つため、平均で補完                       |
+|2026-03-13|睡眠偏差の移動平均にshift(1)追加（Section 6）                     |当日値の自己参照を防止し、統計的に意味のある偏差を算出                                    |
+|2026-03-13|day_of_weekをsin/cosエンコーディングに変更（Section 6）            |LRで曜日の円環的周期性を表現。day_sin+day_cosの2変数に置換（16特徴量に増加）                |
+|2026-03-13|重み付き標準偏差にベッセル補正追加（Section 10）                    |fold数が少ない場合のstd過小評価を防止し、1σルールの公平性を向上                            |

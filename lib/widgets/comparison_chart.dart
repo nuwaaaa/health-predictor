@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../models/daily_log.dart';
@@ -42,7 +44,8 @@ class _ComparisonChartState extends State<ComparisonChart> {
     'dev14': '普段との体調差',
     'sleep_dev': '普段との睡眠差',
     'steps_dev': '普段との歩数差',
-    'day_of_week': '曜日',
+    'day_sin': '曜日(周期)',
+    'day_cos': '曜日(周期)',
     'is_weekend': '休日かどうか',
   };
 
@@ -112,10 +115,17 @@ class _ComparisonChartState extends State<ComparisonChart> {
         return _computeSleepDev(logs);
       case 'steps_dev':
         return _computeStepsDev(logs);
-      case 'day_of_week':
+      case 'day_sin':
         return logs.map((l) {
           final dow = _dayOfWeek(l.dateKey);
-          return dow != null ? (dow - 1).toDouble() : null;
+          if (dow == null) return null;
+          return sin(2 * pi * (dow - 1) / 7);
+        }).toList();
+      case 'day_cos':
+        return logs.map((l) {
+          final dow = _dayOfWeek(l.dateKey);
+          if (dow == null) return null;
+          return cos(2 * pi * (dow - 1) / 7);
         }).toList();
       case 'is_weekend':
         return logs.map((l) {
@@ -227,10 +237,9 @@ class _ComparisonChartState extends State<ComparisonChart> {
       case 'dev14':
         final sign = original >= 0 ? '+' : '';
         return '$sign${original.toStringAsFixed(1)}';
-      case 'day_of_week':
-        const days = ['月', '火', '水', '木', '金', '土', '日'];
-        final idx = original.round().clamp(0, 6);
-        return days[idx];
+      case 'day_sin':
+      case 'day_cos':
+        return original.toStringAsFixed(2);
       case 'is_weekend':
         return original >= 0.5 ? '休日' : '平日';
       default:
