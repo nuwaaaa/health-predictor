@@ -65,27 +65,31 @@ def train_and_predict(
     ):
         lgb_cv = _tscv_evaluate_lgb(X, y, days_collected)
 
-    # --- モデル選択（PR-AUCの平均で比較）---
+    # --- モデル選択（1σルール: LightGBMがLRの平均+1σを超えた場合のみ切替）---
     best_model_type = "logistic"
     if lgb_cv is not None and lgb_cv["pr_auc_mean"] is not None:
-        if lr_cv["pr_auc_mean"] is None or lgb_cv["pr_auc_mean"] > lr_cv["pr_auc_mean"]:
+        lr_mean = lr_cv["pr_auc_mean"]
+        lr_std = lr_cv["pr_auc_std"] or 0.0
+        lgb_mean = lgb_cv["pr_auc_mean"]
+
+        if lr_mean is None or lgb_mean > lr_mean + lr_std:
             best_model_type = "lightgbm"
             logger.info(
-                "LightGBM selected (CV PR-AUC: %.3f±%.3f, %d folds > LR CV PR-AUC: %s, %d folds)",
-                lgb_cv["pr_auc_mean"],
-                lgb_cv["pr_auc_std"],
+                "LightGBM selected (CV PR-AUC: %.3f±%.3f, %d folds > LR: %s + 1σ=%.3f, %d folds)",
+                lgb_mean,
+                lgb_cv["pr_auc_std"] or 0.0,
                 lgb_cv["valid_folds"],
-                f"{lr_cv['pr_auc_mean']:.3f}±{lr_cv['pr_auc_std']:.3f}" if lr_cv["pr_auc_mean"] is not None else "N/A",
+                f"{lr_mean:.3f}±{lr_std:.3f}" if lr_mean is not None else "N/A",
+                (lr_mean or 0.0) + lr_std,
                 lr_cv["valid_folds"],
             )
         else:
             logger.info(
-                "Logistic selected (CV PR-AUC: %s, %d folds >= LGBM CV PR-AUC: %.3f±%.3f, %d folds)",
-                f"{lr_cv['pr_auc_mean']:.3f}±{lr_cv['pr_auc_std']:.3f}" if lr_cv["pr_auc_mean"] is not None else "N/A",
-                lr_cv["valid_folds"],
-                lgb_cv["pr_auc_mean"],
-                lgb_cv["pr_auc_std"],
-                lgb_cv["valid_folds"],
+                "Logistic retained — 1σ rule (LR: %s, threshold: %.3f, LGBM: %.3f±%.3f)",
+                f"{lr_mean:.3f}±{lr_std:.3f}" if lr_mean is not None else "N/A",
+                (lr_mean or 0.0) + lr_std,
+                lgb_mean,
+                lgb_cv["pr_auc_std"] or 0.0,
             )
 
     # --- 選択されたモデルで全データ学習 → 最終予測 ---
@@ -165,17 +169,21 @@ def _tscv_evaluate_lr(
 ) -> dict:
     """ロジスティック回帰のTSCV評価"""
     splits = _generate_tscv_splits(len(X), days_collected)
-    pr_aucs = []
-    roc_aucs = []
+    pr_aucs_w: list[tuple[float, int]] = []  # (pr_auc, n_pos)
+    roc_aucs_w: list[tuple[float, int]] = []
 
     lr_C = _get_lr_regularization(days_collected)
+    skipped = 0
 
     for train_end, test_end in splits:
         X_train, y_train = X[:train_end], y[:train_end]
         X_test, y_test = X[train_end:test_end], y[train_end:test_end]
 
-        # 正例が train/test どちらかに0件ならスキップ
-        if y_train.sum() == 0 or y_test.sum() == 0 or len(np.unique(y_test)) < 2:
+        n_pos = int(y_test.sum())
+
+        # trainに正例0 or テスト正例が最小閾値未満 → スキップ
+        if y_train.sum() == 0 or n_pos < config.TSCV_MIN_TEST_POSITIVES or len(np.unique(y_test)) < 2:
+            skipped += 1
             continue
 
         scaler = StandardScaler()
@@ -189,11 +197,15 @@ def _tscv_evaluate_lr(
         pr_auc = _safe_pr_auc(y_test, y_score)
         roc_auc = _safe_auc(y_test, y_score)
         if pr_auc is not None:
-            pr_aucs.append(pr_auc)
+            pr_aucs_w.append((pr_auc, n_pos))
         if roc_auc is not None:
-            roc_aucs.append(roc_auc)
+            roc_aucs_w.append((roc_auc, n_pos))
 
-    return _aggregate_cv_results(pr_aucs, roc_aucs, len(splits))
+    if skipped:
+        logger.info("LR TSCV: %d/%d folds skipped (test positives < %d)",
+                     skipped, len(splits), config.TSCV_MIN_TEST_POSITIVES)
+
+    return _aggregate_cv_results(pr_aucs_w, roc_aucs_w, len(splits))
 
 
 def _tscv_evaluate_lgb(
@@ -206,16 +218,20 @@ def _tscv_evaluate_lgb(
         return None
 
     splits = _generate_tscv_splits(len(X), days_collected)
-    pr_aucs = []
-    roc_aucs = []
+    pr_aucs_w: list[tuple[float, int]] = []
+    roc_aucs_w: list[tuple[float, int]] = []
 
     lgb_params = _get_lgb_params(days_collected)
+    skipped = 0
 
     for train_end, test_end in splits:
         X_train, y_train = X[:train_end], y[:train_end]
         X_test, y_test = X[train_end:test_end], y[train_end:test_end]
 
-        if y_train.sum() == 0 or y_test.sum() == 0 or len(np.unique(y_test)) < 2:
+        n_pos = int(y_test.sum())
+
+        if y_train.sum() == 0 or n_pos < config.TSCV_MIN_TEST_POSITIVES or len(np.unique(y_test)) < 2:
+            skipped += 1
             continue
 
         try:
@@ -226,26 +242,48 @@ def _tscv_evaluate_lgb(
             pr_auc = _safe_pr_auc(y_test, y_score)
             roc_auc = _safe_auc(y_test, y_score)
             if pr_auc is not None:
-                pr_aucs.append(pr_auc)
+                pr_aucs_w.append((pr_auc, n_pos))
             if roc_auc is not None:
-                roc_aucs.append(roc_auc)
+                roc_aucs_w.append((roc_auc, n_pos))
         except Exception as e:
             logger.warning("LightGBM fold failed: %s", e)
 
-    return _aggregate_cv_results(pr_aucs, roc_aucs, len(splits))
+    if skipped:
+        logger.info("LGBM TSCV: %d/%d folds skipped (test positives < %d)",
+                     skipped, len(splits), config.TSCV_MIN_TEST_POSITIVES)
+
+    return _aggregate_cv_results(pr_aucs_w, roc_aucs_w, len(splits))
 
 
 def _aggregate_cv_results(
-    pr_aucs: list[float], roc_aucs: list[float], total_folds: int,
+    pr_aucs_w: list[tuple[float, int]],
+    roc_aucs_w: list[tuple[float, int]],
+    total_folds: int,
 ) -> dict:
+    """CV結果をテスト正例数で重み付け平均して集約する。"""
+    pr_mean, pr_std = _weighted_mean_std(pr_aucs_w)
+    auc_mean, auc_std = _weighted_mean_std(roc_aucs_w)
     return {
-        "pr_auc_mean": float(np.mean(pr_aucs)) if pr_aucs else None,
-        "pr_auc_std": float(np.std(pr_aucs)) if pr_aucs else None,
-        "auc_mean": float(np.mean(roc_aucs)) if roc_aucs else None,
-        "auc_std": float(np.std(roc_aucs)) if roc_aucs else None,
-        "valid_folds": len(pr_aucs),
+        "pr_auc_mean": pr_mean,
+        "pr_auc_std": pr_std,
+        "auc_mean": auc_mean,
+        "auc_std": auc_std,
+        "valid_folds": len(pr_aucs_w),
         "total_folds": total_folds,
     }
+
+
+def _weighted_mean_std(
+    values_weights: list[tuple[float, int]],
+) -> tuple[float | None, float | None]:
+    """(value, weight) のリストから重み付け平均と重み付き標準偏差を返す。"""
+    if not values_weights:
+        return None, None
+    values = np.array([v for v, _ in values_weights])
+    weights = np.array([w for _, w in values_weights], dtype=float)
+    mean = float(np.average(values, weights=weights))
+    std = float(np.sqrt(np.average((values - mean) ** 2, weights=weights)))
+    return mean, std
 
 
 # ---------------------------------------------------------------------------
