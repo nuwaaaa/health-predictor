@@ -61,9 +61,10 @@ class _DataPageState extends State<DataPage> {
         setState(() => _displayLogs = logs);
       }
     } catch (e) {
+      debugPrint('データ読み込み失敗: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('読み込み失敗: $e')),
+          const SnackBar(content: Text('データの読み込みに失敗しました')),
         );
       }
     } finally {

@@ -38,6 +38,7 @@ class _WeeklyFeedbackPageState extends State<WeeklyFeedbackPage> {
   }
 
   Future<void> _submit(String result) async {
+    if (_saving) return;
     setState(() => _saving = true);
     try {
       await widget.service.saveWeeklyFeedback(
@@ -46,9 +47,10 @@ class _WeeklyFeedbackPageState extends State<WeeklyFeedbackPage> {
       );
       setState(() => _submitted = true);
     } catch (e) {
+      debugPrint('フィードバック送信失敗: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('送信失敗: $e')),
+          const SnackBar(content: Text('送信に失敗しました。しばらくしてから再度お試しください')),
         );
       }
     } finally {

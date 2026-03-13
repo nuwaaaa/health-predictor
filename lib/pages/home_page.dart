@@ -55,9 +55,10 @@ class _HomePageState extends State<HomePage> {
         );
       }
     } catch (e) {
+      debugPrint('体調スコア保存失敗: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失敗: $e')),
+          const SnackBar(content: Text('保存に失敗しました。しばらくしてから再度お試しください')),
         );
       }
     } finally {

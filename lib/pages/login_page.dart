@@ -36,7 +36,8 @@ class _LoginPageState extends State<LoginPage> {
     } on FirebaseAuthException catch (e) {
       _showError(_authErrorMessage(e.code));
     } catch (e) {
-      _showError('エラー: $e');
+      debugPrint('認証エラー: $e');
+      _showError('エラーが発生しました。しばらくしてから再度お試しください');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -52,7 +53,8 @@ class _LoginPageState extends State<LoginPage> {
     } on FirebaseAuthException catch (e) {
       _showError(_authErrorMessage(e.code));
     } catch (e) {
-      _showError('エラー: $e');
+      debugPrint('認証エラー: $e');
+      _showError('エラーが発生しました。しばらくしてから再度お試しください');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -65,7 +67,8 @@ class _LoginPageState extends State<LoginPage> {
     } on FirebaseAuthException catch (e) {
       _showError(_authErrorMessage(e.code));
     } catch (e) {
-      _showError('エラー: $e');
+      debugPrint('認証エラー: $e');
+      _showError('エラーが発生しました。しばらくしてから再度お試しください');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -94,7 +97,8 @@ class _LoginPageState extends State<LoginPage> {
     } on FirebaseAuthException catch (e) {
       _showError(_authErrorMessage(e.code));
     } catch (e) {
-      _showError('エラー: $e');
+      debugPrint('認証エラー: $e');
+      _showError('エラーが発生しました。しばらくしてから再度お試しください');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

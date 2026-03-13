@@ -196,7 +196,8 @@ class _DailyInputPageState extends State<DailyInputPage> {
         );
       }
     } catch (e) {
-      _showError('歩数の取得に失敗しました: $e');
+      debugPrint('歩数取得失敗: $e');
+      _showError('歩数の取得に失敗しました');
     } finally {
       if (mounted) setState(() => _importingSteps = false);
     }
@@ -236,7 +237,8 @@ class _DailyInputPageState extends State<DailyInputPage> {
         );
       }
     } catch (e) {
-      _showError('睡眠データの取得に失敗しました: $e');
+      debugPrint('睡眠データ取得失敗: $e');
+      _showError('睡眠データの取得に失敗しました');
     } finally {
       if (mounted) setState(() => _importingSleep = false);
     }
@@ -297,9 +299,10 @@ class _DailyInputPageState extends State<DailyInputPage> {
         Navigator.pop(context);
       }
     } catch (e) {
+      debugPrint('データ保存失敗: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失敗: $e')),
+          const SnackBar(content: Text('保存に失敗しました。しばらくしてから再度お試しください')),
         );
       }
     } finally {
