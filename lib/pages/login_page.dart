@@ -104,6 +104,36 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // パスワードリセット
+  // ---------------------------------------------------------------------------
+  Future<void> _resetPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      _showError('メールアドレスを入力してください');
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      await _authService.sendPasswordResetEmail(email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('パスワードリセットメールを送信しました'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      _showError(_authErrorMessage(e.code));
+    } catch (e) {
+      debugPrint('パスワードリセットエラー: $e');
+      _showError('送信に失敗しました。メールアドレスを確認してください');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   String _authErrorMessage(String code) {
     switch (code) {
       case 'user-not-found':
@@ -289,17 +319,30 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: _loading
-                        ? null
-                        : () => setState(() => _isLogin = !_isLogin),
-                    child: Text(
-                      _isLogin
-                          ? 'アカウントをお持ちでない方はこちら'
-                          : '既にアカウントをお持ちの方はこちら',
-                      style: const TextStyle(fontSize: 13),
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton(
+                        onPressed: _loading
+                            ? null
+                            : () => setState(() => _isLogin = !_isLogin),
+                        child: Text(
+                          _isLogin
+                              ? 'アカウントをお持ちでない方はこちら'
+                              : '既にアカウントをお持ちの方はこちら',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    ],
                   ),
+                  if (_isLogin)
+                    TextButton(
+                      onPressed: _loading ? null : _resetPassword,
+                      child: const Text(
+                        'パスワードを忘れた方',
+                        style: TextStyle(fontSize: 13, color: Colors.black54),
+                      ),
+                    ),
                 ],
               ],
             ),

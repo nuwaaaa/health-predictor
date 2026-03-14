@@ -322,27 +322,8 @@ class _SettingsPageState extends State<SettingsPage> {
               const SizedBox(height: AppSpacing.lg),
             ],
 
-            // --- 通知設定 ---
-            SectionHeader(title: '通知設定'),
-            const SizedBox(height: AppSpacing.sm),
-            _settingCard(
-              icon: Icons.notifications_outlined,
-              title: '入力リマインダー',
-              subtitle: '毎日の記録を忘れないように通知',
-              trailing: Text('準備中', style: AppTextStyles.captionSmall),
-            ),
-
-            const SizedBox(height: AppSpacing.lg),
-
             // --- プライバシー ---
             SectionHeader(title: 'プライバシー'),
-            const SizedBox(height: AppSpacing.sm),
-            _settingCard(
-              icon: Icons.shield_outlined,
-              title: '学習データの確認・削除',
-              subtitle: '収集されたデータを確認・管理',
-              trailing: Text('準備中', style: AppTextStyles.captionSmall),
-            ),
             const SizedBox(height: AppSpacing.sm),
             _settingCard(
               icon: Icons.description_outlined,

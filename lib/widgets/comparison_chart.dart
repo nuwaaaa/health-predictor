@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../models/daily_log.dart';
@@ -18,6 +16,7 @@ class ComparisonChart extends StatefulWidget {
 
 class _ComparisonChartState extends State<ComparisonChart> {
   String _selectedFeature = 'sleep';
+  bool _showAdvanced = false;
   List<double?>? _cachedFeatureValues;
   String? _cachedFeatureKey;
   int? _cachedLogsLength;
@@ -33,21 +32,31 @@ class _ComparisonChartState extends State<ComparisonChart> {
     return _cachedFeatureValues!;
   }
 
-  static const _featureOptions = <String, String>{
+  // 基本項目
+  static const _basicOptions = <String, String>{
     'sleep': '睡眠時間',
     'steps': '歩数',
     'stress': 'ストレス',
     'mood_t1': '前日の体調',
-    'ma3': '直近3日の体調傾向',
-    'ma7': '直近7日の体調傾向',
-    'delta1': '体調の変化',
+  };
+
+  // 詳細項目（トレンド + パターン）
+  static const _advancedOptions = <String, String>{
+    'ma3': '体調の3日平均',
+    'ma7': '体調の7日平均',
+    'delta1': '体調の前日比',
     'dev14': '普段との体調差',
     'sleep_dev': '普段との睡眠差',
     'steps_dev': '普段との歩数差',
-    'day_sin': '曜日(周期)',
-    'day_cos': '曜日(周期)',
     'is_weekend': '休日かどうか',
   };
+
+  Map<String, String> get _activeOptions {
+    if (_showAdvanced) {
+      return {..._basicOptions, ..._advancedOptions};
+    }
+    return _basicOptions;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,24 +69,57 @@ class _ComparisonChartState extends State<ComparisonChart> {
       );
     }
 
+    // 詳細を閉じた際に選択中の項目が基本にない場合、リセット
+    if (!_showAdvanced && !_basicOptions.containsKey(_selectedFeature)) {
+      _selectedFeature = 'sleep';
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DropdownButtonFormField<String>(
-          initialValue: _selectedFeature,
-          decoration: const InputDecoration(
-            labelText: '比較する生活データ',
-            isDense: true,
-          ),
-          items: _featureOptions.entries
-              .map((e) => DropdownMenuItem(
-                    value: e.key,
-                    child: Text(e.value, style: const TextStyle(fontSize: 13)),
-                  ))
-              .toList(),
-          onChanged: (v) {
-            if (v != null) setState(() => _selectedFeature = v);
-          },
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: _selectedFeature,
+                decoration: const InputDecoration(
+                  labelText: '比較する生活データ',
+                  isDense: true,
+                ),
+                items: _activeOptions.entries
+                    .map((e) => DropdownMenuItem(
+                          value: e.key,
+                          child: Text(e.value, style: const TextStyle(fontSize: 13)),
+                        ))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) setState(() => _selectedFeature = v);
+                },
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            GestureDetector(
+              onTap: () => setState(() => _showAdvanced = !_showAdvanced),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _showAdvanced ? AppColors.primaryTint : AppColors.background,
+                  borderRadius: BorderRadius.circular(AppRadii.pill),
+                  border: Border.all(
+                    color: _showAdvanced ? AppColors.primary.withAlpha(80) : AppColors.divider,
+                  ),
+                ),
+                child: Text(
+                  _showAdvanced ? '基本のみ' : '詳細',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _showAdvanced ? AppColors.primary : AppColors.textSub,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: AppSpacing.sm),
         SizedBox(
@@ -115,18 +157,6 @@ class _ComparisonChartState extends State<ComparisonChart> {
         return _computeSleepDev(logs);
       case 'steps_dev':
         return _computeStepsDev(logs);
-      case 'day_sin':
-        return logs.map((l) {
-          final dow = _dayOfWeek(l.dateKey);
-          if (dow == null) return null;
-          return sin(2 * pi * (dow - 1) / 7);
-        }).toList();
-      case 'day_cos':
-        return logs.map((l) {
-          final dow = _dayOfWeek(l.dateKey);
-          if (dow == null) return null;
-          return cos(2 * pi * (dow - 1) / 7);
-        }).toList();
       case 'is_weekend':
         return logs.map((l) {
           final dow = _dayOfWeek(l.dateKey);
@@ -237,9 +267,6 @@ class _ComparisonChartState extends State<ComparisonChart> {
       case 'dev14':
         final sign = original >= 0 ? '+' : '';
         return '$sign${original.toStringAsFixed(1)}';
-      case 'day_sin':
-      case 'day_cos':
-        return original.toStringAsFixed(2);
       case 'is_weekend':
         return original >= 0.5 ? '休日' : '平日';
       default:
