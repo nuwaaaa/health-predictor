@@ -221,7 +221,7 @@ class _HomePageState extends State<HomePage> {
     return AppCard(
       child: Row(
         children: [
-          const Icon(Icons.lock_outline, size: 16, color: AppColors.textSub),
+          Icon(Icons.lock_outline, size: 16, color: context.textSubColor),
           const SizedBox(width: 8),
           Text(message, style: AppTextStyles.captionSmall),
         ],
@@ -278,7 +278,7 @@ class _HomePageState extends State<HomePage> {
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.textMain,
+                          color: context.textMainColor,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -320,7 +320,7 @@ class _HomePageState extends State<HomePage> {
                     CircularProgressIndicator(
                       value: done / 4,
                       strokeWidth: 3,
-                      backgroundColor: AppColors.divider,
+                      backgroundColor: context.dividerColor,
                       color: AppColors.chartGreen,
                     ),
                     Text(
@@ -328,7 +328,7 @@ class _HomePageState extends State<HomePage> {
                       style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textMain,
+                        color: context.textMainColor,
                       ),
                     ),
                   ],
@@ -340,11 +340,11 @@ class _HomePageState extends State<HomePage> {
                   '${missing.join('・')}も追加しますか？',
                   style: const TextStyle(
                     fontSize: 14,
-                    color: AppColors.textMain,
+                    color: context.textMainColor,
                   ),
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.textSub, size: 20),
+              Icon(Icons.chevron_right, color: context.textSubColor, size: 20),
             ],
           ),
         ),
@@ -372,7 +372,7 @@ class _HomePageState extends State<HomePage> {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textMain,
+                    color: context.textMainColor,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -400,7 +400,7 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: AppColors.textSub),
+          Icon(Icons.chevron_right, color: context.textSubColor),
         ],
       ),
     );

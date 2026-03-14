@@ -90,7 +90,7 @@ class SleepPatternChart extends StatelessWidget {
                     Container(
                       height: 20,
                       decoration: BoxDecoration(
-                        color: AppColors.divider,
+                        color: context.dividerColor,
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),

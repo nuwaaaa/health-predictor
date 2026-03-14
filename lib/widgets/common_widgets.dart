@@ -19,9 +19,9 @@ class AppCard extends StatelessWidget {
       width: double.infinity,
       padding: padding ?? const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(AppRadii.card),
-        boxShadow: AppShadows.card,
+        boxShadow: context.isDark ? null : AppShadows.card,
       ),
       child: child,
     );
@@ -50,9 +50,9 @@ class AccentCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(AppRadii.card),
-        boxShadow: AppShadows.card,
+        boxShadow: context.isDark ? null : AppShadows.card,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadii.card),
@@ -103,10 +103,10 @@ class AppPill extends StatelessWidget {
               ? AppColors.primaryTint
               : filled
                   ? AppColors.primary
-                  : AppColors.card,
+                  : context.cardColor,
           borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(
-            color: selected ? AppColors.primary : AppColors.divider,
+            color: selected ? AppColors.primary : context.dividerColor,
           ),
         ),
         child: Text(
@@ -118,7 +118,7 @@ class AppPill extends StatelessWidget {
                 ? AppColors.primary
                 : filled
                     ? Colors.white
-                    : AppColors.textMain,
+                    : context.textMainColor,
           ),
         ),
       ),
@@ -219,7 +219,7 @@ class _MetricChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: data.filled ? AppColors.primaryTint : AppColors.background,
+        color: data.filled ? AppColors.primaryTint : context.bgColor,
         borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Row(
@@ -229,7 +229,7 @@ class _MetricChip extends StatelessWidget {
             data.label,
             style: TextStyle(
               fontSize: 11,
-              color: data.filled ? AppColors.primary : AppColors.textSub,
+              color: data.filled ? AppColors.primary : context.textSubColor,
             ),
           ),
           const SizedBox(width: 4),
@@ -238,7 +238,7 @@ class _MetricChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: data.filled ? AppColors.textMain : AppColors.textSub,
+              color: data.filled ? context.textMainColor : context.textSubColor,
             ),
           ),
         ],
@@ -269,24 +269,24 @@ class EmptyState extends StatelessWidget {
         vertical: AppSpacing.xl,
       ),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(AppRadii.card),
-        boxShadow: AppShadows.card,
+        boxShadow: context.isDark ? null : AppShadows.card,
       ),
       child: Column(
         children: [
-          Icon(icon, size: 40, color: AppColors.textSub),
+          Icon(icon, size: 40, color: context.textSubColor),
           const SizedBox(height: AppSpacing.sm),
           Text(
             message,
-            style: AppTextStyles.caption,
+            style: AppTextStyles.caption.copyWith(color: context.textSubColor),
             textAlign: TextAlign.center,
           ),
           if (subMessage != null) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(
               subMessage!,
-              style: AppTextStyles.captionSmall,
+              style: AppTextStyles.captionSmall.copyWith(color: context.textSubColor),
               textAlign: TextAlign.center,
             ),
           ],

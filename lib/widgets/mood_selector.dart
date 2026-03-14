@@ -81,10 +81,10 @@ class _MoodTile extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.primaryTint : AppColors.background,
+              color: isSelected ? AppColors.primaryTint : context.bgColor,
               borderRadius: BorderRadius.circular(AppRadii.button),
               border: Border.all(
-                color: isSelected ? AppColors.primary : AppColors.divider,
+                color: isSelected ? AppColors.primary : context.dividerColor,
                 width: isSelected ? 2 : 1,
               ),
             ),
@@ -98,7 +98,7 @@ class _MoodTile extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                    color: isSelected ? AppColors.primary : AppColors.textSub,
+                    color: isSelected ? AppColors.primary : context.textSubColor,
                   ),
                 ),
               ],

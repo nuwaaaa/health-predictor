@@ -24,11 +24,11 @@ class PredictionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!status.ready) return _buildLearningCard();
+    if (!status.ready) return _buildLearningCard(context);
     final hasData = isP3d
         ? prediction != null && prediction!.p3d != null
         : prediction != null && prediction!.pToday != null;
-    if (!hasData) return _buildWaitingCard();
+    if (!hasData) return _buildWaitingCard(context);
     final card = _buildPredictionCard(context);
     return onTap != null
         ? GestureDetector(onTap: onTap, child: card)
@@ -36,18 +36,18 @@ class PredictionCard extends StatelessWidget {
   }
 
   /// 学習中（14日未満）
-  Widget _buildLearningCard() {
+  Widget _buildLearningCard(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(AppRadii.card),
-        boxShadow: AppShadows.card,
+        boxShadow: context.isDark ? null : AppShadows.card,
       ),
       child: Column(
         children: [
-          const Icon(Icons.model_training, size: 40, color: AppColors.textSub),
+          Icon(Icons.model_training, size: 40, color: context.textSubColor),
           const SizedBox(height: AppSpacing.sm),
           const Text('あなた専用のモデルを作成中', style: AppTextStyles.section),
           const SizedBox(height: AppSpacing.sm),
@@ -61,7 +61,7 @@ class PredictionCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: status.daysCollected / status.daysRequired,
               minHeight: 8,
-              backgroundColor: AppColors.divider,
+              backgroundColor: context.dividerColor,
               valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
             ),
           ),
@@ -76,22 +76,23 @@ class PredictionCard extends StatelessWidget {
   }
 
   /// バッチ未実行
-  Widget _buildWaitingCard() {
+  Widget _buildWaitingCard(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(AppRadii.card),
-        boxShadow: AppShadows.card,
+        boxShadow: context.isDark ? null : AppShadows.card,
       ),
-      child: const Column(
+      child: Column(
         children: [
-          Icon(Icons.schedule, size: 36, color: AppColors.primary),
-          SizedBox(height: AppSpacing.sm),
-          Text('予測準備中', style: AppTextStyles.section),
-          SizedBox(height: AppSpacing.xs),
-          Text('明朝の更新をお待ちください', style: AppTextStyles.caption),
+          const Icon(Icons.schedule, size: 36, color: AppColors.primary),
+          const SizedBox(height: AppSpacing.sm),
+          const Text('予測準備中', style: AppTextStyles.section),
+          const SizedBox(height: AppSpacing.xs),
+          Text('明朝の更新をお待ちください',
+              style: AppTextStyles.caption.copyWith(color: context.textSubColor)),
         ],
       ),
     );
@@ -114,9 +115,9 @@ class PredictionCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(AppRadii.card),
-        boxShadow: AppShadows.card,
+        boxShadow: context.isDark ? null : AppShadows.card,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,43 +131,43 @@ class PredictionCard extends StatelessWidget {
                   children: [
                     Text(
                       titleOverride ?? defaultTitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textMain,
+                        color: context.textMainColor,
                       ),
                     ),
                     if (!isP3d && titleOverride != null && pred.provisional)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 2),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
                         child: Text(
                           '今日の入力データに基づく予測です',
-                          style: AppTextStyles.captionSmall,
+                          style: AppTextStyles.captionSmall.copyWith(color: context.textSubColor),
                         ),
                       ),
                     if (!isP3d &&
                         titleOverride == null &&
                         pred.provisional &&
                         !isFallback)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 2),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
                         child: Text(
                           '翌朝により正確な予測に更新されます',
-                          style: AppTextStyles.captionSmall,
+                          style: AppTextStyles.captionSmall.copyWith(color: context.textSubColor),
                         ),
                       ),
                     if (!isP3d && isFallback && titleOverride == null)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 2),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
                         child: Text(
                           '今日の予測は明朝更新されます',
-                          style: AppTextStyles.captionSmall,
+                          style: AppTextStyles.captionSmall.copyWith(color: context.textSubColor),
                         ),
                       ),
                   ],
                 ),
               ),
-              _confidenceBadge(pred.confidence),
+              _confidenceBadge(context, pred.confidence),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -199,6 +200,22 @@ class PredictionCard extends StatelessWidget {
             ],
           ),
 
+          // リスクの解釈ガイダンス（今日カードのみ）
+          if (!isP3d && titleOverride == null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: context.bgColor,
+                borderRadius: BorderRadius.circular(AppRadii.button),
+              ),
+              child: Text(
+                _riskGuidance(displayP),
+                style: AppTextStyles.captionSmall.copyWith(color: context.textSubColor),
+              ),
+            ),
+          ],
+
           // 不調基準の要約（明日・3日以内カードでは省略）
           if (!isP3d &&
               titleOverride == null &&
@@ -206,7 +223,7 @@ class PredictionCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               'あなたの基準: 体調 ${status.unhealthyThreshold!.toStringAsFixed(1)} 以下の日',
-              style: AppTextStyles.captionSmall,
+              style: AppTextStyles.captionSmall.copyWith(color: context.textSubColor),
             ),
           ],
 
@@ -215,9 +232,9 @@ class PredictionCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               pred.confidenceNote!,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: AppColors.textSub,
+                color: context.textSubColor,
                 fontStyle: FontStyle.italic,
               ),
             ),
@@ -227,7 +244,7 @@ class PredictionCard extends StatelessWidget {
     );
   }
 
-  Widget _confidenceBadge(String confidence) {
+  Widget _confidenceBadge(BuildContext context, String confidence) {
     Color bgColor;
     Color textColor;
     String label;
@@ -243,8 +260,8 @@ class PredictionCard extends StatelessWidget {
         label = '信頼度：中';
         break;
       default:
-        bgColor = AppColors.background;
-        textColor = AppColors.textSub;
+        bgColor = context.bgColor;
+        textColor = context.textSubColor;
         label = '信頼度：低';
     }
     return Container(
@@ -270,6 +287,13 @@ class PredictionCard extends StatelessWidget {
     } catch (_) {
       return dateKey;
     }
+  }
+
+  String _riskGuidance(double p) {
+    if (p >= 0.6) return '不調の可能性が高めです。無理せず休息を優先しましょう';
+    if (p >= 0.4) return 'やや注意が必要です。睡眠や休息を意識してみましょう';
+    if (p >= 0.2) return '大きな心配はなさそうです。いつも通り過ごしましょう';
+    return '体調が安定しています。この調子を維持しましょう';
   }
 
   Color _riskColor(double p) {

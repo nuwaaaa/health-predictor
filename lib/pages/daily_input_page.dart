@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../models/daily_log.dart';
@@ -37,6 +38,7 @@ class _DailyInputPageState extends State<DailyInputPage> {
   final _stepsController = TextEditingController();
   int? _stress;
   bool _saving = false;
+  bool _saved = false;
   bool _importingSteps = false;
   bool _importingSleep = false;
 
@@ -100,8 +102,33 @@ class _DailyInputPageState extends State<DailyInputPage> {
         ? (_bedTime ?? const TimeOfDay(hour: 23, minute: 0))
         : (_wakeTime ?? const TimeOfDay(hour: 7, minute: 0));
 
-    TimeOfDay temp = initial;
+    if (Platform.isAndroid) {
+      final picked = await showTimePicker(
+        context: context,
+        initialTime: initial,
+        helpText: isBed ? '就寝時刻' : '起床時刻',
+        builder: (context, child) {
+          return MediaQuery(
+            data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+            child: child!,
+          );
+        },
+      );
+      if (picked != null) {
+        setState(() {
+          _sleepFromAuto = false;
+          if (isBed) {
+            _bedTime = picked;
+          } else {
+            _wakeTime = picked;
+          }
+        });
+      }
+      return;
+    }
 
+    // iOS: CupertinoDatePicker
+    TimeOfDay temp = initial;
     await showCupertinoModalPopup<void>(
       context: context,
       builder: (context) {
@@ -292,11 +319,9 @@ class _DailyInputPageState extends State<DailyInputPage> {
 
       widget.onSaved();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('保存しました'), duration: Duration(seconds: 2)),
-        );
-        Navigator.pop(context);
+        setState(() => _saved = true);
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (mounted) Navigator.pop(context);
       }
     } catch (e) {
       debugPrint('データ保存失敗: $e');
@@ -414,7 +439,7 @@ class _DailyInputPageState extends State<DailyInputPage> {
                   '睡眠時間：${dur.toStringAsFixed(1)} 時間',
                   style: TextStyle(
                     fontSize: 15,
-                    color: dur < 6 ? AppColors.destructive : AppColors.textMain,
+                    color: dur < 6 ? AppColors.destructive : context.textMainColor,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -485,13 +510,13 @@ class _DailyInputPageState extends State<DailyInputPage> {
                               decoration: BoxDecoration(
                                 color: selected
                                     ? AppColors.cautionSoft
-                                    : AppColors.background,
+                                    : context.bgColor,
                                 borderRadius:
                                     BorderRadius.circular(AppRadii.button),
                                 border: Border.all(
                                   color: selected
                                       ? AppColors.chartOrange
-                                      : AppColors.divider,
+                                      : context.dividerColor,
                                   width: selected ? 2 : 1,
                                 ),
                               ),
@@ -504,8 +529,8 @@ class _DailyInputPageState extends State<DailyInputPage> {
                                         ? FontWeight.bold
                                         : FontWeight.normal,
                                     color: selected
-                                        ? AppColors.textMain
-                                        : AppColors.textSub,
+                                        ? context.textMainColor
+                                        : context.textSubColor,
                                   ),
                                 ),
                               ),
@@ -534,6 +559,16 @@ class _DailyInputPageState extends State<DailyInputPage> {
                   child: Text(
                     '4日以上前のデータは編集できません',
                     style: AppTextStyles.caption,
+                  ),
+                )
+              else if (_saved)
+                Center(
+                  child: Column(
+                    children: [
+                      Icon(Icons.check_circle, size: 48, color: AppColors.chartGreen),
+                      const SizedBox(height: AppSpacing.sm),
+                      const Text('保存しました', style: AppTextStyles.caption),
+                    ],
                   ),
                 )
               else
@@ -608,20 +643,20 @@ class _DailyInputPageState extends State<DailyInputPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: AppColors.background,
+          color: context.bgColor,
           borderRadius: BorderRadius.circular(AppRadii.button),
-          border: Border.all(color: AppColors.divider),
+          border: Border.all(color: context.dividerColor),
         ),
         child: Column(
           children: [
-            Text(label, style: AppTextStyles.captionSmall),
+            Text(label, style: AppTextStyles.captionSmall.copyWith(color: context.textSubColor)),
             const SizedBox(height: 4),
             Text(
               time != null ? _formatTime(time) : '--:--',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: AppColors.textMain,
+                color: context.textMainColor,
               ),
             ),
           ],

@@ -103,10 +103,10 @@ class _ComparisonChartState extends State<ComparisonChart> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _showAdvanced ? AppColors.primaryTint : AppColors.background,
+                  color: _showAdvanced ? AppColors.primaryTint : context.bgColor,
                   borderRadius: BorderRadius.circular(AppRadii.pill),
                   border: Border.all(
-                    color: _showAdvanced ? AppColors.primary.withAlpha(80) : AppColors.divider,
+                    color: _showAdvanced ? AppColors.primary.withAlpha(80) : context.dividerColor,
                   ),
                 ),
                 child: Text(
@@ -114,7 +114,7 @@ class _ComparisonChartState extends State<ComparisonChart> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: _showAdvanced ? AppColors.primary : AppColors.textSub,
+                    color: _showAdvanced ? AppColors.primary : context.textSubColor,
                   ),
                 ),
               ),

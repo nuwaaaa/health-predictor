@@ -287,7 +287,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
             Container(
               width: 1,
               height: 48,
-              color: AppColors.divider,
+              color: context.dividerColor,
               margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             ),
           if (tomorrow != null)
@@ -375,7 +375,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.model_training, size: 56, color: AppColors.textSub),
+            Icon(Icons.model_training, size: 56, color: context.textSubColor),
             const SizedBox(height: AppSpacing.lg),
             const Text('データを集めています', style: AppTextStyles.section),
             const SizedBox(height: AppSpacing.sm),
@@ -438,7 +438,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
                             style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.textMain)),
+                                color: context.textMainColor)),
                         Text(
                           isBad ? '不調になりやすい' : '調子が良くなりやすい',
                           style: TextStyle(
@@ -513,12 +513,12 @@ class _AnalysisPageState extends State<AnalysisPage> {
     return AppCard(
       child: Column(
         children: [
-          const Text(
+          Text(
             '先週の予報、実際はどうでした？',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: AppColors.textMain,
+              color: context.textMainColor,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -600,7 +600,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
               style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textMain)),
+                  color: context.textMainColor)),
         ],
       ),
     );

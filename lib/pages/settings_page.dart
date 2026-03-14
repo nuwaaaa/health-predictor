@@ -292,7 +292,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   subtitle: '',
                   trailing: _linking
                       ? const _SmallSpinner()
-                      : const Icon(Icons.chevron_right, color: AppColors.textSub),
+                      : Icon(Icons.chevron_right, color: context.textSubColor),
                   onTap: _linking ? null : _linkWithApple,
                 ),
               if (!hasGoogle) ...[
@@ -303,7 +303,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   subtitle: '',
                   trailing: _linking
                       ? const _SmallSpinner()
-                      : const Icon(Icons.chevron_right, color: AppColors.textSub),
+                      : Icon(Icons.chevron_right, color: context.textSubColor),
                   onTap: _linking ? null : _linkWithGoogle,
                 ),
               ],
@@ -315,7 +315,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   subtitle: '',
                   trailing: _linking
                       ? const _SmallSpinner()
-                      : const Icon(Icons.chevron_right, color: AppColors.textSub),
+                      : Icon(Icons.chevron_right, color: context.textSubColor),
                   onTap: _linking ? null : _linkWithEmail,
                 ),
               ],
@@ -329,7 +329,7 @@ class _SettingsPageState extends State<SettingsPage> {
               icon: Icons.description_outlined,
               title: 'プライバシーポリシー',
               subtitle: 'データの取り扱いについて',
-              trailing: const Icon(Icons.open_in_new, size: 18, color: AppColors.textSub),
+              trailing: Icon(Icons.open_in_new, size: 18, color: context.textSubColor),
               onTap: () {
                 // TODO: プライバシーポリシーURLが確定したら更新する
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -374,7 +374,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 subtitle: '開発・デバッグ用のサンプルデータを生成',
                 trailing: _seeding
                     ? const _SmallSpinner()
-                    : const Icon(Icons.chevron_right, color: AppColors.textSub),
+                    : Icon(Icons.chevron_right, color: context.textSubColor),
                 onTap: _seeding ? null : _showSeedDialog,
               ),
             ],
@@ -399,11 +399,11 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('アカウント未連携',
+                Text('アカウント未連携',
                     style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textMain)),
+                        color: context.textMainColor)),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   'アプリを削除するとデータにアクセスできなくなります。アカウントを連携してデータを保護しましょう。',
@@ -429,7 +429,7 @@ class _SettingsPageState extends State<SettingsPage> {
       onTap: onTap,
       child: Row(
         children: [
-          Icon(icon, size: 24, color: titleColor ?? AppColors.textSub),
+          Icon(icon, size: 24, color: titleColor ?? context.textSubColor),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
@@ -439,7 +439,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: titleColor ?? AppColors.textMain)),
+                        color: titleColor ?? context.textMainColor)),
                 if (subtitle.isNotEmpty)
                   Text(subtitle, style: AppTextStyles.captionSmall),
               ],

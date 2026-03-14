@@ -181,38 +181,38 @@ class MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver 
               ],
             ),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.card,
+        decoration: BoxDecoration(
+          color: context.cardColor,
           border: Border(
-            top: BorderSide(color: AppColors.divider, width: 0.5),
+            top: BorderSide(color: context.dividerColor, width: 0.5),
           ),
         ),
         child: NavigationBar(
-          backgroundColor: AppColors.card,
+          backgroundColor: context.cardColor,
           surfaceTintColor: Colors.transparent,
           indicatorColor: AppColors.primaryTint,
           selectedIndex: _currentIndex,
           onDestinationSelected: switchTab,
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          destinations: const [
+          destinations: [
             NavigationDestination(
-              icon: Icon(Icons.home_outlined, color: AppColors.textSub),
-              selectedIcon: Icon(Icons.home, color: AppColors.primary),
+              icon: Icon(Icons.home_outlined, color: context.textSubColor),
+              selectedIcon: const Icon(Icons.home, color: AppColors.primary),
               label: 'ホーム',
             ),
             NavigationDestination(
-              icon: Icon(Icons.bar_chart_outlined, color: AppColors.textSub),
-              selectedIcon: Icon(Icons.bar_chart, color: AppColors.primary),
+              icon: Icon(Icons.bar_chart_outlined, color: context.textSubColor),
+              selectedIcon: const Icon(Icons.bar_chart, color: AppColors.primary),
               label: 'データ',
             ),
             NavigationDestination(
-              icon: Icon(Icons.search_outlined, color: AppColors.textSub),
-              selectedIcon: Icon(Icons.search, color: AppColors.primary),
+              icon: Icon(Icons.search_outlined, color: context.textSubColor),
+              selectedIcon: const Icon(Icons.search, color: AppColors.primary),
               label: '分析',
             ),
             NavigationDestination(
-              icon: Icon(Icons.settings_outlined, color: AppColors.textSub),
-              selectedIcon: Icon(Icons.settings, color: AppColors.primary),
+              icon: Icon(Icons.settings_outlined, color: context.textSubColor),
+              selectedIcon: const Icon(Icons.settings, color: AppColors.primary),
               label: '設定',
             ),
           ],

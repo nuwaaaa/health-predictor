@@ -29,6 +29,8 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: '体調予測',
       theme: buildCalmBlueTheme(),
+      darkTheme: buildCalmBlueDarkTheme(),
+      themeMode: ThemeMode.system,
       home: AuthWrapper(onboardingDone: onboardingDone),
     );
   }

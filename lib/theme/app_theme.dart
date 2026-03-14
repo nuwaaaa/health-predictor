@@ -37,35 +37,30 @@ class AppTextStyles {
   static const title = TextStyle(
     fontSize: 24,
     fontWeight: FontWeight.w600,
-    color: AppColors.textMain,
     height: 1.3,
   );
 
   static const section = TextStyle(
     fontSize: 20,
     fontWeight: FontWeight.w600,
-    color: AppColors.textMain,
     height: 1.3,
   );
 
   static const body = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w400,
-    color: AppColors.textMain,
     height: 1.5,
   );
 
   static const caption = TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.w400,
-    color: AppColors.textSub,
     height: 1.4,
   );
 
   static const captionSmall = TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.w400,
-    color: AppColors.textSub,
     height: 1.4,
   );
 }
@@ -99,6 +94,33 @@ class AppShadows {
       blurRadius: 12,
     ),
   ];
+}
+
+// ─────────────────────────────────────────────
+// Dark Colors — Calm Blue Dark
+// ─────────────────────────────────────────────
+
+class AppColorsDark {
+  AppColorsDark._();
+
+  static const background = Color(0xFF121820);
+  static const card = Color(0xFF1C2530);
+  static const textMain = Color(0xFFE2E8F0);
+  static const textSub = Color(0xFF8899AA);
+  static const divider = Color(0xFF2D3A4A);
+}
+
+// ─────────────────────────────────────────────
+// ライト/ダーク対応カラーヘルパー
+// ─────────────────────────────────────────────
+
+extension AdaptiveColors on BuildContext {
+  bool get isDark => Theme.of(this).brightness == Brightness.dark;
+  Color get cardColor => isDark ? AppColorsDark.card : AppColors.card;
+  Color get bgColor => isDark ? AppColorsDark.background : AppColors.background;
+  Color get textMainColor => isDark ? AppColorsDark.textMain : AppColors.textMain;
+  Color get textSubColor => isDark ? AppColorsDark.textSub : AppColors.textSub;
+  Color get dividerColor => isDark ? AppColorsDark.divider : AppColors.divider;
 }
 
 // ─────────────────────────────────────────────
@@ -221,6 +243,121 @@ ThemeData buildCalmBlueTheme() {
       backgroundColor: AppColors.textMain,
       contentTextStyle:
           const TextStyle(fontSize: 14, color: Colors.white),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadii.button),
+      ),
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
+}
+
+ThemeData buildCalmBlueDarkTheme() {
+  return ThemeData(
+    useMaterial3: true,
+    colorSchemeSeed: AppColors.primary,
+    brightness: Brightness.dark,
+    scaffoldBackgroundColor: AppColorsDark.background,
+
+    appBarTheme: const AppBarTheme(
+      backgroundColor: AppColorsDark.background,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      centerTitle: true,
+      titleTextStyle: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        color: AppColorsDark.textMain,
+      ),
+      iconTheme: IconThemeData(color: AppColorsDark.textMain),
+    ),
+
+    cardTheme: CardThemeData(
+      color: AppColorsDark.card,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadii.card),
+      ),
+      margin: EdgeInsets.zero,
+    ),
+
+    dividerTheme: const DividerThemeData(
+      color: AppColorsDark.divider,
+      thickness: 1,
+      space: 0,
+    ),
+
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      backgroundColor: AppColorsDark.card,
+      selectedItemColor: AppColors.primary,
+      unselectedItemColor: AppColorsDark.textSub,
+      type: BottomNavigationBarType.fixed,
+      elevation: 0,
+      selectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      unselectedLabelStyle: TextStyle(fontSize: 12),
+    ),
+
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadii.button),
+        ),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      ),
+    ),
+
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.primary,
+        side: const BorderSide(color: AppColorsDark.divider),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadii.button),
+        ),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      ),
+    ),
+
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: AppColorsDark.background,
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadii.input),
+        borderSide: const BorderSide(color: AppColorsDark.divider),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadii.input),
+        borderSide: const BorderSide(color: AppColorsDark.divider),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadii.input),
+        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+      ),
+      labelStyle: const TextStyle(fontSize: 14, color: AppColorsDark.textSub),
+      hintStyle: const TextStyle(fontSize: 14, color: AppColorsDark.textSub),
+    ),
+
+    chipTheme: ChipThemeData(
+      backgroundColor: AppColorsDark.card,
+      selectedColor: const Color(0xFF2A3A55),
+      side: const BorderSide(color: AppColorsDark.divider),
+      labelStyle: const TextStyle(fontSize: 13, color: AppColorsDark.textMain),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    ),
+
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: AppColorsDark.textMain,
+      contentTextStyle:
+          const TextStyle(fontSize: 14, color: AppColorsDark.background),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadii.button),
       ),

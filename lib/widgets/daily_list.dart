@@ -68,19 +68,20 @@ class DailyList extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: AppSpacing.sm),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: isEmpty ? AppColors.background : AppColors.card,
+              color: isEmpty ? context.bgColor : context.cardColor,
               borderRadius: BorderRadius.circular(AppRadii.button),
               border: Border.all(
                 color: isEmpty && editable
                     ? AppColors.cautionSoft2
-                    : AppColors.divider,
+                    : context.dividerColor,
               ),
             ),
             child: Row(
               children: [
                 SizedBox(
                   width: 90,
-                  child: Text(log.dateKey, style: AppTextStyles.captionSmall),
+                  child: Text(log.dateKey,
+                      style: AppTextStyles.captionSmall.copyWith(color: context.textSubColor)),
                 ),
                 if (isEmpty)
                   Text(
@@ -89,13 +90,13 @@ class DailyList extends StatelessWidget {
                       fontSize: 13,
                       color: editable
                           ? AppColors.chartOrange
-                          : AppColors.textSub,
+                          : context.textSubColor,
                     ),
                   )
                 else
                   Text('$emoji $m',
-                      style: const TextStyle(
-                          fontSize: 16, color: AppColors.textMain)),
+                      style: TextStyle(
+                          fontSize: 16, color: context.textMainColor)),
                 const Spacer(),
                 if (!isEmpty) ...[
                   _miniLabel('🛏️', sleepText),
@@ -109,7 +110,7 @@ class DailyList extends StatelessWidget {
                         ? Icons.edit_outlined
                         : Icons.visibility_outlined,
                     size: 16,
-                    color: editable ? AppColors.primary : AppColors.textSub,
+                    color: editable ? AppColors.primary : context.textSubColor,
                   ),
                 ],
               ],

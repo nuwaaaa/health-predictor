@@ -15,9 +15,9 @@ class StatusBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(AppRadii.card),
-        boxShadow: AppShadows.card,
+        boxShadow: context.isDark ? null : AppShadows.card,
       ),
       child: Column(
         children: [
@@ -32,10 +32,10 @@ class StatusBanner extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 status.statusLabel,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textMain,
+                  color: context.textMainColor,
                 ),
               ),
             ],
@@ -43,7 +43,7 @@ class StatusBanner extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             '${status.daysCollected} / ${status.daysRequired} 日記録済み',
-            style: AppTextStyles.captionSmall,
+            style: AppTextStyles.captionSmall.copyWith(color: context.textSubColor),
           ),
           if (ready) ...[
             const SizedBox(height: AppSpacing.sm),
@@ -51,12 +51,14 @@ class StatusBanner extends StatelessWidget {
               spacing: AppSpacing.sm,
               children: [
                 _infoPill(
+                  context,
                   'モデル',
                   status.modelType == 'lightgbm' ? 'LightGBM' : 'ロジスティック',
                 ),
-                _infoPill('信頼度', status.confidenceLevelLabel),
+                _infoPill(context, '信頼度', status.confidenceLevelLabel),
                 if (status.recentMissingRate > 0)
                   _infoPill(
+                    context,
                     '欠損率',
                     '${(status.recentMissingRate * 100).round()}%',
                   ),
@@ -68,16 +70,16 @@ class StatusBanner extends StatelessWidget {
     );
   }
 
-  Widget _infoPill(String label, String value) {
+  Widget _infoPill(BuildContext context, String label, String value) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: context.bgColor,
         borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Text(
         '$label: $value',
-        style: AppTextStyles.captionSmall,
+        style: AppTextStyles.captionSmall.copyWith(color: context.textSubColor),
       ),
     );
   }
