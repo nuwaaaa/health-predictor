@@ -390,9 +390,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
   }
 
   Widget _contributionsCard(Prediction pred) {
-    final filtered = pred.contributions
-        .where((c) => !c.feature.endsWith('_missing'))
-        .toList();
+    final filtered = pred.contributions;
 
     if (filtered.isEmpty) {
       return const EmptyState(

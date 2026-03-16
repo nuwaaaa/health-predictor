@@ -136,8 +136,7 @@
 
 - 体調の時系列: 前日スコア(`mood_lag1`)、3日/7日移動平均(`mood_ma3`, `mood_ma7`)、前日差分(`mood_delta1`)、14日平均偏差(`mood_dev14`)
 - 生活データ: 睡眠時間(`sleep_hours_filled`)、歩数(`steps_filled`, 前日値)、ストレス(`stress_filled`, 前日値)、各偏差(`sleep_dev`, `steps_dev`)
-- 欠損フラグ: `sleep_missing`, `steps_missing`, `stress_missing`（欠損自体が情報になるケースをカバー）
-- カレンダー: 曜日(`day_of_week`)、休日フラグ(`is_weekend`)
+- カレンダー: 曜日(`day_sin`, `day_cos`)、休日フラグ(`is_weekend`)
 - リーク防止: 当日(t)の体調は予測入力に使わない（t-1以前のみ）
 
 ### 不調の定義
@@ -221,7 +220,7 @@
 |項目|変更内容|
 |---|---|
 |不調判定|「閾値以下」→「閾値未満（`<`）」に修正。閾値ちょうどは不調としない|
-|特徴量名|`steps_t1`→`steps_filled`、`mood_t1`→`mood_lag1` 等、コードの命名に統一。`*_missing` フラグを追加|
+|特徴量名|`steps_t1`→`steps_filled`、`mood_t1`→`mood_lag1` 等、コードの命名に統一。欠損フラグは小サンプルでの過学習リスクのため不採用|
 
 ### 設計書が正しいがMVP未実装（将来対応）
 

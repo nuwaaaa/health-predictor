@@ -43,7 +43,6 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     # --- 睡眠特徴量 ---
     # 睡眠は当日起床分 (date_key=t) を使用可能
     df["sleep_hours_filled"] = _fill_missing(df["sleep_hours"], window=7)
-    df["sleep_missing"] = df["sleep_hours"].isna().astype(int)
     # shift(1)で前日までの移動平均を使い、当日値の自己参照を防止
     sleep_mean = df["sleep_hours"].shift(1).rolling(window=7, min_periods=1).mean()
     df["sleep_dev"] = df["sleep_hours_filled"] - _fill_missing(sleep_mean, window=7)
@@ -52,14 +51,12 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     # 歩数は t-1 を使用（当日はまだ増えるため）
     df["steps_lag1"] = df["steps"].shift(1)
     df["steps_filled"] = _fill_missing(df["steps_lag1"], window=7)
-    df["steps_missing"] = df["steps_lag1"].isna().astype(int)
     steps_mean = df["steps"].shift(1).rolling(window=7, min_periods=1).mean()
     df["steps_dev"] = df["steps_filled"] - _fill_missing(steps_mean, window=7)
 
     # --- ストレス特徴量（任意入力）---
     df["stress_lag1"] = df["stress"].shift(1)
     df["stress_filled"] = _fill_missing(df["stress_lag1"], window=7)
-    df["stress_missing"] = df["stress_lag1"].isna().astype(int)
 
     return df
 
@@ -76,13 +73,10 @@ def get_feature_columns() -> list[str]:
         "mood_delta1",
         "mood_dev14",
         "sleep_hours_filled",
-        "sleep_missing",
         "sleep_dev",
         "steps_filled",
-        "steps_missing",
         "steps_dev",
         "stress_filled",
-        "stress_missing",
     ]
 
 

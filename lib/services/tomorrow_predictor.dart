@@ -128,7 +128,6 @@ class TomorrowPredictor {
     }
     final sleepFilled =
         sleepValues.isNotEmpty ? _rollingMean(sleepValues, 7) : 0.0;
-    const sleepMissing = 1.0; // 未知
     const sleepDev = 0.0; // 平均で補完→偏差≈0
 
     // --- 歩数特徴量（steps(D) = 今日の歩数）---
@@ -137,14 +136,11 @@ class TomorrowPredictor {
       if (log.steps != null) stepsHistory.add(log.steps!.toDouble());
     }
     double stepsFilled;
-    double stepsMissing;
     if (today.steps != null) {
       stepsFilled = today.steps!.toDouble();
-      stepsMissing = 0.0;
     } else {
       stepsFilled =
           stepsHistory.isNotEmpty ? _rollingMean(stepsHistory, 7) : 0.0;
-      stepsMissing = 1.0;
     }
     double stepsDev = 0;
     if (stepsHistory.isNotEmpty) {
@@ -157,14 +153,11 @@ class TomorrowPredictor {
       if (log.stress != null) stressHistory.add(log.stress!.toDouble());
     }
     double stressFilled;
-    double stressMissing;
     if (today.stress != null) {
       stressFilled = today.stress!.toDouble();
-      stressMissing = 0.0;
     } else {
       stressFilled =
           stressHistory.isNotEmpty ? _rollingMean(stressHistory, 7) : 0.0;
-      stressMissing = 1.0;
     }
 
     return {
@@ -177,13 +170,10 @@ class TomorrowPredictor {
       'mood_delta1': moodDelta1,
       'mood_dev14': moodDev14,
       'sleep_hours_filled': sleepFilled,
-      'sleep_missing': sleepMissing,
       'sleep_dev': sleepDev,
       'steps_filled': stepsFilled,
-      'steps_missing': stepsMissing,
       'steps_dev': stepsDev,
       'stress_filled': stressFilled,
-      'stress_missing': stressMissing,
     };
   }
 

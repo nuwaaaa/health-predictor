@@ -525,7 +525,7 @@ class FirestoreService {
 
     // テスト用ダミーモデルパラメータ（クライアント側推論で明日の予測を表示するため）
     if (isReady) {
-      // 16特徴量分のダミー係数（体調・睡眠に正の寄与を設定）
+      // 13特徴量分のダミー係数（体調・睡眠に正の寄与を設定）
       statusData['modelParams'] = {
         'coefficients': [
           0.05,  // day_sin
@@ -537,29 +537,26 @@ class FirestoreService {
           0.15,  // mood_delta1
           0.1,   // mood_dev14
           -0.3,  // sleep_hours_filled
-          0.1,   // sleep_missing
           -0.05, // sleep_dev
           -0.1,  // steps_filled
-          0.05,  // steps_missing
           -0.05, // steps_dev
           0.2,   // stress_filled
-          0.05,  // stress_missing
         ],
         'intercept': -0.5,
         'scalerMean': [
           0.0, 0.0, 0.29, 3.2, 3.2, 3.2, 0.0, 0.0,
-          7.0, 0.1, 0.0, 6500.0, 0.1, 0.0, 2.5, 0.2,
+          7.0, 0.0, 6500.0, 0.0, 2.5,
         ],
         'scalerScale': [
           0.7, 0.7, 0.45, 1.0, 0.8, 0.6, 0.8, 0.5,
-          1.2, 0.3, 0.8, 3000.0, 0.3, 2000.0, 1.0, 0.4,
+          1.2, 0.8, 3000.0, 2000.0, 1.0,
         ],
         'featureColumns': [
           'day_sin', 'day_cos', 'is_weekend', 'mood_lag1', 'mood_ma3',
           'mood_ma7', 'mood_delta1', 'mood_dev14',
-          'sleep_hours_filled', 'sleep_missing', 'sleep_dev',
-          'steps_filled', 'steps_missing', 'steps_dev',
-          'stress_filled', 'stress_missing',
+          'sleep_hours_filled', 'sleep_dev',
+          'steps_filled', 'steps_dev',
+          'stress_filled',
         ],
       };
     }
