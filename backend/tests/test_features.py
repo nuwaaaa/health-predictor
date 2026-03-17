@@ -19,6 +19,16 @@ def _make_df(n: int = 20) -> pd.DataFrame:
             "date_key": dates,
             "moodScore": [3 + (i % 3) for i in range(n)],
             "sleep_hours": [7.0 + (i % 3) * 0.5 for i in range(n)],
+            "bed_time": [
+                f"{23 if i % 2 == 0 else 0}:{i % 6 * 10:02d}"
+                if i % 5 != 0
+                else None
+                for i in range(n)
+            ],
+            "wake_time": [
+                f"07:{i % 6 * 10:02d}" if i % 7 != 0 else None
+                for i in range(n)
+            ],
             "steps": [8000 + i * 100 for i in range(n)],
             "stress": [None if i % 4 == 0 else 2 + (i % 3) for i in range(n)],
         }
@@ -47,8 +57,9 @@ def test_steps_uses_lag1():
     """歩数が t-1 を使用していること"""
     df = _make_df()
     result = build_features(df)
-    # steps_filled at index 1 should be based on steps at index 0
-    assert pd.isna(result.loc[0, "steps_filled"]) or result.loc[0, "steps_filled"] == 0
+    # index 0 の steps_lag1 は NaN（前日データなし）→ _fill_missing でグローバル平均に補完
+    # index 1 の steps_filled は index 0 の steps を基にしている
+    assert result.loc[1, "steps_filled"] == df.loc[0, "steps"]
 
 
 def test_weekend_flag():
@@ -61,12 +72,13 @@ def test_weekend_flag():
     assert sat_row.iloc[0]["is_weekend"] == 1
 
 
-def test_missing_flag():
-    """欠損フラグが正しいことを確認"""
+def test_sleep_missing_filled():
+    """睡眠欠損が補完されることを確認（*_missing フラグは設計書 3/16 で廃止済み）"""
     df = _make_df()
     df.loc[5, "sleep_hours"] = None
     result = build_features(df)
-    assert result.loc[5, "sleep_missing"] == 1
+    # 欠損はローリング平均で補完され、NaN にならないこと
+    assert pd.notna(result.loc[5, "sleep_hours_filled"])
 
 
 def test_stress_missing_filled():
