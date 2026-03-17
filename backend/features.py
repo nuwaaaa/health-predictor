@@ -12,7 +12,7 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     """日次ログ DataFrame から特徴量を生成する。
 
     入力 df は date_key 昇順にソート済みを想定。
-    カラム: date_key, moodScore, sleep_hours, steps, stress
+    カラム: date_key, moodScore, sleep_hours, bed_time, wake_time, steps, stress
 
     返却: 特徴量テーブル（date_key, 各特徴量カラム）
     """
@@ -47,6 +47,21 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     sleep_mean = df["sleep_hours"].shift(1).rolling(window=7, min_periods=1).mean()
     df["sleep_dev"] = df["sleep_hours_filled"] - _fill_missing(sleep_mean, window=7)
 
+    # --- 就寝・起床時刻の周期特徴量 ---
+    bed_minutes = _time_str_to_minutes(df["bed_time"])
+    wake_minutes = _time_str_to_minutes(df["wake_time"])
+
+    # 就寝時刻: 正午未満(深夜〜早朝)を+1440で補正してローリング平均を正しく計算
+    bed_shifted = bed_minutes.where(bed_minutes >= 720, bed_minutes + 1440)
+    bed_filled = _fill_missing(bed_shifted, window=7)
+    df["bed_sin"] = np.sin(2 * np.pi * bed_filled / 1440)
+    df["bed_cos"] = np.cos(2 * np.pi * bed_filled / 1440)
+
+    # 起床時刻: 06:00-10:00付近に集中、境界問題なし
+    wake_filled = _fill_missing(wake_minutes, window=7)
+    df["wake_sin"] = np.sin(2 * np.pi * wake_filled / 1440)
+    df["wake_cos"] = np.cos(2 * np.pi * wake_filled / 1440)
+
     # --- 歩数特徴量 ---
     # 歩数は t-1 を使用（当日はまだ増えるため）
     df["steps_lag1"] = df["steps"].shift(1)
@@ -74,10 +89,29 @@ def get_feature_columns() -> list[str]:
         "mood_dev14",
         "sleep_hours_filled",
         "sleep_dev",
+        "bed_sin",
+        "bed_cos",
+        "wake_sin",
+        "wake_cos",
         "steps_filled",
         "steps_dev",
         "stress_filled",
     ]
+
+
+def _time_str_to_minutes(series: pd.Series) -> pd.Series:
+    """'HH:mm' 文字列の Series を分(float)に変換する。None/NaN はそのまま保持。"""
+    def _parse(val):
+        if pd.isna(val) or not isinstance(val, str):
+            return np.nan
+        parts = val.split(":")
+        if len(parts) != 2:
+            return np.nan
+        try:
+            return int(parts[0]) * 60 + int(parts[1])
+        except ValueError:
+            return np.nan
+    return series.apply(_parse)
 
 
 def _fill_missing(series: pd.Series, window: int = 7) -> pd.Series:

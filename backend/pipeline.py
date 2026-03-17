@@ -93,6 +93,8 @@ def _process_user(db: firestore.Client, uid: str, today: str):
                 "date_key": doc.id,
                 "moodScore": data.get("moodScore"),  # Noneも含める（欠損率算出のため）
                 "sleep_hours": sleep_data.get("durationHours"),
+                "bed_time": sleep_data.get("bedTime"),      # "HH:mm" or None
+                "wake_time": sleep_data.get("wakeTime"),    # "HH:mm" or None
                 "steps": data.get("steps"),
                 "stress": data.get("stress"),
             }

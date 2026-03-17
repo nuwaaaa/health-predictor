@@ -73,7 +73,7 @@ class TomorrowPredictor {
     );
   }
 
-  /// 明日 (D+1) の予測に必要な16特徴量をマップで構築する。
+  /// 明日 (D+1) の予測に必要な17特徴量をマップで構築する。
   ///
   /// 「data(D) → risk(D+1)」の関係:
   ///   mood_lag1  = mood(D)       ... 今日の体調
@@ -130,6 +130,31 @@ class TomorrowPredictor {
         sleepValues.isNotEmpty ? _rollingMean(sleepValues, 7) : 0.0;
     const sleepDev = 0.0; // 平均で補完→偏差≈0
 
+    // --- 就寝・起床時刻の周期特徴量（D+1 は未知→過去平均で補完）---
+    final bedMinutesList = <double>[];
+    final wakeMinutesList = <double>[];
+    for (final log in recentLogs) {
+      if (log.sleep?.bedTime != null) {
+        var m = _parseTimeToMinutes(log.sleep!.bedTime!);
+        if (m < 720) m += 1440; // 正午未満をシフトして平均を正しく計算
+        bedMinutesList.add(m);
+      }
+      if (log.sleep?.wakeTime != null) {
+        wakeMinutesList.add(_parseTimeToMinutes(log.sleep!.wakeTime!));
+      }
+    }
+    final bedFilled = bedMinutesList.isNotEmpty
+        ? _rollingMean(bedMinutesList, 7)
+        : 1410.0; // デフォルト ~23:30
+    final wakeFilled = wakeMinutesList.isNotEmpty
+        ? _rollingMean(wakeMinutesList, 7)
+        : 420.0; // デフォルト ~07:00
+
+    final bedSin = sin(2 * pi * bedFilled / 1440);
+    final bedCos = cos(2 * pi * bedFilled / 1440);
+    final wakeSin = sin(2 * pi * wakeFilled / 1440);
+    final wakeCos = cos(2 * pi * wakeFilled / 1440);
+
     // --- 歩数特徴量（steps(D) = 今日の歩数）---
     final stepsHistory = <double>[];
     for (final log in recentLogs) {
@@ -171,10 +196,20 @@ class TomorrowPredictor {
       'mood_dev14': moodDev14,
       'sleep_hours_filled': sleepFilled,
       'sleep_dev': sleepDev,
+      'bed_sin': bedSin,
+      'bed_cos': bedCos,
+      'wake_sin': wakeSin,
+      'wake_cos': wakeCos,
       'steps_filled': stepsFilled,
       'steps_dev': stepsDev,
       'stress_filled': stressFilled,
     };
+  }
+
+  /// "HH:mm" 文字列を分(double)に変換する。
+  static double _parseTimeToMinutes(String time) {
+    final parts = time.split(':');
+    return int.parse(parts[0]) * 60.0 + int.parse(parts[1]);
   }
 
   /// 直近 [window] 件の平均を計算（min_periods=1 相当）。
