@@ -203,7 +203,8 @@ class TomorrowPredictor {
     };
   }
 
-  /// sin/cos ペアの寄与度を符号付きL2ノルムで合算する。
+  /// sin/cos ペアの寄与度を単純加算で合算する。
+  /// LR の coef×feature は log-odds 空間で加法的なので単純和が正しい。
   static const _sinCosPairs = {
     'day_sin': 'day_cos',
     'bed_sin': 'bed_cos',
@@ -219,10 +220,7 @@ class TomorrowPredictor {
       if (_sinCosPairs.containsKey(entry.key)) {
         final vSin = entry.value;
         final vCos = contribs[_sinCosPairs[entry.key]!] ?? 0.0;
-        final magnitude = sqrt(vSin * vSin + vCos * vCos);
-        final sign =
-            vSin.abs() >= vCos.abs() ? (vSin >= 0 ? 1.0 : -1.0) : (vCos >= 0 ? 1.0 : -1.0);
-        merged.add(FeatureContribution(feature: entry.key, value: sign * magnitude));
+        merged.add(FeatureContribution(feature: entry.key, value: vSin + vCos));
       } else {
         merged.add(FeatureContribution(feature: entry.key, value: entry.value));
       }

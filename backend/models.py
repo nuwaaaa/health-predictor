@@ -410,9 +410,10 @@ _SINCOS_COS_KEYS = {v[0] for v in _SINCOS_PAIRS.values()}
 
 
 def _merge_sincos_pairs(items: list[dict]) -> list[dict]:
-    """sin/cos ペアの寄与度を符号付きL2ノルムで合算する。
+    """sin/cos ペアの寄与度を単純加算で合算する。
 
-    合算値 = sqrt(v_sin² + v_cos²) × sign(abs が大きい方)
+    LR の coef×feature も SHAP 値も log-odds 空間で加法的なので、
+    sin/cos ペアの合算は単純和が正しい。
     ペアの feature 名は sin 側を代表として使用する。
     """
     value_map = {item["feature"]: item["value"] for item in items}
@@ -427,13 +428,7 @@ def _merge_sincos_pairs(items: list[dict]) -> list[dict]:
             cos_key, _ = _SINCOS_PAIRS[feat]
             v_sin = item["value"]
             v_cos = value_map.get(cos_key, 0.0)
-            magnitude = (v_sin ** 2 + v_cos ** 2) ** 0.5
-            sign = 1 if abs(v_sin) >= abs(v_cos) else (1 if v_cos >= 0 else -1)
-            if abs(v_sin) >= abs(v_cos):
-                sign = 1 if v_sin >= 0 else -1
-            else:
-                sign = 1 if v_cos >= 0 else -1
-            merged.append({"feature": feat, "value": sign * magnitude})
+            merged.append({"feature": feat, "value": v_sin + v_cos})
         else:
             merged.append(item)
     return merged
