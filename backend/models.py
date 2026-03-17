@@ -65,18 +65,18 @@ def train_and_predict(
     ):
         lgb_cv = _tscv_evaluate_lgb(X, y, days_collected)
 
-    # --- モデル選択（0.5σルール: LightGBMがLRの平均+0.5σを超えた場合のみ切替）---
+    # --- モデル選択（1σルール: LightGBMがLRの平均+1σを超えた場合のみ切替）---
     best_model_type = "logistic"
     if lgb_cv is not None and lgb_cv["pr_auc_mean"] is not None:
         lr_mean = lr_cv["pr_auc_mean"]
         lr_std = lr_cv["pr_auc_std"] or 0.0
         lgb_mean = lgb_cv["pr_auc_mean"]
-        threshold = (lr_mean or 0.0) + lr_std * 0.5
+        threshold = (lr_mean or 0.0) + lr_std * 1.0
 
         if lr_mean is None or lgb_mean > threshold:
             best_model_type = "lightgbm"
             logger.info(
-                "LightGBM selected (CV PR-AUC: %.3f±%.3f, %d folds > LR: %s + 0.5σ=%.3f, %d folds)",
+                "LightGBM selected (CV PR-AUC: %.3f±%.3f, %d folds > LR: %s + 1σ=%.3f, %d folds)",
                 lgb_mean,
                 lgb_cv["pr_auc_std"] or 0.0,
                 lgb_cv["valid_folds"],
@@ -86,7 +86,7 @@ def train_and_predict(
             )
         else:
             logger.info(
-                "Logistic retained — 0.5σ rule (LR: %s, threshold: %.3f, LGBM: %.3f±%.3f)",
+                "Logistic retained — 1σ rule (LR: %s, threshold: %.3f, LGBM: %.3f±%.3f)",
                 f"{lr_mean:.3f}±{lr_std:.3f}" if lr_mean is not None else "N/A",
                 threshold,
                 lgb_mean,
