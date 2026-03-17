@@ -399,6 +399,46 @@ def _safe_pr_auc(y_true, y_score) -> float | None:
 # 寄与度計算
 # ---------------------------------------------------------------------------
 
+# sin/cos ペア定義: 合算して1つの寄与度として扱う
+_SINCOS_PAIRS = {
+    "day_sin": ("day_cos", "曜日"),
+    "bed_sin": ("bed_cos", "就寝時刻"),
+    "wake_sin": ("wake_cos", "起床時刻"),
+}
+# cos 側のキー（sin 側で合算済みなのでスキップ用）
+_SINCOS_COS_KEYS = {v[0] for v in _SINCOS_PAIRS.values()}
+
+
+def _merge_sincos_pairs(items: list[dict]) -> list[dict]:
+    """sin/cos ペアの寄与度を符号付きL2ノルムで合算する。
+
+    合算値 = sqrt(v_sin² + v_cos²) × sign(abs が大きい方)
+    ペアの feature 名は sin 側を代表として使用する。
+    """
+    value_map = {item["feature"]: item["value"] for item in items}
+    merged = []
+    seen = set()
+    for item in items:
+        feat = item["feature"]
+        if feat in seen or feat in _SINCOS_COS_KEYS:
+            continue
+        seen.add(feat)
+        if feat in _SINCOS_PAIRS:
+            cos_key, _ = _SINCOS_PAIRS[feat]
+            v_sin = item["value"]
+            v_cos = value_map.get(cos_key, 0.0)
+            magnitude = (v_sin ** 2 + v_cos ** 2) ** 0.5
+            sign = 1 if abs(v_sin) >= abs(v_cos) else (1 if v_cos >= 0 else -1)
+            if abs(v_sin) >= abs(v_cos):
+                sign = 1 if v_sin >= 0 else -1
+            else:
+                sign = 1 if v_cos >= 0 else -1
+            merged.append({"feature": feat, "value": sign * magnitude})
+        else:
+            merged.append(item)
+    return merged
+
+
 def _calc_lr_contributions(
     model: LogisticRegression,
     scaler: StandardScaler,
@@ -414,6 +454,7 @@ def _calc_lr_contributions(
             {"feature": feature_cols[i], "value": float(contributions[i])}
             for i in range(len(feature_cols))
         ]
+        items = _merge_sincos_pairs(items)
         items.sort(key=lambda x: abs(x["value"]), reverse=True)
         return items[:3]
     except Exception:
@@ -439,6 +480,7 @@ def _calc_lgb_contributions(
             {"feature": feature_cols[i], "value": float(vals[i])}
             for i in range(len(feature_cols))
         ]
+        items = _merge_sincos_pairs(items)
         items.sort(key=lambda x: abs(x["value"]), reverse=True)
         return items[:3]
     except Exception:

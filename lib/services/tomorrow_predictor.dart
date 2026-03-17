@@ -49,15 +49,12 @@ class TomorrowPredictor {
     double probability = 1.0 / (1.0 + exp(-logit));
     probability = (probability * 10000).roundToDouble() / 10000;
 
-    // 寄与度 (coef × scaled_feature) → TOP3
-    final allContribs = <FeatureContribution>[];
+    // 寄与度 (coef × scaled_feature) → sin/cosペア合算 → TOP3
+    final rawContribs = <String, double>{};
     for (int i = 0; i < n; i++) {
-      allContribs.add(FeatureContribution(
-        feature: featureCols[i],
-        value: modelParams.coefficients[i] * scaled[i],
-      ));
+      rawContribs[featureCols[i]] = modelParams.coefficients[i] * scaled[i];
     }
-    allContribs.sort((a, b) => b.value.abs().compareTo(a.value.abs()));
+    final allContribs = _mergeSinCosPairs(rawContribs);
 
     // 明日の日付キー
     final tomorrow = DateTime.now().add(const Duration(days: 1));
@@ -204,6 +201,34 @@ class TomorrowPredictor {
       'steps_dev': stepsDev,
       'stress_filled': stressFilled,
     };
+  }
+
+  /// sin/cos ペアの寄与度を符号付きL2ノルムで合算する。
+  static const _sinCosPairs = {
+    'day_sin': 'day_cos',
+    'bed_sin': 'bed_cos',
+    'wake_sin': 'wake_cos',
+  };
+
+  static List<FeatureContribution> _mergeSinCosPairs(
+      Map<String, double> contribs) {
+    final cosKeys = _sinCosPairs.values.toSet();
+    final merged = <FeatureContribution>[];
+    for (final entry in contribs.entries) {
+      if (cosKeys.contains(entry.key)) continue; // cos 側はスキップ
+      if (_sinCosPairs.containsKey(entry.key)) {
+        final vSin = entry.value;
+        final vCos = contribs[_sinCosPairs[entry.key]!] ?? 0.0;
+        final magnitude = sqrt(vSin * vSin + vCos * vCos);
+        final sign =
+            vSin.abs() >= vCos.abs() ? (vSin >= 0 ? 1.0 : -1.0) : (vCos >= 0 ? 1.0 : -1.0);
+        merged.add(FeatureContribution(feature: entry.key, value: sign * magnitude));
+      } else {
+        merged.add(FeatureContribution(feature: entry.key, value: entry.value));
+      }
+    }
+    merged.sort((a, b) => b.value.abs().compareTo(a.value.abs()));
+    return merged;
   }
 
   /// "HH:mm" 文字列を分(double)に変換する。
