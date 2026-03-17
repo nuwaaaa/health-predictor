@@ -8,6 +8,7 @@ MIN_UNHEALTHY_3D = 10
 # LightGBM切替条件
 LGBM_MIN_DAYS = 60
 LGBM_MIN_UNHEALTHY = 10
+MODEL_SELECTION_MAX_STD = 0.1  # 1σルールのσ上限（CV分散が大きい時にLGBMを過度に不利にしない）
 
 # TSCV設定（Expanding Window）
 TSCV_FOLDS_SMALL = 2    # 14-29日

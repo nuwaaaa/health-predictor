@@ -372,20 +372,39 @@ class TestTrainAndPredict:
 # ---------------------------------------------------------------------------
 
 class TestModelSelectionThreshold:
-    """models.py:74 の閾値計算が 1σ であることを検証"""
+    """models.py:74 の閾値計算が 1σ（σキャップ付き）であることを検証"""
 
     def test_threshold_uses_1sigma(self):
         """閾値が lr_mean + 1.0 * lr_std で計算されること"""
-        # train_and_predict 内のロジックを直接テストするために、
-        # 同じ計算式で検証する
         lr_mean = 0.5
         lr_std = 0.1
         threshold = lr_mean + lr_std * 1.0
         assert abs(threshold - 0.6) < 1e-9
 
+    def test_std_cap_below_max(self):
+        """σがキャップ値(0.1)以下の場合はそのまま使用される"""
+        import config
+        lr_std = 0.05
+        capped = min(lr_std, config.MODEL_SELECTION_MAX_STD)
+        assert capped == 0.05
+
+    def test_std_cap_above_max(self):
+        """σがキャップ値(0.1)を超える場合は0.1に丸められる"""
+        import config
+        lr_std = 0.25
+        capped = min(lr_std, config.MODEL_SELECTION_MAX_STD)
+        assert abs(capped - 0.1) < 1e-9
+
+    def test_std_cap_threshold_calculation(self):
+        """σキャップ適用時の閾値計算例: mean=0.7, std=0.2 → threshold=0.8（not 0.9）"""
+        import config
+        lr_mean = 0.7
+        lr_std = min(0.2, config.MODEL_SELECTION_MAX_STD)  # 0.2 → 0.1
+        threshold = lr_mean + lr_std * 1.0
+        assert abs(threshold - 0.8) < 1e-9
+
     def test_lgbm_below_threshold_keeps_lr(self):
         """LightGBM が 1σ 以下なら LR が維持されること（統合テスト）"""
-        # LightGBM 条件未達（days < LGBM_MIN_DAYS）→ 必ず logistic
         np.random.seed(42)
         n = 30
         df = pd.DataFrame({

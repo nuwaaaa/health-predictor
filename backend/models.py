@@ -66,10 +66,11 @@ def train_and_predict(
         lgb_cv = _tscv_evaluate_lgb(X, y, days_collected)
 
     # --- モデル選択（1σルール: LightGBMがLRの平均+1σを超えた場合のみ切替）---
+    # σが大きすぎるとLGBMに不利になるため、上限をキャップする
     best_model_type = "logistic"
     if lgb_cv is not None and lgb_cv["pr_auc_mean"] is not None:
         lr_mean = lr_cv["pr_auc_mean"]
-        lr_std = lr_cv["pr_auc_std"] or 0.0
+        lr_std = min(lr_cv["pr_auc_std"] or 0.0, config.MODEL_SELECTION_MAX_STD)
         lgb_mean = lgb_cv["pr_auc_mean"]
         threshold = (lr_mean or 0.0) + lr_std * 1.0
 
