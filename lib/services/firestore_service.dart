@@ -530,8 +530,6 @@ class FirestoreService {
         'coefficients': [
           0.05,  // day_sin
           0.03,  // day_cos
-          0.02,  // day_sin2
-          0.01,  // day_cos2
           -0.1,  // is_weekend
           0.4,   // mood_lag1
           0.3,   // mood_ma3
@@ -547,29 +545,24 @@ class FirestoreService {
           -0.1,  // steps_filled
           -0.05, // steps_dev
           0.2,   // stress_filled
-          -0.15, // sleep_stress
-          -0.08, // steps_stress
         ],
         'intercept': -0.5,
         'scalerMean': [
-          0.0, 0.0, 0.0, 0.0, 0.29, 3.2, 3.2, 3.2, 0.0, 0.0,
+          0.0, 0.0, 0.29, 3.2, 3.2, 3.2, 0.0, 0.0,
           7.0, 0.0, 0.0, 0.0, 0.0, 0.0, 6500.0, 0.0, 2.5,
-          17.5, 16250.0,
         ],
         'scalerScale': [
-          0.7, 0.7, 0.7, 0.7, 0.45, 1.0, 0.8, 0.6, 0.8, 0.5,
+          0.7, 0.7, 0.45, 1.0, 0.8, 0.6, 0.8, 0.5,
           1.2, 0.8, 0.7, 0.7, 0.7, 0.7, 3000.0, 2000.0, 1.0,
-          8.0, 8000.0,
         ],
         'featureColumns': [
-          'day_sin', 'day_cos', 'day_sin2', 'day_cos2',
+          'day_sin', 'day_cos',
           'is_weekend', 'mood_lag1', 'mood_ma3',
           'mood_ma7', 'mood_delta1', 'mood_dev14',
           'sleep_hours_filled', 'sleep_dev',
           'bed_sin', 'bed_cos', 'wake_sin', 'wake_cos',
           'steps_filled', 'steps_dev',
           'stress_filled',
-          'sleep_stress', 'steps_stress',
         ],
       };
     }

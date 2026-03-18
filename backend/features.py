@@ -26,8 +26,6 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     dow = df["date"].dt.dayofweek  # 0=Mon, 6=Sun
     df["day_sin"] = np.sin(2 * np.pi * dow / 7)
     df["day_cos"] = np.cos(2 * np.pi * dow / 7)
-    df["day_sin2"] = np.sin(4 * np.pi * dow / 7)
-    df["day_cos2"] = np.cos(4 * np.pi * dow / 7)
     df["is_weekend"] = dow.isin([5, 6]).astype(int)
 
     # --- 体調の時系列特徴量（t-1 以前のみ使用）---
@@ -82,10 +80,6 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     df["stress_filled"] = _fill_missing(
         df["stress_lag1"], window=7, default=config.FEATURE_DEFAULTS["stress"])
 
-    # --- 交互作用項（LRでの非線形パターン捕捉用）---
-    df["sleep_stress"] = df["sleep_hours_filled"] * df["stress_filled"]
-    df["steps_stress"] = df["steps_filled"] * df["stress_filled"]
-
     return df
 
 
@@ -94,8 +88,6 @@ def get_feature_columns() -> list[str]:
     return [
         "day_sin",
         "day_cos",
-        "day_sin2",
-        "day_cos2",
         "is_weekend",
         "mood_lag1",
         "mood_ma3",
@@ -111,8 +103,6 @@ def get_feature_columns() -> list[str]:
         "steps_filled",
         "steps_dev",
         "stress_filled",
-        "sleep_stress",
-        "steps_stress",
     ]
 
 

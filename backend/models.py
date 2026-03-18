@@ -412,7 +412,6 @@ def _safe_pr_auc(y_true, y_score) -> float | None:
 # sin/cos ペア定義: 合算して1つの寄与度として扱う
 _SINCOS_PAIRS = {
     "day_sin": ("day_cos", "曜日"),
-    "day_sin2": ("day_cos2", "曜日(2次)"),
     "bed_sin": ("bed_cos", "就寝時刻"),
     "wake_sin": ("wake_cos", "起床時刻"),
 }

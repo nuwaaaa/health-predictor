@@ -104,25 +104,10 @@ def test_default_fallback_all_nan():
     assert (result["stress_filled"] == 3.0).all()
 
 
-def test_second_harmonic():
-    """2次高調波が 4π*dow/7 で計算されること"""
-    df = _make_df()
-    result = build_features(df)
-    # 2026-01-01 is Thursday (dow=3)
-    thu_row = result[result["date_key"] == "2026-01-01"].iloc[0]
-    expected_sin2 = np.sin(4 * np.pi * 3 / 7)
-    expected_cos2 = np.cos(4 * np.pi * 3 / 7)
-    assert abs(thu_row["day_sin2"] - expected_sin2) < 1e-9
-    assert abs(thu_row["day_cos2"] - expected_cos2) < 1e-9
-
-
-def test_interaction_features():
-    """交互作用項が sleep_hours_filled * stress_filled の積であること"""
-    df = _make_df()
-    result = build_features(df)
-    # NaN でない行で積を検証
-    valid = result.dropna(subset=["sleep_stress", "steps_stress"])
-    assert len(valid) > 0
-    for _, row in valid.iterrows():
-        assert abs(row["sleep_stress"] - row["sleep_hours_filled"] * row["stress_filled"]) < 1e-9
-        assert abs(row["steps_stress"] - row["steps_filled"] * row["stress_filled"]) < 1e-9
+def test_no_interaction_or_second_harmonic():
+    """交互作用項・2次高調波が特徴量に含まれないこと"""
+    cols = get_feature_columns()
+    assert "day_sin2" not in cols
+    assert "day_cos2" not in cols
+    assert "sleep_stress" not in cols
+    assert "steps_stress" not in cols
