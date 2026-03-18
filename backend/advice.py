@@ -1,13 +1,15 @@
 """改善アドバイス生成
 
 要件定義書 Section 2.3 に基づく。
-- 今日～明日に変えられる行動に限定
 - 個人データの好調日・不調日の統計量から推奨値を自動算出
-- 最大2件のアドバイスを生成
-- 対象: 睡眠時間、歩数、ストレス（曜日・過去の体調は対象外）
+- 条件を満たすアドバイスをすべて生成（各種類は最大1件）
+- 対象: 睡眠時間、就寝時刻、歩数、ストレス、曜日
 """
 
+import numpy as np
 import pandas as pd
+
+_DOW_LABELS = ["月", "火", "水", "木", "金", "土", "日"]
 
 
 def generate_advice(
@@ -16,7 +18,7 @@ def generate_advice(
     days_collected: int = 0,
     unhealthy_count: int = 0,
 ) -> list[dict]:
-    """個人データに基づく改善アドバイスを最大2件生成する。
+    """個人データに基づく改善アドバイスを生成する。
 
     返却: [{"param": str, "message": str}, ...]
     """
@@ -40,7 +42,7 @@ def generate_advice(
 
     advices = []
 
-    # --- 睡眠アドバイス ---
+    # --- 睡眠時間アドバイス ---
     good_sleep = good_days["sleep_hours"].dropna()
     bad_sleep = bad_days["sleep_hours"].dropna()
     if len(good_sleep) >= 3 and len(bad_sleep) >= 3:
@@ -52,6 +54,9 @@ def generate_advice(
                 "param": "sleep",
                 "message": f"{rec_hours}時間の睡眠をとった翌日は体調が安定する傾向があります",
             })
+
+    # --- 就寝時刻アドバイス ---
+    _append_bedtime_advice(advices, good_days, bad_days)
 
     # --- 歩数アドバイス ---
     good_steps = good_days["steps"].dropna()
@@ -75,7 +80,6 @@ def generate_advice(
         if avg_bad_stress - avg_good_stress > 0.5:
             rec_level = int(round(avg_good_stress))
             # 不調率の差を計算
-            total = len(valid)
             low_stress = valid[valid["stress"].fillna(99) <= rec_level]
             high_stress = valid[valid["stress"].fillna(0) > rec_level]
             if len(low_stress) > 0 and len(high_stress) > 0:
@@ -93,4 +97,107 @@ def generate_advice(
                         "message": msg,
                     })
 
-    return advices[:2]
+    # --- 曜日アドバイス ---
+    _append_dow_advice(advices, valid, mean_mood)
+
+    return advices
+
+
+# ---------------------------------------------------------------------------
+# 就寝時刻アドバイス
+# ---------------------------------------------------------------------------
+
+def _time_str_to_minutes(series: pd.Series) -> pd.Series:
+    """'HH:mm' → 分(float)。NaN はそのまま保持。"""
+    def _parse(val):
+        if pd.isna(val) or not isinstance(val, str):
+            return np.nan
+        parts = val.split(":")
+        if len(parts) != 2:
+            return np.nan
+        try:
+            return int(parts[0]) * 60 + int(parts[1])
+        except ValueError:
+            return np.nan
+    return series.apply(_parse)
+
+
+def _shift_bedtime_minutes(minutes: pd.Series) -> pd.Series:
+    """正午未満（深夜〜早朝）を +1440 で補正し、連続的な値にする。"""
+    return minutes.where(minutes >= 720, minutes + 1440)
+
+
+def _minutes_to_time_str(m: float) -> str:
+    """分(float) → 'H:MM' 形式。1440 以上は翌日扱いで mod 1440。"""
+    m = int(round(m)) % 1440
+    return f"{m // 60}:{m % 60:02d}"
+
+
+def _append_bedtime_advice(
+    advices: list[dict],
+    good_days: pd.DataFrame,
+    bad_days: pd.DataFrame,
+) -> None:
+    """好調日・不調日の就寝時刻を比較し、30分以上の差があればアドバイスを追加。"""
+    if "bed_time" not in good_days.columns:
+        return
+
+    good_bed = _shift_bedtime_minutes(_time_str_to_minutes(good_days["bed_time"])).dropna()
+    bad_bed = _shift_bedtime_minutes(_time_str_to_minutes(bad_days["bed_time"])).dropna()
+
+    if len(good_bed) < 3 or len(bad_bed) < 3:
+        return
+
+    avg_good = good_bed.mean()
+    avg_bad = bad_bed.mean()
+
+    # 好調日の方が早寝（値が小さい）で、差が30分以上
+    if avg_bad - avg_good < 30:
+        return
+
+    rec_time = _minutes_to_time_str(avg_good)
+    advices.append({
+        "param": "bedtime",
+        "message": f"{rec_time}頃の就寝が体調の安定に関連する傾向があります",
+    })
+
+
+# ---------------------------------------------------------------------------
+# 曜日アドバイス
+# ---------------------------------------------------------------------------
+
+def _append_dow_advice(
+    advices: list[dict],
+    valid: pd.DataFrame,
+    mean_mood: float,
+) -> None:
+    """曜日別の不調率を計算し、突出して高い曜日があればアドバイスを追加。"""
+    df = valid.copy()
+    df["_dow"] = pd.to_datetime(df["date_key"]).dt.dayofweek  # 0=Mon
+
+    # 曜日ごとの不調率（mean_mood - 1 以下を不調とする）
+    dow_stats = df.groupby("_dow").agg(
+        total=("moodScore", "size"),
+        bad_count=("moodScore", lambda s: (s <= mean_mood - 1).sum()),
+    )
+    dow_stats["bad_rate"] = dow_stats["bad_count"] / dow_stats["total"]
+
+    # 各曜日に最低3日分のデータが必要
+    dow_stats = dow_stats[dow_stats["total"] >= 3]
+    if len(dow_stats) < 3:
+        return
+
+    overall_bad_rate = dow_stats["bad_count"].sum() / dow_stats["total"].sum()
+    worst_dow = dow_stats["bad_rate"].idxmax()
+    worst_rate = dow_stats["bad_rate"].loc[worst_dow]
+
+    # 全体平均より10%ポイント以上高い曜日のみ
+    if worst_rate - overall_bad_rate < 0.10:
+        return
+
+    label = _DOW_LABELS[worst_dow]
+    diff_pct = int(round((worst_rate - overall_bad_rate) * 100))
+    advices.append({
+        "param": "day_of_week",
+        "message": f"{label}曜日は不調率が平均より{diff_pct}%高い傾向があります",
+    })
