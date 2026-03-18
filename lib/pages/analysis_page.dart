@@ -433,7 +433,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(c.label,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
                                 color: context.textMainColor)),
@@ -595,7 +595,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
           Text(label, style: AppTextStyles.caption),
           const Spacer(),
           Text(value,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: context.textMainColor)),

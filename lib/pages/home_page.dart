@@ -273,7 +273,7 @@ class _HomePageState extends State<HomePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         '今日の体調を記録しましょう',
                         style: TextStyle(
                           fontSize: 15,
@@ -325,7 +325,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     Text(
                       '$done/4',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
                         color: context.textMainColor,
@@ -338,7 +338,7 @@ class _HomePageState extends State<HomePage> {
               Expanded(
                 child: Text(
                   '${missing.join('・')}も追加しますか？',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     color: context.textMainColor,
                   ),
@@ -367,7 +367,7 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   '今日の記録',
                   style: TextStyle(
                     fontSize: 15,
