@@ -50,9 +50,13 @@ class TomorrowPredictor {
     probability = (probability * 10000).roundToDouble() / 10000;
 
     // 寄与度 (coef × scaled_feature) → sin/cosペア合算 → TOP3
+    // featureMap に含まれない旧特徴量（sleep_missing 等）は除外
+    final knownFeatures = featureMap.keys.toSet();
     final rawContribs = <String, double>{};
     for (int i = 0; i < n; i++) {
-      rawContribs[featureCols[i]] = modelParams.coefficients[i] * scaled[i];
+      if (knownFeatures.contains(featureCols[i])) {
+        rawContribs[featureCols[i]] = modelParams.coefficients[i] * scaled[i];
+      }
     }
     final allContribs = _mergeSinCosPairs(rawContribs);
 
@@ -70,7 +74,7 @@ class TomorrowPredictor {
     );
   }
 
-  /// 明日 (D+1) の予測に必要な17特徴量をマップで構築する。
+  /// 明日 (D+1) の予測に必要な21特徴量をマップで構築する。
   ///
   /// 「data(D) → risk(D+1)」の関係:
   ///   mood_lag1  = mood(D)       ... 今日の体調
@@ -97,6 +101,8 @@ class TomorrowPredictor {
     final dow = (tomorrow.weekday - 1).toDouble(); // 0=Mon..6=Sun
     final daySin = sin(2 * pi * dow / 7);
     final dayCos = cos(2 * pi * dow / 7);
+    final daySin2 = sin(4 * pi * dow / 7);
+    final dayCos2 = cos(4 * pi * dow / 7);
     final isWeekend =
         (tomorrow.weekday == 6 || tomorrow.weekday == 7) ? 1.0 : 0.0;
 
@@ -124,7 +130,7 @@ class TomorrowPredictor {
       }
     }
     final sleepFilled =
-        sleepValues.isNotEmpty ? _rollingMean(sleepValues, 7) : 0.0;
+        sleepValues.isNotEmpty ? _rollingMean(sleepValues, 7) : 7.0;
     const sleepDev = 0.0; // 平均で補完→偏差≈0
 
     // --- 就寝・起床時刻の周期特徴量（D+1 は未知→過去平均で補完）---
@@ -162,7 +168,7 @@ class TomorrowPredictor {
       stepsFilled = today.steps!.toDouble();
     } else {
       stepsFilled =
-          stepsHistory.isNotEmpty ? _rollingMean(stepsHistory, 7) : 0.0;
+          stepsHistory.isNotEmpty ? _rollingMean(stepsHistory, 7) : 5000.0;
     }
     double stepsDev = 0;
     if (stepsHistory.isNotEmpty) {
@@ -179,12 +185,18 @@ class TomorrowPredictor {
       stressFilled = today.stress!.toDouble();
     } else {
       stressFilled =
-          stressHistory.isNotEmpty ? _rollingMean(stressHistory, 7) : 0.0;
+          stressHistory.isNotEmpty ? _rollingMean(stressHistory, 7) : 3.0;
     }
+
+    // --- 交互作用項 ---
+    final sleepStress = sleepFilled * stressFilled;
+    final stepsStress = stepsFilled * stressFilled;
 
     return {
       'day_sin': daySin,
       'day_cos': dayCos,
+      'day_sin2': daySin2,
+      'day_cos2': dayCos2,
       'is_weekend': isWeekend,
       'mood_lag1': moodLag1,
       'mood_ma3': moodMa3,
@@ -200,6 +212,8 @@ class TomorrowPredictor {
       'steps_filled': stepsFilled,
       'steps_dev': stepsDev,
       'stress_filled': stressFilled,
+      'sleep_stress': sleepStress,
+      'steps_stress': stepsStress,
     };
   }
 
@@ -207,6 +221,7 @@ class TomorrowPredictor {
   /// LR の coef×feature は log-odds 空間で加法的なので単純和が正しい。
   static const _sinCosPairs = {
     'day_sin': 'day_cos',
+    'day_sin2': 'day_cos2',
     'bed_sin': 'bed_cos',
     'wake_sin': 'wake_cos',
   };
