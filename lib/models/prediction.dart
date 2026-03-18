@@ -148,8 +148,12 @@ class FeatureContribution {
       'steps_filled': '歩数',
       'steps_dev': '歩数(ばらつき)',
       'stress_filled': 'ストレス',
+      'sleep_stress': '睡眠×ストレス',
+      'steps_stress': '運動×ストレス',
       'day_sin': '曜日(周期)',
       'day_cos': '曜日(周期)',
+      'day_sin2': '曜日(2次)',
+      'day_cos2': '曜日(2次)',
       'is_weekend': '休日',
     };
     return labels[feature] ?? feature;

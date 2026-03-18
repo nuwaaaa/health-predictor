@@ -12,7 +12,7 @@ import logging
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import average_precision_score, roc_auc_score
+from sklearn.metrics import average_precision_score, brier_score_loss, roc_auc_score
 from sklearn.preprocessing import StandardScaler
 
 import config
@@ -107,6 +107,7 @@ def train_and_predict(
         "model_type": best_model_type,
         "auc": selected_cv["auc_mean"],
         "pr_auc": selected_cv["pr_auc_mean"],
+        "brier_score": selected_cv["brier_score"],
         "cv_pr_auc_mean": selected_cv["pr_auc_mean"],
         "cv_pr_auc_std": selected_cv["pr_auc_std"],
         "cv_folds": selected_cv["valid_folds"],
@@ -121,6 +122,7 @@ def _empty_result(probability=None) -> dict:
         "model_type": "logistic",
         "auc": None,
         "pr_auc": None,
+        "brier_score": None,
         "cv_pr_auc_mean": None,
         "cv_pr_auc_std": None,
         "cv_folds": 0,
@@ -141,13 +143,13 @@ def _generate_tscv_splits(n_samples: int, days_collected: int) -> list[tuple[int
     """
     if days_collected < 30:
         n_folds = config.TSCV_FOLDS_SMALL
-        n_test = max(3, int(n_samples * 0.2))
     elif days_collected < 100:
         n_folds = config.TSCV_FOLDS_MEDIUM
-        n_test = config.TSCV_TEST_DAYS_MEDIUM
     else:
         n_folds = config.TSCV_FOLDS_LARGE
-        n_test = config.TSCV_TEST_DAYS_LARGE
+
+    # テストサイズをデータ量に比例させる
+    n_test = max(config.TSCV_MIN_TEST_SIZE, n_samples // (n_folds + 1))
 
     # テスト期間がデータの1/3を超えないように調整
     n_test = min(n_test, n_samples // 3)
@@ -173,6 +175,7 @@ def _tscv_evaluate_lr(
     splits = _generate_tscv_splits(len(X), days_collected)
     pr_aucs_w: list[tuple[float, int]] = []  # (pr_auc, n_pos)
     roc_aucs_w: list[tuple[float, int]] = []
+    briers_w: list[tuple[float, int]] = []
 
     lr_C = _get_lr_regularization(days_collected)
     skipped = 0
@@ -202,12 +205,13 @@ def _tscv_evaluate_lr(
             pr_aucs_w.append((pr_auc, n_pos))
         if roc_auc is not None:
             roc_aucs_w.append((roc_auc, n_pos))
+        briers_w.append((brier_score_loss(y_test, y_score), n_pos))
 
     if skipped:
         logger.info("LR TSCV: %d/%d folds skipped (test positives < %d)",
                      skipped, len(splits), config.TSCV_MIN_TEST_POSITIVES)
 
-    return _aggregate_cv_results(pr_aucs_w, roc_aucs_w, len(splits))
+    return _aggregate_cv_results(pr_aucs_w, roc_aucs_w, briers_w, len(splits))
 
 
 def _tscv_evaluate_lgb(
@@ -222,6 +226,7 @@ def _tscv_evaluate_lgb(
     splits = _generate_tscv_splits(len(X), days_collected)
     pr_aucs_w: list[tuple[float, int]] = []
     roc_aucs_w: list[tuple[float, int]] = []
+    briers_w: list[tuple[float, int]] = []
 
     lgb_params = _get_lgb_params(days_collected)
     skipped = 0
@@ -247,6 +252,7 @@ def _tscv_evaluate_lgb(
                 pr_aucs_w.append((pr_auc, n_pos))
             if roc_auc is not None:
                 roc_aucs_w.append((roc_auc, n_pos))
+            briers_w.append((brier_score_loss(y_test, y_score), n_pos))
         except Exception as e:
             logger.warning("LightGBM fold failed: %s", e)
 
@@ -254,22 +260,25 @@ def _tscv_evaluate_lgb(
         logger.info("LGBM TSCV: %d/%d folds skipped (test positives < %d)",
                      skipped, len(splits), config.TSCV_MIN_TEST_POSITIVES)
 
-    return _aggregate_cv_results(pr_aucs_w, roc_aucs_w, len(splits))
+    return _aggregate_cv_results(pr_aucs_w, roc_aucs_w, briers_w, len(splits))
 
 
 def _aggregate_cv_results(
     pr_aucs_w: list[tuple[float, int]],
     roc_aucs_w: list[tuple[float, int]],
+    briers_w: list[tuple[float, int]],
     total_folds: int,
 ) -> dict:
     """CV結果をテスト正例数で重み付け平均して集約する。"""
     pr_mean, pr_std = _weighted_mean_std(pr_aucs_w)
     auc_mean, auc_std = _weighted_mean_std(roc_aucs_w)
+    brier_mean, _ = _weighted_mean_std(briers_w)
     return {
         "pr_auc_mean": pr_mean,
         "pr_auc_std": pr_std,
         "auc_mean": auc_mean,
         "auc_std": auc_std,
+        "brier_score": brier_mean,
         "valid_folds": len(pr_aucs_w),
         "total_folds": total_folds,
     }
@@ -403,6 +412,7 @@ def _safe_pr_auc(y_true, y_score) -> float | None:
 # sin/cos ペア定義: 合算して1つの寄与度として扱う
 _SINCOS_PAIRS = {
     "day_sin": ("day_cos", "曜日"),
+    "day_sin2": ("day_cos2", "曜日(2次)"),
     "bed_sin": ("bed_cos", "就寝時刻"),
     "wake_sin": ("wake_cos", "起床時刻"),
 }

@@ -120,3 +120,45 @@ class TestExistingAdvice:
         df = _make_df()
         advices = generate_advice(df, p_today=None)
         assert len(advices) == 0
+
+
+class TestContributionReordering:
+    """contributions に基づくアドバイス並べ替えのテスト"""
+
+    def test_reorder_by_contributions(self):
+        """contributions に含まれる特徴量のアドバイスが先頭に来る"""
+        df = _make_df()
+        # contributions なし: 元の順序（sleep, bedtime, steps, stress, day_of_week）
+        base = generate_advice(df, p_today=0.3)
+        assert len(base) == 5
+
+        # steps_filled が TOP 寄与 → steps が先頭に
+        contribs = [{"feature": "steps_filled", "contribution": 0.5}]
+        reordered = generate_advice(df, p_today=0.3, contributions=contribs)
+        assert reordered[0]["param"] == "steps"
+
+    def test_multiple_boosted_params(self):
+        """複数の寄与特徴量に対応するアドバイスが先頭グループに来る"""
+        df = _make_df()
+        contribs = [
+            {"feature": "stress_filled", "contribution": 0.5},
+            {"feature": "day_sin", "contribution": 0.3},
+        ]
+        reordered = generate_advice(df, p_today=0.3, contributions=contribs)
+        boosted = {reordered[0]["param"], reordered[1]["param"]}
+        assert "stress" in boosted
+        assert "day_of_week" in boosted
+
+    def test_no_contributions_preserves_order(self):
+        """contributions=None の場合は元の順序を維持"""
+        df = _make_df()
+        base = generate_advice(df, p_today=0.3)
+        no_contrib = generate_advice(df, p_today=0.3, contributions=None)
+        assert [a["param"] for a in base] == [a["param"] for a in no_contrib]
+
+    def test_empty_contributions_preserves_order(self):
+        """contributions=[] の場合は元の順序を維持"""
+        df = _make_df()
+        base = generate_advice(df, p_today=0.3)
+        empty = generate_advice(df, p_today=0.3, contributions=[])
+        assert [a["param"] for a in base] == [a["param"] for a in empty]

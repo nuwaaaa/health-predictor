@@ -7,6 +7,8 @@
 import numpy as np
 import pandas as pd
 
+import config
+
 
 def build_features(df: pd.DataFrame) -> pd.DataFrame:
     """日次ログ DataFrame から特徴量を生成する。
@@ -24,6 +26,8 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     dow = df["date"].dt.dayofweek  # 0=Mon, 6=Sun
     df["day_sin"] = np.sin(2 * np.pi * dow / 7)
     df["day_cos"] = np.cos(2 * np.pi * dow / 7)
+    df["day_sin2"] = np.sin(4 * np.pi * dow / 7)
+    df["day_cos2"] = np.cos(4 * np.pi * dow / 7)
     df["is_weekend"] = dow.isin([5, 6]).astype(int)
 
     # --- 体調の時系列特徴量（t-1 以前のみ使用）---
@@ -42,10 +46,12 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # --- 睡眠特徴量 ---
     # 睡眠は当日起床分 (date_key=t) を使用可能
-    df["sleep_hours_filled"] = _fill_missing(df["sleep_hours"], window=7)
+    df["sleep_hours_filled"] = _fill_missing(
+        df["sleep_hours"], window=7, default=config.FEATURE_DEFAULTS["sleep_hours"])
     # shift(1)で前日までの移動平均を使い、当日値の自己参照を防止
     sleep_mean = df["sleep_hours"].shift(1).rolling(window=7, min_periods=1).mean()
-    df["sleep_dev"] = df["sleep_hours_filled"] - _fill_missing(sleep_mean, window=7)
+    df["sleep_dev"] = df["sleep_hours_filled"] - _fill_missing(
+        sleep_mean, window=7, default=config.FEATURE_DEFAULTS["sleep_hours"])
 
     # --- 就寝・起床時刻の周期特徴量 ---
     bed_minutes = _time_str_to_minutes(df["bed_time"])
@@ -65,13 +71,20 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     # --- 歩数特徴量 ---
     # 歩数は t-1 を使用（当日はまだ増えるため）
     df["steps_lag1"] = df["steps"].shift(1)
-    df["steps_filled"] = _fill_missing(df["steps_lag1"], window=7)
+    df["steps_filled"] = _fill_missing(
+        df["steps_lag1"], window=7, default=config.FEATURE_DEFAULTS["steps"])
     steps_mean = df["steps"].shift(1).rolling(window=7, min_periods=1).mean()
-    df["steps_dev"] = df["steps_filled"] - _fill_missing(steps_mean, window=7)
+    df["steps_dev"] = df["steps_filled"] - _fill_missing(
+        steps_mean, window=7, default=config.FEATURE_DEFAULTS["steps"])
 
     # --- ストレス特徴量（任意入力）---
     df["stress_lag1"] = df["stress"].shift(1)
-    df["stress_filled"] = _fill_missing(df["stress_lag1"], window=7)
+    df["stress_filled"] = _fill_missing(
+        df["stress_lag1"], window=7, default=config.FEATURE_DEFAULTS["stress"])
+
+    # --- 交互作用項（LRでの非線形パターン捕捉用）---
+    df["sleep_stress"] = df["sleep_hours_filled"] * df["stress_filled"]
+    df["steps_stress"] = df["steps_filled"] * df["stress_filled"]
 
     return df
 
@@ -81,6 +94,8 @@ def get_feature_columns() -> list[str]:
     return [
         "day_sin",
         "day_cos",
+        "day_sin2",
+        "day_cos2",
         "is_weekend",
         "mood_lag1",
         "mood_ma3",
@@ -96,6 +111,8 @@ def get_feature_columns() -> list[str]:
         "steps_filled",
         "steps_dev",
         "stress_filled",
+        "sleep_stress",
+        "steps_stress",
     ]
 
 
@@ -114,10 +131,11 @@ def _time_str_to_minutes(series: pd.Series) -> pd.Series:
     return series.apply(_parse)
 
 
-def _fill_missing(series: pd.Series, window: int = 7) -> pd.Series:
-    """過去N日平均で欠損を補完する。最終フォールバックはグローバル平均。"""
+def _fill_missing(series: pd.Series, window: int = 7, default: float | None = None) -> pd.Series:
+    """過去N日平均で欠損を補完する。最終フォールバックはグローバル平均→デフォルト値。"""
     rolling_mean = series.rolling(window=window, min_periods=1).mean()
     global_mean = series.mean()
-    # NaN→ローリング平均→グローバル平均の順で補完（0埋めを回避）
-    fallback = global_mean if pd.notna(global_mean) else 0
-    return series.fillna(rolling_mean).fillna(fallback)
+    result = series.fillna(rolling_mean).fillna(global_mean)
+    if default is not None:
+        return result.fillna(default)
+    return result.fillna(0)

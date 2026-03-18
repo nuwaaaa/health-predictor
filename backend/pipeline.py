@@ -186,6 +186,7 @@ def _process_user(db: firestore.Client, uid: str, today: str):
         df, today_result["probability"],
         days_collected=days_collected,
         unhealthy_count=unhealthy_count,
+        contributions=today_result.get("contributions", []),
     )
 
     # 特徴量寄与度TOP3
@@ -232,6 +233,7 @@ def _process_user(db: firestore.Client, uid: str, today: str):
         model_type=model_type,
         val_auc=today_result["auc"],
         val_pr_auc=today_result["pr_auc"],
+        brier_score=today_result.get("brier_score"),
         cv_pr_auc_mean=today_result.get("cv_pr_auc_mean"),
         cv_pr_auc_std=today_result.get("cv_pr_auc_std"),
         cv_folds=today_result.get("cv_folds", 0),
@@ -342,6 +344,7 @@ def _save_batch_log(
     model_type: str,
     val_auc: float | None,
     val_pr_auc: float | None,
+    brier_score: float | None,
     cv_pr_auc_mean: float | None,
     cv_pr_auc_std: float | None,
     cv_folds: int,
@@ -369,6 +372,7 @@ def _save_batch_log(
         "modelType": model_type,
         "valAuc": round(val_auc, 4) if val_auc is not None else None,
         "valPrAuc": round(val_pr_auc, 4) if val_pr_auc is not None else None,
+        "brierScore": round(brier_score, 4) if brier_score is not None else None,
         "cvPrAucMean": round(cv_pr_auc_mean, 4) if cv_pr_auc_mean is not None else None,
         "cvPrAucStd": round(cv_pr_auc_std, 4) if cv_pr_auc_std is not None else None,
         "cvFolds": cv_folds,

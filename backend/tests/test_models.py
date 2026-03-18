@@ -163,6 +163,29 @@ class TestGenerateTscvSplits:
         # テスト期間を確保できない可能性があるが、クラッシュしないこと
         assert isinstance(splits, list)
 
+    def test_proportional_test_size_medium(self):
+        """中規模(40日)でfold 1の訓練サイズがMIN_DAYS_TODAY以上"""
+        splits = _generate_tscv_splits(n_samples=26, days_collected=40)
+        assert len(splits) >= 1
+        # fold 1 (最初) の訓練サイズが MIN_DAYS_TODAY 以上であること
+        # 比例計算: n_test = max(3, 26//(3+1)) = 6
+        # → fold 1: train_end = 26 - 3*6 = 8 → これは 14 未満なので生成されない
+        # → fold 2: train_end = 26 - 2*6 = 14 → ちょうど MIN_DAYS_TODAY
+        for train_end, _ in splits:
+            assert train_end >= 14
+
+    def test_proportional_test_size_large(self):
+        """大規模(300日)でテストサイズが比例的に増加"""
+        splits = _generate_tscv_splits(n_samples=280, days_collected=300)
+        assert len(splits) >= 3
+        # 比例計算: n_test = max(3, 280//(5+1)) = 46
+        # 各foldのテスト区間サイズを検証
+        test_sizes = [t_end - t_start for t_start, t_end in splits]
+        # 全foldで同じテストサイズ
+        assert all(s == test_sizes[0] for s in test_sizes)
+        # テストサイズが固定14より大きい（比例化の効果）
+        assert test_sizes[0] > 14
+
 
 # ---------------------------------------------------------------------------
 # _weighted_mean_std
@@ -365,6 +388,21 @@ class TestTrainAndPredict:
         # CV指標は fold がスキップされる可能性があるため None の場合もある
         if result["cv_folds"] > 0:
             assert result["cv_pr_auc_mean"] is not None
+
+    def test_brier_score_present(self):
+        """Brier score が返却され、0-1の範囲であること"""
+        df, cols = self._make_data(n=40)
+        result = train_and_predict(df, cols, "y_today", days_collected=40, unhealthy_count=5)
+        assert "brier_score" in result
+        if result["cv_folds"] > 0:
+            assert result["brier_score"] is not None
+            assert 0.0 <= result["brier_score"] <= 1.0
+
+    def test_brier_score_none_when_empty(self):
+        """データ不足時は brier_score が None"""
+        df, cols = self._make_data(n=10)
+        result = train_and_predict(df, cols, "y_today", days_collected=10, unhealthy_count=0)
+        assert result["brier_score"] is None
 
 
 # ---------------------------------------------------------------------------

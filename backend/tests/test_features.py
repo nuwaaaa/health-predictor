@@ -87,3 +87,42 @@ def test_stress_missing_filled():
     result = build_features(df)
     # stress_filled should not have NaN (except possibly the first row)
     assert result["stress_filled"].isna().sum() <= 1
+
+
+def test_default_fallback_all_nan():
+    """全データNaN時にFEATURE_DEFAULTSのデフォルト値が使われること"""
+    df = _make_df()
+    df["sleep_hours"] = None
+    df["steps"] = None
+    df["stress"] = None
+    result = build_features(df)
+    # sleep_hours_filled は全行デフォルト 7.0
+    assert (result["sleep_hours_filled"] == 7.0).all()
+    # steps_filled は index 0 はlag1がNaN→デフォルト5000
+    assert result.loc[0, "steps_filled"] == 5000
+    # stress_filled も全行デフォルト 3.0（lag1で全NaN）
+    assert (result["stress_filled"] == 3.0).all()
+
+
+def test_second_harmonic():
+    """2次高調波が 4π*dow/7 で計算されること"""
+    df = _make_df()
+    result = build_features(df)
+    # 2026-01-01 is Thursday (dow=3)
+    thu_row = result[result["date_key"] == "2026-01-01"].iloc[0]
+    expected_sin2 = np.sin(4 * np.pi * 3 / 7)
+    expected_cos2 = np.cos(4 * np.pi * 3 / 7)
+    assert abs(thu_row["day_sin2"] - expected_sin2) < 1e-9
+    assert abs(thu_row["day_cos2"] - expected_cos2) < 1e-9
+
+
+def test_interaction_features():
+    """交互作用項が sleep_hours_filled * stress_filled の積であること"""
+    df = _make_df()
+    result = build_features(df)
+    # NaN でない行で積を検証
+    valid = result.dropna(subset=["sleep_stress", "steps_stress"])
+    assert len(valid) > 0
+    for _, row in valid.iterrows():
+        assert abs(row["sleep_stress"] - row["sleep_hours_filled"] * row["stress_filled"]) < 1e-9
+        assert abs(row["steps_stress"] - row["steps_filled"] * row["stress_filled"]) < 1e-9

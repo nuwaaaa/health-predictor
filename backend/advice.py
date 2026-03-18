@@ -11,12 +11,31 @@ import pandas as pd
 
 _DOW_LABELS = ["月", "火", "水", "木", "金", "土", "日"]
 
+# 特徴量名 → アドバイスの param へのマッピング
+_FEATURE_TO_ADVICE: dict[str, str] = {
+    "sleep_hours_filled": "sleep",
+    "sleep_dev": "sleep",
+    "bed_sin": "bedtime",
+    "bed_cos": "bedtime",
+    "steps_filled": "steps",
+    "steps_dev": "steps",
+    "stress_filled": "stress",
+    "sleep_stress": "sleep",
+    "steps_stress": "steps",
+    "day_sin": "day_of_week",
+    "day_cos": "day_of_week",
+    "day_sin2": "day_of_week",
+    "day_cos2": "day_of_week",
+    "is_weekend": "day_of_week",
+}
+
 
 def generate_advice(
     df: pd.DataFrame,
     p_today: float | None,
     days_collected: int = 0,
     unhealthy_count: int = 0,
+    contributions: list[dict] | None = None,
 ) -> list[dict]:
     """個人データに基づく改善アドバイスを生成する。
 
@@ -100,7 +119,26 @@ def generate_advice(
     # --- 曜日アドバイス ---
     _append_dow_advice(advices, valid, mean_mood)
 
+    # --- contributions に基づく並べ替え ---
+    if contributions and advices:
+        boosted = _contribution_params(contributions)
+        advices.sort(key=lambda a: (a["param"] not in boosted))
+
     return advices
+
+
+# ---------------------------------------------------------------------------
+# contributions → アドバイス param 変換
+# ---------------------------------------------------------------------------
+
+def _contribution_params(contributions: list[dict]) -> set[str]:
+    """contributions の特徴量名を対応するアドバイス param 名の集合に変換する。"""
+    params: set[str] = set()
+    for c in contributions:
+        feat = c.get("feature", "")
+        if feat in _FEATURE_TO_ADVICE:
+            params.add(_FEATURE_TO_ADVICE[feat])
+    return params
 
 
 # ---------------------------------------------------------------------------

@@ -14,8 +14,7 @@ MODEL_SELECTION_MAX_STD = 0.1  # 1σルールのσ上限（CV分散が大きい�
 TSCV_FOLDS_SMALL = 2    # 14-29日
 TSCV_FOLDS_MEDIUM = 3   # 30-99日
 TSCV_FOLDS_LARGE = 5    # 100日以上
-TSCV_TEST_DAYS_MEDIUM = 7
-TSCV_TEST_DAYS_LARGE = 14
+TSCV_MIN_TEST_SIZE = 3       # 比例計算の最低テストサイズ
 TSCV_MIN_TEST_POSITIVES = 2  # テスト正例がこの数未満のfoldはスキップ
 
 # 信頼度ルール
@@ -26,6 +25,13 @@ CONFIDENCE_MEDIUM_UNHEALTHY = 5
 
 # 欠損率による信頼度ダウングレード閾値
 MISSING_RATE_THRESHOLD = 0.3
+
+# 特徴量別デフォルト値（全データNaN時のフォールバック）
+FEATURE_DEFAULTS = {
+    "sleep_hours": 7.0,
+    "steps": 5000,
+    "stress": 3.0,
+}
 
 # バッチ対象：直近N日以内に更新があったユーザー
 ACTIVE_USER_DAYS = 2
