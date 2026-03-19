@@ -74,7 +74,7 @@ class TomorrowPredictor {
     );
   }
 
-  /// 明日 (D+1) の予測に必要な21特徴量をマップで構築する。
+  /// 明日 (D+1) の予測に必要な17特徴量をマップで構築する。
   ///
   /// 「data(D) → risk(D+1)」の関係:
   ///   mood_lag1  = mood(D)       ... 今日の体調
@@ -101,8 +101,6 @@ class TomorrowPredictor {
     final dow = (tomorrow.weekday - 1).toDouble(); // 0=Mon..6=Sun
     final daySin = sin(2 * pi * dow / 7);
     final dayCos = cos(2 * pi * dow / 7);
-    final daySin2 = sin(4 * pi * dow / 7);
-    final dayCos2 = cos(4 * pi * dow / 7);
     final isWeekend =
         (tomorrow.weekday == 6 || tomorrow.weekday == 7) ? 1.0 : 0.0;
 
@@ -188,15 +186,9 @@ class TomorrowPredictor {
           stressHistory.isNotEmpty ? _rollingMean(stressHistory, 7) : 3.0;
     }
 
-    // --- 交互作用項 ---
-    final sleepStress = sleepFilled * stressFilled;
-    final stepsStress = stepsFilled * stressFilled;
-
     return {
       'day_sin': daySin,
       'day_cos': dayCos,
-      'day_sin2': daySin2,
-      'day_cos2': dayCos2,
       'is_weekend': isWeekend,
       'mood_lag1': moodLag1,
       'mood_ma3': moodMa3,
@@ -212,8 +204,6 @@ class TomorrowPredictor {
       'steps_filled': stepsFilled,
       'steps_dev': stepsDev,
       'stress_filled': stressFilled,
-      'sleep_stress': sleepStress,
-      'steps_stress': stepsStress,
     };
   }
 
@@ -221,7 +211,6 @@ class TomorrowPredictor {
   /// LR の coef×feature は log-odds 空間で加法的なので単純和が正しい。
   static const _sinCosPairs = {
     'day_sin': 'day_cos',
-    'day_sin2': 'day_cos2',
     'bed_sin': 'bed_cos',
     'wake_sin': 'wake_cos',
   };
