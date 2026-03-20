@@ -69,40 +69,38 @@ class _MoodTile extends StatelessWidget {
       button: true,
       selected: isSelected,
       enabled: enabled,
-      child: AspectRatio(
-        aspectRatio: 1,
-        child: GestureDetector(
-          onTap: enabled
-              ? () {
-                  HapticFeedback.selectionClick();
-                  onTap();
-                }
-              : null,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            decoration: BoxDecoration(
-              color: isSelected ? AppColors.primaryTint : context.bgColor,
-              borderRadius: BorderRadius.circular(AppRadii.button),
-              border: Border.all(
-                color: isSelected ? AppColors.primary : context.dividerColor,
-                width: isSelected ? 2 : 1,
-              ),
+      child: GestureDetector(
+        onTap: enabled
+            ? () {
+                HapticFeedback.selectionClick();
+                onTap();
+              }
+            : null,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primaryTint : context.bgColor,
+            borderRadius: BorderRadius.circular(AppRadii.button),
+            border: Border.all(
+              color: isSelected ? AppColors.primary : context.dividerColor,
+              width: isSelected ? 2 : 1,
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(emoji, style: const TextStyle(fontSize: 36)),
-                const SizedBox(height: 2),
-                Text(
-                  '$value',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                    color: isSelected ? AppColors.primary : context.textSubColor,
-                  ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 28)),
+              const SizedBox(height: 2),
+              Text(
+                '$value',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  color: isSelected ? AppColors.primary : context.textSubColor,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
