@@ -177,7 +177,7 @@ class _LoginPageState extends State<LoginPage> {
                   style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'あなた専用の体調予測AI',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 14, color: context.textSubColor),
@@ -339,7 +339,7 @@ class _LoginPageState extends State<LoginPage> {
                   if (_isLogin)
                     TextButton(
                       onPressed: _loading ? null : _resetPassword,
-                      child: const Text(
+                      child: Text(
                         'パスワードを忘れた方',
                         style: TextStyle(fontSize: 13, color: context.textSubColor),
                       ),
