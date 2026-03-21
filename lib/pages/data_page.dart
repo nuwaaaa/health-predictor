@@ -47,8 +47,8 @@ class _DataPageState extends State<DataPage> {
     if (days == _periodDays) return;
     setState(() => _periodDays = days);
 
-    // 全データ未取得なら取得（7日タブ以外、またはスクロール用に必要）
-    if (_allLogs == null && days != 7) {
+    // 全データ未取得なら取得（全タブでスクロール用に必要）
+    if (_allLogs == null) {
       await _fetchAllLogs();
     }
   }

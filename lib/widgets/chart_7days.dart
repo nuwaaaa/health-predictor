@@ -252,7 +252,8 @@ class _Chart7DaysState extends State<Chart7Days> {
           child: SizedBox(
             width: chartWidth.clamp(viewportWidth, double.infinity),
             height: _chartHeight,
-            child: _buildChart(context, logs, showLeftAxis: false),
+            child: _buildChart(context, logs,
+                showLeftAxis: false, scrollable: true),
           ),
         );
       },
@@ -260,7 +261,7 @@ class _Chart7DaysState extends State<Chart7Days> {
   }
 
   Widget _buildChart(BuildContext context, List<DailyLog> logs,
-      {required bool showLeftAxis}) {
+      {required bool showLeftAxis, bool scrollable = false}) {
     final maxX = (logs.length - 1).toDouble();
     final gridColor = context.chartGridColor;
     final blueColor = context.chartBlueColor;
@@ -296,28 +297,30 @@ class _Chart7DaysState extends State<Chart7Days> {
             ),
           ),
           borderData: FlBorderData(show: false),
-          lineTouchData: LineTouchData(
-            touchTooltipData: LineTouchTooltipData(
-              fitInsideHorizontally: true,
-              fitInsideVertically: true,
-              getTooltipItems: (touchedSpots) {
-                return touchedSpots.map((spot) {
-                  final i = spot.x.round();
-                  final dateLabel = (i >= 0 && i < logs.length)
-                      ? logs[i].dateKey.substring(5)
-                      : '';
-                  return LineTooltipItem(
-                    '$dateLabel\n${spot.y.toStringAsFixed(1)}',
-                    TextStyle(
-                      color: spot.bar.color ?? blueColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  );
-                }).toList();
-              },
-            ),
-          ),
+          lineTouchData: scrollable
+              ? const LineTouchData(enabled: false)
+              : LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    fitInsideHorizontally: true,
+                    fitInsideVertically: true,
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        final i = spot.x.round();
+                        final dateLabel = (i >= 0 && i < logs.length)
+                            ? logs[i].dateKey.substring(5)
+                            : '';
+                        return LineTooltipItem(
+                          '$dateLabel\n${spot.y.toStringAsFixed(1)}',
+                          TextStyle(
+                            color: spot.bar.color ?? blueColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
           titlesData: FlTitlesData(
             topTitles:
                 const AxisTitles(sideTitles: SideTitles(showTitles: false)),

@@ -370,7 +370,8 @@ class _ComparisonChartState extends State<ComparisonChart> {
             width: chartWidth.clamp(viewportWidth, double.infinity),
             height: _chartHeight,
             child: _buildChart(context,
-                showLeftAxis: false, showRightAxis: false),
+                showLeftAxis: false, showRightAxis: false,
+                scrollable: true),
           ),
         );
       },
@@ -522,7 +523,8 @@ class _ComparisonChartState extends State<ComparisonChart> {
   }
 
   Widget _buildChart(BuildContext context,
-      {required bool showLeftAxis, required bool showRightAxis}) {
+      {required bool showLeftAxis, required bool showRightAxis,
+      bool scrollable = false}) {
     final logs = widget.logs;
     final maxX = (logs.length - 1).toDouble();
     final featureValues = _getFeatureValues(logs);
@@ -576,43 +578,45 @@ class _ComparisonChartState extends State<ComparisonChart> {
             ),
           ),
           borderData: FlBorderData(show: false),
-          lineTouchData: LineTouchData(
-            touchTooltipData: LineTouchTooltipData(
-              fitInsideHorizontally: true,
-              fitInsideVertically: true,
-              getTooltipItems: (touchedSpots) {
-                return touchedSpots.map((spot) {
-                  final isMood = spot.bar.color == blueColor ||
-                      spot.bar.color == blueColor.withAlpha(100);
-                  if (isMood) {
-                    final i = spot.x.round();
-                    final dateLabel = (i >= 0 && i < logs.length)
-                        ? logs[i].dateKey.substring(5)
-                        : '';
-                    return LineTooltipItem(
-                      '$dateLabel\n${spot.y.toStringAsFixed(1)}',
-                      TextStyle(
-                        color: spot.bar.color ?? blueColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    );
-                  } else {
-                    final original = featureRange == 0
-                        ? featureMin
-                        : featureMin +
-                            (spot.y - 1.0) / 4.0 * featureRange;
-                    return LineTooltipItem(
-                      _formatRightAxis(original),
-                      TextStyle(
-                        color: orangeColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    );
-                  }
-                }).toList();
-              },
-            ),
-          ),
+          lineTouchData: scrollable
+              ? const LineTouchData(enabled: false)
+              : LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    fitInsideHorizontally: true,
+                    fitInsideVertically: true,
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        final isMood = spot.bar.color == blueColor ||
+                            spot.bar.color == blueColor.withAlpha(100);
+                        if (isMood) {
+                          final i = spot.x.round();
+                          final dateLabel = (i >= 0 && i < logs.length)
+                              ? logs[i].dateKey.substring(5)
+                              : '';
+                          return LineTooltipItem(
+                            '$dateLabel\n${spot.y.toStringAsFixed(1)}',
+                            TextStyle(
+                              color: spot.bar.color ?? blueColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          );
+                        } else {
+                          final original = featureRange == 0
+                              ? featureMin
+                              : featureMin +
+                                  (spot.y - 1.0) / 4.0 * featureRange;
+                          return LineTooltipItem(
+                            _formatRightAxis(original),
+                            TextStyle(
+                              color: orangeColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          );
+                        }
+                      }).toList();
+                    },
+                  ),
+                ),
           titlesData: FlTitlesData(
             topTitles:
                 const AxisTitles(sideTitles: SideTitles(showTitles: false)),
