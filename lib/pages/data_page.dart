@@ -140,7 +140,12 @@ class _DataPageState extends State<DataPage> {
                 // --- 体調×特徴量 比較グラフ ---
                 SectionHeader(title: '体調と生活データの比較'),
                 const SizedBox(height: AppSpacing.sm),
-                AppCard(child: ComparisonChart(logs: logs)),
+                AppCard(
+                  child: ComparisonChart(
+                    logs: logs,
+                    periodDays: _periodDays,
+                  ),
+                ),
 
                 const SizedBox(height: AppSpacing.lg),
 

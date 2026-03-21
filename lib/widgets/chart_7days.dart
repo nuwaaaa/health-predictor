@@ -44,6 +44,12 @@ class _Chart7DaysState extends State<Chart7Days> {
   bool _showMA = false;
   ScrollController? _scrollController;
 
+  static const double _chartHeight = 210;
+  static const double _bottomReserved = 30.0;
+  static const double _leftAxisWidth = 32.0;
+  static const double _minY = 0.8;
+  static const double _maxY = 5.3;
+
   @override
   void initState() {
     super.initState();
@@ -137,11 +143,10 @@ class _Chart7DaysState extends State<Chart7Days> {
         ),
         const SizedBox(height: AppSpacing.sm),
         SizedBox(
-          height: 200,
-          width: double.infinity,
+          height: _chartHeight,
           child: _isScrollable
-              ? _buildScrollableChart(context)
-              : _buildFitChart(context),
+              ? _buildScrollableLayout(context)
+              : _buildChart(context, widget.logs, showLeftAxis: true),
         ),
         if (_isScrollable)
           Padding(
@@ -160,38 +165,102 @@ class _Chart7DaysState extends State<Chart7Days> {
     );
   }
 
-  /// スクロール可能チャート（7日/30日タブ）
-  Widget _buildScrollableChart(BuildContext context) {
+  /// 固定Y軸 + スクロール可能チャートのレイアウト
+  Widget _buildScrollableLayout(BuildContext context) {
+    return Row(
+      children: [
+        // 固定の左Y軸
+        SizedBox(
+          width: _leftAxisWidth,
+          height: _chartHeight,
+          child: _buildAxisOnly(context),
+        ),
+        // スクロール可能なチャート本体
+        Expanded(child: _buildScrollableContent(context)),
+      ],
+    );
+  }
+
+  /// Y軸のみ表示する空チャート（スクロール時の固定軸用）
+  Widget _buildAxisOnly(BuildContext context) {
+    final gridColor = context.chartGridColor;
+    return LineChart(
+      LineChartData(
+        minY: _minY,
+        maxY: _maxY,
+        minX: 0,
+        maxX: 1,
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: 1,
+          getDrawingHorizontalLine: (_) => FlLine(
+            color: gridColor,
+            strokeWidth: 0.5,
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+        lineTouchData: const LineTouchData(enabled: false),
+        lineBarsData: [],
+        titlesData: FlTitlesData(
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 28,
+              interval: 1,
+              getTitlesWidget: (value, meta) {
+                if (value < 1 || value > 5 || value != value.roundToDouble()) {
+                  return const SizedBox.shrink();
+                }
+                return Text(
+                  value.toInt().toString(),
+                  style: AppTextStyles.captionSmall,
+                );
+              },
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: _bottomReserved,
+              getTitlesWidget: (_, __) => const SizedBox.shrink(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// スクロール可能なチャート本体
+  Widget _buildScrollableContent(BuildContext context) {
     final logs = widget.logs;
     final periodDays = widget.periodDays;
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final viewportWidth = constraints.maxWidth;
-        // 1日あたりの幅を viewport / periodDays から算出
-        final pixelsPerDay = (viewportWidth - 28) / periodDays;
-        // チャート全体の幅
-        final chartWidth = 28 + (pixelsPerDay * (logs.length - 1 + 0.6));
+        final pixelsPerDay = viewportWidth / periodDays;
+        final chartWidth = pixelsPerDay * (logs.length - 1 + 0.6);
 
         return SingleChildScrollView(
           controller: _scrollController,
           scrollDirection: Axis.horizontal,
           child: SizedBox(
             width: chartWidth.clamp(viewportWidth, double.infinity),
-            height: 200,
-            child: _buildChart(context, logs),
+            height: _chartHeight,
+            child: _buildChart(context, logs, showLeftAxis: false),
           ),
         );
       },
     );
   }
 
-  /// 一画面に収めるチャート（全期間タブ or データが少ない場合）
-  Widget _buildFitChart(BuildContext context) {
-    return _buildChart(context, widget.logs);
-  }
-
-  Widget _buildChart(BuildContext context, List<DailyLog> logs) {
+  Widget _buildChart(BuildContext context, List<DailyLog> logs,
+      {required bool showLeftAxis}) {
     final maxX = (logs.length - 1).toDouble();
     final gridColor = context.chartGridColor;
     final blueColor = context.chartBlueColor;
@@ -206,13 +275,17 @@ class _Chart7DaysState extends State<Chart7Days> {
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: EdgeInsets.only(
+        left: showLeftAxis ? 14 : 0,
+        right: 14,
+      ),
       child: LineChart(
         LineChartData(
           minX: 0,
           maxX: maxX + 0.6,
-          minY: 1,
-          maxY: 5,
+          minY: _minY,
+          maxY: _maxY,
+          clipData: const FlClipData.all(),
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
@@ -225,11 +298,14 @@ class _Chart7DaysState extends State<Chart7Days> {
           borderData: FlBorderData(show: false),
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(
+              fitInsideHorizontally: true,
+              fitInsideVertically: true,
               getTooltipItems: (touchedSpots) {
                 return touchedSpots.map((spot) {
                   final i = spot.x.round();
-                  final dateLabel =
-                      (i >= 0 && i < logs.length) ? logs[i].dateKey.substring(5) : '';
+                  final dateLabel = (i >= 0 && i < logs.length)
+                      ? logs[i].dateKey.substring(5)
+                      : '';
                   return LineTooltipItem(
                     '$dateLabel\n${spot.y.toStringAsFixed(1)}',
                     TextStyle(
@@ -247,23 +323,32 @@ class _Chart7DaysState extends State<Chart7Days> {
                 const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             rightTitles:
                 const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 28,
-                getTitlesWidget: (value, meta) {
-                  return Text(
-                    value.toInt().toString(),
-                    style: AppTextStyles.captionSmall,
-                  );
-                },
-              ),
-            ),
+            leftTitles: showLeftAxis
+                ? AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      interval: 1,
+                      getTitlesWidget: (value, meta) {
+                        if (value < 1 ||
+                            value > 5 ||
+                            value != value.roundToDouble()) {
+                          return const SizedBox.shrink();
+                        }
+                        return Text(
+                          value.toInt().toString(),
+                          style: AppTextStyles.captionSmall,
+                        );
+                      },
+                    ),
+                  )
+                : const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false)),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
                 interval: 1,
-                reservedSize: 30,
+                reservedSize: _bottomReserved,
                 getTitlesWidget: (value, meta) {
                   final i = value.round();
                   if (i < 0 || i >= logs.length) {

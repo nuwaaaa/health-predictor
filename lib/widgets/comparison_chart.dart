@@ -7,7 +7,14 @@ import '../theme/app_theme.dart';
 class ComparisonChart extends StatefulWidget {
   final List<DailyLog> logs;
 
-  const ComparisonChart({super.key, required this.logs});
+  /// 表示ウィンドウ幅（7, 30, 0=全期間）
+  final int periodDays;
+
+  const ComparisonChart({
+    super.key,
+    required this.logs,
+    this.periodDays = 0,
+  });
 
   @override
   State<ComparisonChart> createState() => _ComparisonChartState();
@@ -19,6 +26,14 @@ class _ComparisonChartState extends State<ComparisonChart> {
   List<double?>? _cachedFeatureValues;
   String? _cachedFeatureKey;
   int? _cachedLogsLength;
+  ScrollController? _scrollController;
+
+  static const double _chartHeight = 210;
+  static const double _bottomReserved = 30.0;
+  static const double _leftAxisWidth = 32.0;
+  static const double _rightAxisWidth = 54.0;
+  static const double _minY = 0.8;
+  static const double _maxY = 5.3;
 
   List<double?> _getFeatureValues(List<DailyLog> logs) {
     final key = '$_selectedFeature:${logs.length}';
@@ -55,6 +70,47 @@ class _ComparisonChartState extends State<ComparisonChart> {
       return {..._basicOptions, ..._advancedOptions};
     }
     return _basicOptions;
+  }
+
+  bool get _isScrollable =>
+      widget.periodDays > 0 && widget.logs.length > widget.periodDays;
+
+  @override
+  void initState() {
+    super.initState();
+    _initScrollController();
+  }
+
+  @override
+  void didUpdateWidget(covariant ComparisonChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.periodDays != widget.periodDays ||
+        oldWidget.logs.length != widget.logs.length) {
+      _initScrollController();
+    }
+  }
+
+  void _initScrollController() {
+    _scrollController?.dispose();
+    if (_isScrollable) {
+      _scrollController = ScrollController();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController != null &&
+            _scrollController!.hasClients &&
+            _scrollController!.position.maxScrollExtent > 0) {
+          _scrollController!
+              .jumpTo(_scrollController!.position.maxScrollExtent);
+        }
+      });
+    } else {
+      _scrollController = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController?.dispose();
+    super.dispose();
   }
 
   @override
@@ -131,10 +187,193 @@ class _ComparisonChartState extends State<ComparisonChart> {
         ),
         const SizedBox(height: AppSpacing.sm),
         SizedBox(
-          height: 200,
-          child: _buildChart(),
+          height: _chartHeight,
+          child: _isScrollable
+              ? _buildScrollableLayout(context)
+              : _buildChart(context, showLeftAxis: true, showRightAxis: true),
         ),
+        if (_isScrollable)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Center(
+              child: Text(
+                '← 左右にスライドして過去のデータを確認 →',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: context.textSubColor,
+                ),
+              ),
+            ),
+          ),
       ],
+    );
+  }
+
+  /// 固定Y軸 + スクロール可能チャートのレイアウト
+  Widget _buildScrollableLayout(BuildContext context) {
+    final logs = widget.logs;
+    final featureValues = _getFeatureValues(logs);
+    final validValues = featureValues.whereType<double>().toList();
+
+    return Row(
+      children: [
+        // 固定の左Y軸（体調スコア）
+        SizedBox(
+          width: _leftAxisWidth,
+          height: _chartHeight,
+          child: _buildFixedLeftAxis(context),
+        ),
+        // スクロール可能なチャート本体
+        Expanded(child: _buildScrollableContent(context)),
+        // 固定の右Y軸（特徴量）
+        if (validValues.isNotEmpty)
+          SizedBox(
+            width: _rightAxisWidth,
+            height: _chartHeight,
+            child: _buildFixedRightAxis(context, validValues),
+          ),
+      ],
+    );
+  }
+
+  /// 左Y軸のみ表示する空チャート
+  Widget _buildFixedLeftAxis(BuildContext context) {
+    final gridColor = context.chartGridColor;
+    return LineChart(
+      LineChartData(
+        minY: _minY,
+        maxY: _maxY,
+        minX: 0,
+        maxX: 1,
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: 1,
+          getDrawingHorizontalLine: (_) => FlLine(
+            color: gridColor,
+            strokeWidth: 0.5,
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+        lineTouchData: const LineTouchData(enabled: false),
+        lineBarsData: [],
+        titlesData: FlTitlesData(
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 28,
+              interval: 1,
+              getTitlesWidget: (value, meta) {
+                if (value < 1 || value > 5 || value != value.roundToDouble()) {
+                  return const SizedBox.shrink();
+                }
+                return Text(
+                  value.toInt().toString(),
+                  style: AppTextStyles.captionSmall,
+                );
+              },
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: _bottomReserved,
+              getTitlesWidget: (_, __) => const SizedBox.shrink(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 右Y軸のみ表示する空チャート
+  Widget _buildFixedRightAxis(
+      BuildContext context, List<double> validValues) {
+    final gridColor = context.chartGridColor;
+    final orangeColor = context.chartOrangeColor;
+    final featureMin = validValues.reduce((a, b) => a < b ? a : b);
+    final featureMax = validValues.reduce((a, b) => a > b ? a : b);
+    final featureRange = featureMax - featureMin;
+
+    return LineChart(
+      LineChartData(
+        minY: _minY,
+        maxY: _maxY,
+        minX: 0,
+        maxX: 1,
+        gridData: FlGridData(
+          show: false,
+          drawVerticalLine: false,
+          horizontalInterval: 1,
+          getDrawingHorizontalLine: (_) => FlLine(
+            color: gridColor,
+            strokeWidth: 0.5,
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+        lineTouchData: const LineTouchData(enabled: false),
+        lineBarsData: [],
+        titlesData: FlTitlesData(
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          leftTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 50,
+              interval: 1,
+              getTitlesWidget: (value, meta) {
+                if (value < 1 || value > 5 || value != value.roundToDouble()) {
+                  return const SizedBox.shrink();
+                }
+                final original =
+                    featureMin + (value - 1.0) / 4.0 * featureRange;
+                return Text(
+                  _formatRightAxis(original),
+                  style: TextStyle(fontSize: 10, color: orangeColor),
+                );
+              },
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: _bottomReserved,
+              getTitlesWidget: (_, __) => const SizedBox.shrink(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// スクロール可能なチャート本体
+  Widget _buildScrollableContent(BuildContext context) {
+    final logs = widget.logs;
+    final periodDays = widget.periodDays;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final viewportWidth = constraints.maxWidth;
+        final pixelsPerDay = viewportWidth / periodDays;
+        final chartWidth = pixelsPerDay * (logs.length - 1 + 0.6);
+
+        return SingleChildScrollView(
+          controller: _scrollController,
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: chartWidth.clamp(viewportWidth, double.infinity),
+            height: _chartHeight,
+            child: _buildChart(context,
+                showLeftAxis: false, showRightAxis: false),
+          ),
+        );
+      },
     );
   }
 
@@ -282,7 +521,8 @@ class _ComparisonChartState extends State<ComparisonChart> {
     }
   }
 
-  Widget _buildChart() {
+  Widget _buildChart(BuildContext context,
+      {required bool showLeftAxis, required bool showRightAxis}) {
     final logs = widget.logs;
     final maxX = (logs.length - 1).toDouble();
     final featureValues = _getFeatureValues(logs);
@@ -305,14 +545,27 @@ class _ComparisonChartState extends State<ComparisonChart> {
     final blueColor = context.chartBlueColor;
     final orangeColor = context.chartOrangeColor;
 
+    int labelInterval;
+    if (logs.length <= 10) {
+      labelInterval = 1;
+    } else if (logs.length <= 31) {
+      labelInterval = 5;
+    } else {
+      labelInterval = (logs.length / 8).ceil();
+    }
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: EdgeInsets.only(
+        left: showLeftAxis ? 14 : 0,
+        right: showRightAxis ? 14 : 0,
+      ),
       child: LineChart(
         LineChartData(
           minX: 0,
           maxX: maxX + 0.6,
-          minY: 1,
-          maxY: 5,
+          minY: _minY,
+          maxY: _maxY,
+          clipData: const FlClipData.all(),
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
@@ -325,13 +578,19 @@ class _ComparisonChartState extends State<ComparisonChart> {
           borderData: FlBorderData(show: false),
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(
+              fitInsideHorizontally: true,
+              fitInsideVertically: true,
               getTooltipItems: (touchedSpots) {
                 return touchedSpots.map((spot) {
                   final isMood = spot.bar.color == blueColor ||
                       spot.bar.color == blueColor.withAlpha(100);
                   if (isMood) {
+                    final i = spot.x.round();
+                    final dateLabel = (i >= 0 && i < logs.length)
+                        ? logs[i].dateKey.substring(5)
+                        : '';
                     return LineTooltipItem(
-                      spot.y.toStringAsFixed(1),
+                      '$dateLabel\n${spot.y.toStringAsFixed(1)}',
                       TextStyle(
                         color: spot.bar.color ?? blueColor,
                         fontWeight: FontWeight.bold,
@@ -357,52 +616,70 @@ class _ComparisonChartState extends State<ComparisonChart> {
           titlesData: FlTitlesData(
             topTitles:
                 const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 50,
-                getTitlesWidget: (value, meta) {
-                  final original =
-                      featureMin + (value - 1.0) / 4.0 * featureRange;
-                  return Text(
-                    _formatRightAxis(original),
-                    style: TextStyle(
-                        fontSize: 10, color: orangeColor),
-                  );
-                },
-              ),
-            ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 28,
-                getTitlesWidget: (value, meta) {
-                  return Text(
-                    value.toInt().toString(),
-                    style: AppTextStyles.captionSmall,
-                  );
-                },
-              ),
-            ),
+            rightTitles: showRightAxis
+                ? AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 50,
+                      getTitlesWidget: (value, meta) {
+                        final original =
+                            featureMin + (value - 1.0) / 4.0 * featureRange;
+                        return Text(
+                          _formatRightAxis(original),
+                          style: TextStyle(
+                              fontSize: 10, color: orangeColor),
+                        );
+                      },
+                    ),
+                  )
+                : const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false)),
+            leftTitles: showLeftAxis
+                ? AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      interval: 1,
+                      getTitlesWidget: (value, meta) {
+                        if (value < 1 ||
+                            value > 5 ||
+                            value != value.roundToDouble()) {
+                          return const SizedBox.shrink();
+                        }
+                        return Text(
+                          value.toInt().toString(),
+                          style: AppTextStyles.captionSmall,
+                        );
+                      },
+                    ),
+                  )
+                : const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false)),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
                 interval: 1,
-                reservedSize: 30,
+                reservedSize: _bottomReserved,
                 getTitlesWidget: (value, meta) {
                   final i = value.round();
                   if (i < 0 || i >= logs.length) {
                     return const SizedBox.shrink();
                   }
-                  final interval = logs.length <= 10
-                      ? 1
-                      : logs.length <= 31
-                          ? 5
-                          : (logs.length / 8).ceil();
-                  final isFirst = i == 0;
-                  final isLast = i == logs.length - 1;
-                  if (!isFirst && !isLast && i % interval != 0) {
-                    return const SizedBox.shrink();
+                  if (!_isScrollable) {
+                    final interval = logs.length <= 10
+                        ? 1
+                        : logs.length <= 31
+                            ? 5
+                            : (logs.length / 8).ceil();
+                    final isFirst = i == 0;
+                    final isLast = i == logs.length - 1;
+                    if (!isFirst && !isLast && i % interval != 0) {
+                      return const SizedBox.shrink();
+                    }
+                  } else {
+                    if (i % labelInterval != 0) {
+                      return const SizedBox.shrink();
+                    }
                   }
                   final dateKey = logs[i].dateKey;
                   final label = logs.length > 60
@@ -421,7 +698,14 @@ class _ComparisonChartState extends State<ComparisonChart> {
               isCurved: true,
               barWidth: 2.5,
               color: blueColor,
-              dotData: FlDotData(show: logs.length <= 31),
+              dotData: FlDotData(
+                show: widget.periodDays != 0 || logs.length <= 31,
+                getDotPainter: (spot, __, ___, ____) => FlDotCirclePainter(
+                  radius: 3,
+                  color: blueColor,
+                  strokeWidth: 0,
+                ),
+              ),
               spots: [
                 for (int i = 0; i < logs.length; i++)
                   FlSpot(
@@ -444,6 +728,13 @@ class _ComparisonChartState extends State<ComparisonChart> {
         ),
       ),
     );
+  }
+
+  int get labelInterval {
+    final len = widget.logs.length;
+    if (len <= 10) return 1;
+    if (len <= 31) return 5;
+    return (len / 8).ceil();
   }
 
   Widget _legendItem(Color color, String label, bool dashed) {
