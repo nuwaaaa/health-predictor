@@ -6,7 +6,6 @@ import '../services/firestore_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/mood_selector.dart';
-import '../widgets/chart_7days.dart';
 import '../widgets/prediction_card.dart';
 import 'daily_input_page.dart';
 
@@ -18,7 +17,6 @@ class HomePage extends StatefulWidget {
   final Prediction? prediction;
   final Prediction? tomorrowPrediction;
   final bool isFallbackPrediction;
-  final List<DailyLog> last7;
   final Future<void> Function() onReload;
   final void Function(int tabIndex) onSwitchTab;
 
@@ -30,7 +28,6 @@ class HomePage extends StatefulWidget {
     required this.prediction,
     this.tomorrowPrediction,
     this.isFallbackPrediction = false,
-    required this.last7,
     required this.onReload,
     required this.onSwitchTab,
   });
@@ -170,34 +167,11 @@ class _HomePageState extends State<HomePage> {
               // --- (3) 今日の記録サマリー ---
               _todaySummaryCard(),
 
-              const SizedBox(height: AppSpacing.lg),
-
-              // --- (5) 直近7日ミニカード → データへ ---
-              _mini7DaysSection(),
-
               const SizedBox(height: AppSpacing.xl),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  /// 直近7日ミニセクション
-  Widget _mini7DaysSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionHeader(
-          title: '直近7日',
-          actionLabel: 'データへ',
-          onAction: () => widget.onSwitchTab(1),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        AppCard(
-          child: Chart7Days(logs: widget.last7),
-        ),
-      ],
     );
   }
 

@@ -157,7 +157,6 @@ class MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver 
                   prediction: _prediction,
                   tomorrowPrediction: _tomorrowPrediction,
                   isFallbackPrediction: _isFallbackPrediction,
-                  last7: _last7,
                   onReload: _loadAll,
                   onSwitchTab: switchTab,
                 ),
