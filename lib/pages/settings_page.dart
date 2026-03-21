@@ -4,8 +4,10 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, kDebugMode,
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../main.dart' show themeNotifier;
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../services/theme_notifier.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
@@ -322,6 +324,13 @@ class _SettingsPageState extends State<SettingsPage> {
               const SizedBox(height: AppSpacing.lg),
             ],
 
+            // --- テーマ ---
+            SectionHeader(title: '外観'),
+            const SizedBox(height: AppSpacing.sm),
+            _themeSelector(),
+
+            const SizedBox(height: AppSpacing.lg),
+
             // --- プライバシー ---
             SectionHeader(title: 'プライバシー'),
             const SizedBox(height: AppSpacing.sm),
@@ -413,6 +422,100 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _themeSelector() {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (context, currentMode, _) {
+        return AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.palette_outlined, size: 24, color: context.textSubColor),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Text('テーマ',
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: context.textMainColor)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  _themeChip(
+                    label: 'ライト',
+                    icon: Icons.light_mode,
+                    mode: ThemeMode.light,
+                    currentMode: currentMode,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  _themeChip(
+                    label: 'ダーク',
+                    icon: Icons.dark_mode,
+                    mode: ThemeMode.dark,
+                    currentMode: currentMode,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  _themeChip(
+                    label: '自動',
+                    icon: Icons.settings_brightness,
+                    mode: ThemeMode.system,
+                    currentMode: currentMode,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _themeChip({
+    required String label,
+    required IconData icon,
+    required ThemeMode mode,
+    required ThemeMode currentMode,
+  }) {
+    final selected = mode == currentMode;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => themeNotifier.setThemeMode(mode),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? context.primaryTintColor : context.bgColor,
+            borderRadius: BorderRadius.circular(AppRadii.button),
+            border: Border.all(
+              color: selected ? AppColors.primary : context.dividerColor,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, size: 20,
+                  color: selected ? AppColors.primary : context.textSubColor),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                  color: selected ? AppColors.primary : context.textSubColor,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

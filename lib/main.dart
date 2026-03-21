@@ -8,13 +8,17 @@ import 'pages/login_page.dart';
 import 'pages/onboarding_page.dart';
 import 'services/auth_service.dart';
 import 'services/migration_service.dart';
+import 'services/theme_notifier.dart';
 import 'theme/app_theme.dart';
+
+final themeNotifier = ThemeNotifier();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
   await MigrationService.runMigrations();
+  await themeNotifier.load();
   final onboardingDone = await OnboardingPage.isCompleted();
   runApp(MyApp(onboardingDone: onboardingDone));
 }
@@ -25,13 +29,18 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: '体調予測',
-      theme: buildCalmBlueTheme(),
-      darkTheme: buildCalmBlueDarkTheme(),
-      themeMode: ThemeMode.system,
-      home: AuthWrapper(onboardingDone: onboardingDone),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (context, themeMode, _) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: '体調予測',
+          theme: buildCalmBlueTheme(),
+          darkTheme: buildCalmBlueDarkTheme(),
+          themeMode: themeMode,
+          home: AuthWrapper(onboardingDone: onboardingDone),
+        );
+      },
     );
   }
 }
