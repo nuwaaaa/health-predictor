@@ -107,11 +107,11 @@ class _DataPageState extends State<DataPage> {
               // --- 期間切替 ---
               Row(
                 children: [
-                  _periodPill(7, '7日'),
+                  _periodPill(7, '7日', Icons.swipe, 'スライド'),
                   const SizedBox(width: AppSpacing.sm),
-                  _periodPill(30, '30日'),
+                  _periodPill(30, '30日', Icons.swipe, 'スライド'),
                   const SizedBox(width: AppSpacing.sm),
-                  _periodPill(0, '全期間'),
+                  _periodPill(0, '全期間', Icons.fullscreen, '一覧'),
                 ],
               ),
 
@@ -179,11 +179,13 @@ class _DataPageState extends State<DataPage> {
     );
   }
 
-  Widget _periodPill(int days, String label) {
+  Widget _periodPill(int days, String label, IconData icon, String subLabel) {
     final selected = _periodDays == days;
     return AppPill(
       label: label,
       selected: selected,
+      icon: icon,
+      subLabel: subLabel,
       onTap: () => _changePeriod(days),
     );
   }

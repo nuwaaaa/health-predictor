@@ -82,6 +82,8 @@ class AppPill extends StatelessWidget {
   final bool filled;
   final bool selected;
   final VoidCallback? onTap;
+  final IconData? icon;
+  final String? subLabel;
 
   const AppPill({
     super.key,
@@ -89,10 +91,18 @@ class AppPill extends StatelessWidget {
     this.filled = false,
     this.selected = false,
     this.onTap,
+    this.icon,
+    this.subLabel,
   });
 
   @override
   Widget build(BuildContext context) {
+    final mainColor = selected
+        ? AppColors.primary
+        : filled
+            ? Colors.white
+            : context.textMainColor;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -109,17 +119,32 @@ class AppPill extends StatelessWidget {
             color: selected ? AppColors.primary : context.dividerColor,
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-            color: selected
-                ? AppColors.primary
-                : filled
-                    ? Colors.white
-                    : context.textMainColor,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 14, color: mainColor),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                color: mainColor,
+              ),
+            ),
+            if (subLabel != null) ...[
+              const SizedBox(width: 3),
+              Text(
+                subLabel!,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: mainColor.withAlpha(150),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
