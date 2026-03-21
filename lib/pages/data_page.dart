@@ -5,8 +5,7 @@ import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/chart_7days.dart';
 import '../widgets/comparison_chart.dart';
-import '../widgets/daily_list.dart';
-import '../widgets/sleep_pattern_chart.dart';
+import '../widgets/calendar_view.dart';
 import 'daily_input_page.dart';
 
 /// データタブ — Calm Blue デザイン
@@ -139,19 +138,14 @@ class _DataPageState extends State<DataPage> {
 
                 const SizedBox(height: AppSpacing.lg),
 
-                // --- 睡眠パターン ---
-                SectionHeader(title: '睡眠パターン'),
+                // --- カレンダー ---
+                SectionHeader(title: '日次カレンダー'),
                 const SizedBox(height: AppSpacing.sm),
-                AppCard(child: SleepPatternChart(logs: _displayLogs)),
-
-                const SizedBox(height: AppSpacing.lg),
-
-                // --- 日次一覧 ---
-                SectionHeader(title: '日次一覧'),
-                const SizedBox(height: AppSpacing.sm),
-                DailyList(
-                  logs: _displayLogs,
-                  onTap: _openDailyEdit,
+                AppCard(
+                  child: CalendarView(
+                    logs: _displayLogs,
+                    onTap: _openDailyEdit,
+                  ),
                 ),
               ],
 
