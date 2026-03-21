@@ -398,9 +398,10 @@ class _CalendarViewState extends State<CalendarView> {
   String _sleepText(DailyLog log) {
     final sleep = log.sleep!;
     final dur = '${sleep.durationHours!.toStringAsFixed(1)}h';
-    final bed = sleep.bedTime ?? '--:--';
-    final wake = sleep.wakeTime ?? '--:--';
-    return '$dur（$bed → $wake）';
+    if (sleep.bedTime != null && sleep.wakeTime != null) {
+      return '$dur（${sleep.bedTime} → ${sleep.wakeTime}）';
+    }
+    return dur;
   }
 
   String _moodLabel(int score) {
