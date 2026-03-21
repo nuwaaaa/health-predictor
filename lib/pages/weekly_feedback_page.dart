@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
+import '../theme/app_theme.dart';
 
 /// 週次フィードバックページ
 /// 「先週の予報、実際はどうでした？」を1タップで回答
@@ -77,7 +78,7 @@ class _WeeklyFeedbackPageState extends State<WeeklyFeedbackPage> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.feedback_outlined, size: 56, color: Colors.blueAccent),
+        Icon(Icons.feedback_outlined, size: 56, color: AppColors.primary),
         const SizedBox(height: 24),
         const Text(
           '先週の予報、\n実際はどうでした？',
@@ -85,10 +86,10 @@ class _WeeklyFeedbackPageState extends State<WeeklyFeedbackPage> {
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        const Text(
+        Text(
           '1タップで教えてください。予測改善に役立ちます。',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, color: Colors.black54),
+          style: TextStyle(fontSize: 14, color: context.textSubColor),
         ),
         const SizedBox(height: 36),
         Row(
@@ -136,9 +137,9 @@ class _WeeklyFeedbackPageState extends State<WeeklyFeedbackPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 20),
         decoration: BoxDecoration(
-          color: color.withAlpha(25),
+          color: context.colorWithAdaptiveAlpha(color, 25),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withAlpha(100)),
+          border: Border.all(color: context.colorWithAdaptiveAlpha(color, 100)),
         ),
         child: Column(
           children: [
@@ -163,16 +164,16 @@ class _WeeklyFeedbackPageState extends State<WeeklyFeedbackPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.check_circle, size: 64, color: Colors.green.shade400),
+          Icon(Icons.check_circle, size: 64, color: context.chartGreenColor),
           const SizedBox(height: 20),
           const Text(
             '回答ありがとうございます！',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             '予測モデルの改善に活用します。',
-            style: TextStyle(fontSize: 14, color: Colors.black54),
+            style: TextStyle(fontSize: 14, color: context.textSubColor),
           ),
           const SizedBox(height: 32),
           OutlinedButton(

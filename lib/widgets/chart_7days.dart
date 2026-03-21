@@ -41,6 +41,8 @@ class Chart7Days extends StatelessWidget {
 
     final maxX = (logs.length - 1).toDouble();
     final showMA = logs.length > 7;
+    final gridColor = context.chartGridColor;
+    final blueColor = context.chartBlueColor;
 
     int labelInterval;
     if (logs.length <= 10) {
@@ -67,7 +69,7 @@ class Chart7Days extends StatelessWidget {
               drawVerticalLine: false,
               horizontalInterval: 1,
               getDrawingHorizontalLine: (_) => FlLine(
-                color: AppColors.chartGrid,
+                color: gridColor,
                 strokeWidth: 0.5,
               ),
             ),
@@ -137,13 +139,13 @@ class Chart7Days extends StatelessWidget {
                 isCurved: true,
                 barWidth: showMA ? 1.5 : 2.5,
                 color: showMA
-                    ? AppColors.chartBlue.withAlpha(100)
-                    : AppColors.chartBlue,
+                    ? blueColor.withAlpha(100)
+                    : blueColor,
                 dotData: FlDotData(
                   show: logs.length <= 31,
                   getDotPainter: (spot, __, ___, ____) => FlDotCirclePainter(
                     radius: 3,
-                    color: AppColors.chartBlue,
+                    color: blueColor,
                     strokeWidth: 0,
                   ),
                 ),
@@ -156,7 +158,7 @@ class Chart7Days extends StatelessWidget {
                 LineChartBarData(
                   isCurved: true,
                   barWidth: 2.5,
-                  color: AppColors.chartBlue,
+                  color: blueColor,
                   dotData: const FlDotData(show: false),
                   spots: calcMovingAverage(logs),
                 ),

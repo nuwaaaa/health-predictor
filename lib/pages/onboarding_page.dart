@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../theme/app_theme.dart';
 
 /// プライバシーオンボーディング（初回起動時のみ表示）
 /// 設計書 Section 15.1 に基づく
@@ -40,18 +41,21 @@ class OnboardingPage extends StatelessWidget {
               ),
               const SizedBox(height: 36),
               _infoRow(
+                context,
                 icon: Icons.bar_chart_rounded,
                 title: '何を記録するか',
                 description: '体調・睡眠・歩数・ストレス',
               ),
               const SizedBox(height: 24),
               _infoRow(
+                context,
                 icon: Icons.lock_outline,
                 title: 'どこに保存されるか',
                 description: 'あなた専用のクラウド\n（インターネット上の安全な保管場所）',
               ),
               const SizedBox(height: 24),
               _infoRow(
+                context,
                 icon: Icons.delete_outline,
                 title: 'いつでも削除できます',
                 description: '設定 → アカウント削除で\nすべてのデータを完全に削除',
@@ -76,7 +80,8 @@ class OnboardingPage extends StatelessWidget {
     );
   }
 
-  Widget _infoRow({
+  Widget _infoRow(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required String description,
@@ -88,10 +93,10 @@ class OnboardingPage extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: Colors.blue.shade50,
+            color: context.primaryTintColor,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, size: 24, color: Colors.blue.shade700),
+          child: Icon(icon, size: 24, color: AppColors.primary),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -100,14 +105,16 @@ class OnboardingPage extends StatelessWidget {
             children: [
               Text(
                 title,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: context.textMainColor),
               ),
               const SizedBox(height: 4),
               Text(
                 description,
                 style: TextStyle(
-                    fontSize: 14, color: Colors.grey.shade600, height: 1.4),
+                    fontSize: 14, color: context.textSubColor, height: 1.4),
               ),
             ],
           ),

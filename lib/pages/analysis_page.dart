@@ -337,16 +337,16 @@ class _AnalysisPageState extends State<AnalysisPage> {
                     height: 32,
                     decoration: BoxDecoration(
                       color: isBad
-                          ? Colors.red.shade50
-                          : Colors.green.shade50,
+                          ? context.negativeBgColor
+                          : context.positiveBgColor,
                       borderRadius: BorderRadius.circular(AppRadii.button),
                     ),
                     child: Icon(
                       isBad ? Icons.arrow_upward : Icons.arrow_downward,
                       size: 18,
                       color: isBad
-                          ? Colors.red.shade500
-                          : Colors.green.shade500,
+                          ? context.negativeTextColor
+                          : context.positiveTextColor,
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -364,8 +364,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
                           style: TextStyle(
                             fontSize: 12,
                             color: isBad
-                                ? Colors.red.shade400
-                                : Colors.green.shade400,
+                                ? context.negativeTextColor
+                                : context.positiveTextColor,
                           ),
                         ),
                       ],
@@ -471,9 +471,9 @@ class _AnalysisPageState extends State<AnalysisPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: color.withAlpha(20),
+          color: context.colorWithAdaptiveAlpha(color, 20),
           borderRadius: BorderRadius.circular(AppRadii.button),
-          border: Border.all(color: color.withAlpha(60)),
+          border: Border.all(color: context.colorWithAdaptiveAlpha(color, 60)),
         ),
         child: Column(
           children: [

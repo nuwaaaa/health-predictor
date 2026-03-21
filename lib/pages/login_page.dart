@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatf
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
+import '../theme/app_theme.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -179,7 +180,7 @@ class _LoginPageState extends State<LoginPage> {
                 const Text(
                   'あなた専用の体調予測AI',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Colors.black54),
+                  style: TextStyle(fontSize: 14, color: context.textSubColor),
                 ),
                 const SizedBox(height: 40),
 
@@ -214,14 +215,14 @@ class _LoginPageState extends State<LoginPage> {
                 // --- 区切り線 ---
                 Row(
                   children: [
-                    Expanded(child: Divider(color: Colors.grey.shade300)),
+                    Expanded(child: Divider(color: context.dividerColor)),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text('または',
                           style: TextStyle(
-                              fontSize: 12, color: Colors.grey.shade500)),
+                              fontSize: 12, color: context.textSubColor)),
                     ),
-                    Expanded(child: Divider(color: Colors.grey.shade300)),
+                    Expanded(child: Divider(color: context.dividerColor)),
                   ],
                 ),
 
@@ -232,8 +233,8 @@ class _LoginPageState extends State<LoginPage> {
                   _socialButton(
                     label: 'Appleでサインイン',
                     icon: Icons.apple,
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
+                    backgroundColor: context.isDark ? Colors.white : Colors.black,
+                    foregroundColor: context.isDark ? Colors.black : Colors.white,
                     onPressed: _loading ? null : _signInWithApple,
                   ),
                   const SizedBox(height: 12),
@@ -243,9 +244,9 @@ class _LoginPageState extends State<LoginPage> {
                 _socialButton(
                   label: 'Googleでサインイン',
                   icon: Icons.g_mobiledata,
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black87,
-                  borderColor: Colors.grey.shade300,
+                  backgroundColor: context.isDark ? AppColorsDark.card : Colors.white,
+                  foregroundColor: context.textMainColor,
+                  borderColor: context.dividerColor,
                   onPressed: _loading ? null : _signInWithGoogle,
                 ),
 
@@ -340,7 +341,7 @@ class _LoginPageState extends State<LoginPage> {
                       onPressed: _loading ? null : _resetPassword,
                       child: const Text(
                         'パスワードを忘れた方',
-                        style: TextStyle(fontSize: 13, color: Colors.black54),
+                        style: TextStyle(fontSize: 13, color: context.textSubColor),
                       ),
                     ),
                 ],

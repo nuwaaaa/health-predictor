@@ -102,7 +102,7 @@ class PredictionCard extends StatelessWidget {
   Widget _buildPredictionCard(BuildContext context) {
     final pred = prediction!;
     final displayP = isP3d ? pred.displayP3d! : pred.displayPToday!;
-    final riskColor = _riskColor(displayP);
+    final riskColor = context.riskColor(displayP);
     final percentText = isP3d ? pred.risk3dPercent : pred.riskPercent;
     final labelText = isP3d ? pred.risk3dLabel : pred.riskLabel;
     final defaultTitle = isP3d
@@ -250,13 +250,13 @@ class PredictionCard extends StatelessWidget {
     String label;
     switch (confidence) {
       case 'high':
-        bgColor = AppColors.confidenceHighBg;
-        textColor = AppColors.confidenceHighText;
+        bgColor = context.confidenceHighBg;
+        textColor = context.confidenceHighText;
         label = '信頼度：高';
         break;
       case 'medium':
-        bgColor = AppColors.confidenceMedBg;
-        textColor = AppColors.confidenceMedText;
+        bgColor = context.confidenceMedBg;
+        textColor = context.confidenceMedText;
         label = '信頼度：中';
         break;
       default:
@@ -296,10 +296,4 @@ class PredictionCard extends StatelessWidget {
     return '体調が安定しています。この調子を維持しましょう';
   }
 
-  Color _riskColor(double p) {
-    if (p >= 0.6) return Colors.red.shade700;
-    if (p >= 0.4) return Colors.orange.shade700;
-    if (p >= 0.2) return Colors.amber.shade700;
-    return AppColors.chartGreen;
-  }
 }

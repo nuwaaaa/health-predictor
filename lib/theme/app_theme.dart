@@ -108,6 +108,39 @@ class AppColorsDark {
   static const textMain = Color(0xFFE2E8F0);
   static const textSub = Color(0xFF8899AA);
   static const divider = Color(0xFF2D3A4A);
+
+  // Primary tint (dark)
+  static const primaryTint = Color(0xFF1E2D45);
+
+  // Caution (dark)
+  static const cautionSoft = Color(0xFF3A2A1E);
+  static const cautionSoft2 = Color(0xFF4A3020);
+
+  // Chart palette (dark) — 彩度を下げ明度を調整
+  static const chartBlue = Color(0xFF7FA8E8);
+  static const chartOrange = Color(0xFFD4956A);
+  static const chartGreen = Color(0xFF6DB895);
+  static const chartGrid = Color(0xFF2D3A4A);
+
+  // Confidence badge (dark)
+  static const confidenceHighBg = Color(0xFF1A3328);
+  static const confidenceHighText = Color(0xFF6DB895);
+  static const confidenceMedBg = Color(0xFF332E1A);
+  static const confidenceMedText = Color(0xFFD4B060);
+
+  // Risk colors (dark) — 彩度抑えめ
+  static const riskHigh = Color(0xFFE06060);
+  static const riskMedium = Color(0xFFD4956A);
+  static const riskLow = Color(0xFFD4B060);
+
+  // Semantic feedback (dark)
+  static const positiveBg = Color(0xFF1A3328);
+  static const negativeBg = Color(0xFF331A1A);
+  static const positiveText = Color(0xFF6DB895);
+  static const negativeText = Color(0xFFE06060);
+
+  // Auto-import badge text
+  static const autoImportText = Color(0xFF6DB895);
 }
 
 // ─────────────────────────────────────────────
@@ -121,6 +154,44 @@ extension AdaptiveColors on BuildContext {
   Color get textMainColor => isDark ? AppColorsDark.textMain : AppColors.textMain;
   Color get textSubColor => isDark ? AppColorsDark.textSub : AppColors.textSub;
   Color get dividerColor => isDark ? AppColorsDark.divider : AppColors.divider;
+  Color get primaryTintColor => isDark ? AppColorsDark.primaryTint : AppColors.primaryTint;
+  Color get cautionSoftColor => isDark ? AppColorsDark.cautionSoft : AppColors.cautionSoft;
+
+  // Chart
+  Color get chartBlueColor => isDark ? AppColorsDark.chartBlue : AppColors.chartBlue;
+  Color get chartOrangeColor => isDark ? AppColorsDark.chartOrange : AppColors.chartOrange;
+  Color get chartGreenColor => isDark ? AppColorsDark.chartGreen : AppColors.chartGreen;
+  Color get chartGridColor => isDark ? AppColorsDark.chartGrid : AppColors.chartGrid;
+
+  // Confidence badge
+  Color get confidenceHighBg => isDark ? AppColorsDark.confidenceHighBg : AppColors.confidenceHighBg;
+  Color get confidenceHighText => isDark ? AppColorsDark.confidenceHighText : AppColors.confidenceHighText;
+  Color get confidenceMedBg => isDark ? AppColorsDark.confidenceMedBg : AppColors.confidenceMedBg;
+  Color get confidenceMedText => isDark ? AppColorsDark.confidenceMedText : AppColors.confidenceMedText;
+
+  // Risk
+  Color riskColor(double p) {
+    if (p >= 0.6) return isDark ? AppColorsDark.riskHigh : Colors.red.shade700;
+    if (p >= 0.4) return isDark ? AppColorsDark.riskMedium : Colors.orange.shade700;
+    if (p >= 0.2) return isDark ? AppColorsDark.riskLow : Colors.amber.shade700;
+    return chartGreenColor;
+  }
+
+  // Feedback / contribution
+  Color get positiveBgColor => isDark ? AppColorsDark.positiveBg : Colors.green.shade50;
+  Color get negativeBgColor => isDark ? AppColorsDark.negativeBg : Colors.red.shade50;
+  Color get positiveTextColor => isDark ? AppColorsDark.positiveText : Colors.green.shade500;
+  Color get negativeTextColor => isDark ? AppColorsDark.negativeText : Colors.red.shade500;
+
+  // Auto-import badge
+  Color get autoImportTextColor => isDark ? AppColorsDark.autoImportText : const Color(0xFF276749);
+
+  // Alpha helper — ダーク時は alpha を高くして可視性を確保
+  Color primaryWithAlpha(int lightAlpha) =>
+      AppColors.primary.withAlpha(isDark ? (lightAlpha * 2.5).round().clamp(0, 255) : lightAlpha);
+
+  Color colorWithAdaptiveAlpha(Color color, int lightAlpha) =>
+      color.withAlpha(isDark ? (lightAlpha * 2.5).round().clamp(0, 255) : lightAlpha);
 }
 
 // ─────────────────────────────────────────────

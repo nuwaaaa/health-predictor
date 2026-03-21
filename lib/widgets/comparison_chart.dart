@@ -103,10 +103,10 @@ class _ComparisonChartState extends State<ComparisonChart> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _showAdvanced ? AppColors.primaryTint : context.bgColor,
+                  color: _showAdvanced ? context.primaryTintColor : context.bgColor,
                   borderRadius: BorderRadius.circular(AppRadii.pill),
                   border: Border.all(
-                    color: _showAdvanced ? AppColors.primary.withAlpha(80) : context.dividerColor,
+                    color: _showAdvanced ? context.primaryWithAlpha(80) : context.dividerColor,
                   ),
                 ),
                 child: Text(
@@ -293,6 +293,10 @@ class _ComparisonChartState extends State<ComparisonChart> {
       return 1.0 + (v - featureMin) / featureRange * 4.0;
     }
 
+    final gridColor = context.chartGridColor;
+    final blueColor = context.chartBlueColor;
+    final orangeColor = context.chartOrangeColor;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       child: LineChart(
@@ -306,7 +310,7 @@ class _ComparisonChartState extends State<ComparisonChart> {
             drawVerticalLine: false,
             horizontalInterval: 1,
             getDrawingHorizontalLine: (_) => FlLine(
-              color: AppColors.chartGrid,
+              color: gridColor,
               strokeWidth: 0.5,
             ),
           ),
@@ -315,13 +319,13 @@ class _ComparisonChartState extends State<ComparisonChart> {
             touchTooltipData: LineTouchTooltipData(
               getTooltipItems: (touchedSpots) {
                 return touchedSpots.map((spot) {
-                  final isMood = spot.bar.color == AppColors.chartBlue ||
-                      spot.bar.color == AppColors.chartBlue.withAlpha(100);
+                  final isMood = spot.bar.color == blueColor ||
+                      spot.bar.color == blueColor.withAlpha(100);
                   if (isMood) {
                     return LineTooltipItem(
                       spot.y.toStringAsFixed(1),
                       TextStyle(
-                        color: spot.bar.color ?? AppColors.chartBlue,
+                        color: spot.bar.color ?? blueColor,
                         fontWeight: FontWeight.bold,
                       ),
                     );
@@ -332,8 +336,8 @@ class _ComparisonChartState extends State<ComparisonChart> {
                             (spot.y - 1.0) / 4.0 * featureRange;
                     return LineTooltipItem(
                       _formatRightAxis(original),
-                      const TextStyle(
-                        color: AppColors.chartOrange,
+                      TextStyle(
+                        color: orangeColor,
                         fontWeight: FontWeight.bold,
                       ),
                     );
@@ -354,8 +358,8 @@ class _ComparisonChartState extends State<ComparisonChart> {
                       featureMin + (value - 1.0) / 4.0 * featureRange;
                   return Text(
                     _formatRightAxis(original),
-                    style: const TextStyle(
-                        fontSize: 10, color: AppColors.chartOrange),
+                    style: TextStyle(
+                        fontSize: 10, color: orangeColor),
                   );
                 },
               ),
@@ -409,8 +413,8 @@ class _ComparisonChartState extends State<ComparisonChart> {
               isCurved: true,
               barWidth: logs.length > 7 ? 1.5 : 2.5,
               color: logs.length > 7
-                  ? AppColors.chartBlue.withAlpha(100)
-                  : AppColors.chartBlue,
+                  ? blueColor.withAlpha(100)
+                  : blueColor,
               dotData: FlDotData(show: logs.length <= 31),
               spots: [
                 for (int i = 0; i < logs.length; i++)
@@ -422,14 +426,14 @@ class _ComparisonChartState extends State<ComparisonChart> {
               LineChartBarData(
                 isCurved: true,
                 barWidth: 2.5,
-                color: AppColors.chartBlue,
+                color: blueColor,
                 dotData: const FlDotData(show: false),
                 spots: Chart7Days.calcMovingAverage(logs),
               ),
             LineChartBarData(
               isCurved: true,
               barWidth: 2,
-              color: AppColors.chartOrange,
+              color: orangeColor,
               dashArray: [5, 3],
               dotData: const FlDotData(show: false),
               spots: [

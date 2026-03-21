@@ -67,73 +67,75 @@ class SleepPatternChart extends StatelessWidget {
     final sleep = log.sleep!;
     final dur = sleep.durationHours!;
     final isGood = dur >= recommendedHours;
-    final color = isGood ? AppColors.chartGreen : AppColors.chartOrange;
     final barFraction = (dur / 12.0).clamp(0.0, 1.0);
     final bedStr = sleep.bedTime ?? '--:--';
     final wakeStr = sleep.wakeTime ?? '--:--';
     final mmdd = log.dateKey.substring(5);
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 40,
-            child: Text(mmdd, style: AppTextStyles.captionSmall),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return Stack(
-                  children: [
-                    Container(
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: context.dividerColor,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    Container(
-                      height: 20,
-                      width: constraints.maxWidth * barFraction,
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.only(left: 6),
-                      child: Text(
-                        '$bedStr → $wakeStr',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                );
-              },
+    return Builder(builder: (context) {
+      final color = isGood ? context.chartGreenColor : context.chartOrangeColor;
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 40,
+              child: Text(mmdd, style: AppTextStyles.captionSmall),
             ),
-          ),
-          const SizedBox(width: 6),
-          SizedBox(
-            width: 36,
-            child: Text(
-              '${dur.toStringAsFixed(1)}h',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isGood
-                    ? const Color(0xFF276749)
-                    : const Color(0xFF9C4221),
+            const SizedBox(width: 4),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return Stack(
+                    children: [
+                      Container(
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: context.dividerColor,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      Container(
+                        height: 20,
+                        width: constraints.maxWidth * barFraction,
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.only(left: 6),
+                        child: Text(
+                          '$bedStr → $wakeStr',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(width: 6),
+            SizedBox(
+              width: 36,
+              child: Text(
+                '${dur.toStringAsFixed(1)}h',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isGood
+                      ? context.autoImportTextColor
+                      : context.chartOrangeColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }

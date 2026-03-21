@@ -509,7 +509,7 @@ class _DailyInputPageState extends State<DailyInputPage> {
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               decoration: BoxDecoration(
                                 color: selected
-                                    ? AppColors.cautionSoft
+                                    ? context.cautionSoftColor
                                     : context.bgColor,
                                 borderRadius:
                                     BorderRadius.circular(AppRadii.button),
@@ -595,10 +595,14 @@ class _DailyInputPageState extends State<DailyInputPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isAuto ? AppColors.chartGreen.withAlpha(30) : AppColors.primaryTint,
+          color: isAuto
+              ? context.colorWithAdaptiveAlpha(context.chartGreenColor, 30)
+              : context.primaryTintColor,
           borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(
-            color: isAuto ? AppColors.chartGreen : AppColors.primary.withAlpha(80),
+            color: isAuto
+                ? context.chartGreenColor
+                : context.primaryWithAlpha(80),
           ),
         ),
         child: Row(
@@ -612,7 +616,7 @@ class _DailyInputPageState extends State<DailyInputPage> {
               )
             else if (isAuto)
               Icon(Icons.check_circle, size: 14,
-                  color: const Color(0xFF276749))
+                  color: context.autoImportTextColor)
             else
               Icon(Icons.download_rounded, size: 14,
                   color: AppColors.primary),
@@ -622,7 +626,7 @@ class _DailyInputPageState extends State<DailyInputPage> {
               style: TextStyle(
                 fontSize: 12,
                 color: isAuto
-                    ? const Color(0xFF276749)
+                    ? context.autoImportTextColor
                     : AppColors.primary,
                 fontWeight: FontWeight.w600,
               ),

@@ -220,10 +220,10 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.primary.withAlpha(30), AppColors.primary.withAlpha(10)],
+                colors: [context.primaryWithAlpha(30), context.primaryWithAlpha(10)],
               ),
               borderRadius: BorderRadius.circular(AppRadii.card),
-              border: Border.all(color: AppColors.primary.withAlpha(60)),
+              border: Border.all(color: context.primaryWithAlpha(60)),
             ),
             child: Row(
               children: [
@@ -231,7 +231,7 @@ class _HomePageState extends State<HomePage> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withAlpha(30),
+                    color: context.primaryWithAlpha(30),
                     borderRadius: BorderRadius.circular(AppRadii.button),
                   ),
                   child: const Icon(Icons.edit_note, color: AppColors.primary, size: 24),
