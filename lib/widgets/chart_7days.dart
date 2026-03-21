@@ -72,7 +72,7 @@ class Chart7Days extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: LineChart(
-          LineChartData(
+              LineChartData(
             minX: 0,
             maxX: maxX + 0.6,
             minY: 1,
@@ -179,6 +179,7 @@ class Chart7Days extends StatelessWidget {
           ),
         ),
       ),
+    ),
       ],
     );
   }
