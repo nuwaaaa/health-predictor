@@ -416,7 +416,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
   Widget _feedbackCard() {
     final alreadyDone =
         _feedbackSubmitted || _alreadySubmittedWeek != null;
-    final disabled = _feedbackLoading || _feedbackSaving;
 
     if (alreadyDone) {
       return AppCard(
