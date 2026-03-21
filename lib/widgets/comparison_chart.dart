@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../models/daily_log.dart';
 import '../theme/app_theme.dart';
-import 'chart_7days.dart';
 
 /// 体調×特徴量 比較グラフ（設計書 Section 14.1）
 class ComparisonChart extends StatefulWidget {
@@ -420,10 +419,8 @@ class _ComparisonChartState extends State<ComparisonChart> {
           lineBarsData: [
             LineChartBarData(
               isCurved: true,
-              barWidth: logs.length > 7 ? 1.5 : 2.5,
-              color: logs.length > 7
-                  ? blueColor.withAlpha(100)
-                  : blueColor,
+              barWidth: 2.5,
+              color: blueColor,
               dotData: FlDotData(show: logs.length <= 31),
               spots: [
                 for (int i = 0; i < logs.length; i++)
@@ -431,14 +428,6 @@ class _ComparisonChartState extends State<ComparisonChart> {
                       i.toDouble(), (logs[i].moodScore ?? 3).toDouble()),
               ],
             ),
-            if (logs.length > 7)
-              LineChartBarData(
-                isCurved: true,
-                barWidth: 2.5,
-                color: blueColor,
-                dotData: const FlDotData(show: false),
-                spots: Chart7Days.calcMovingAverage(logs),
-              ),
             LineChartBarData(
               isCurved: true,
               barWidth: 2,
