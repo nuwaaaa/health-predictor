@@ -54,6 +54,21 @@ def generate_test_data(n_days: int = 100, seed: int = 42) -> pd.DataFrame:
             base_sleep += 0.5
         sleep_hours = round(base_sleep, 1)
 
+        # 就寝・起床時刻
+        if is_weekend:
+            bed_minute = rng.randint(23 * 60, 25 * 60 + 30)  # 23:00〜01:30
+            wake_minute = bed_minute + round(sleep_hours * 60)
+        elif mood <= 2:
+            bed_minute = rng.randint(24 * 60, 26 * 60)  # 0:00〜2:00
+            wake_minute = bed_minute + round(sleep_hours * 60)
+        else:
+            bed_minute = rng.randint(22 * 60 + 30, 24 * 60 + 30)  # 22:30〜0:30
+            wake_minute = bed_minute + round(sleep_hours * 60)
+        bed_h, bed_m = (bed_minute // 60) % 24, bed_minute % 60
+        wake_h, wake_m = (wake_minute // 60) % 24, wake_minute % 60
+        bed_time = f"{bed_h:02d}:{bed_m:02d}"
+        wake_time = f"{wake_h:02d}:{wake_m:02d}"
+
         # 歩数
         steps = rng.randint(2000, 5000) if mood <= 2 else rng.randint(5000, 13000)
 
@@ -66,6 +81,8 @@ def generate_test_data(n_days: int = 100, seed: int = 42) -> pd.DataFrame:
             "date_key": date_key,
             "moodScore": mood,
             "sleep_hours": sleep_hours,
+            "bed_time": bed_time,
+            "wake_time": wake_time,
             "steps": steps,
             "stress": stress,
         })
@@ -218,7 +235,11 @@ def main():
         emojis = {1: "😣", 2: "😕", 3: "😐", 4: "🙂", 5: "😄"}
         y = row.get("y_today")
         flag = " ⚠不調" if y == 1 else ""
-        print(f"    {row['date_key']}  {emojis.get(mood, '?')} {mood}{flag}")
+        bed = row.get("bed_time", "--:--") or "--:--"
+        wake = row.get("wake_time", "--:--") or "--:--"
+        sleep = row.get("sleep_hours", 0)
+        print(f"    {row['date_key']}  {emojis.get(mood, '?')} {mood}  "
+              f"🛏️ {bed}→{wake} ({sleep}h){flag}")
 
     print()
 
