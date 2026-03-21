@@ -6,6 +6,7 @@ import '../widgets/common_widgets.dart';
 import '../widgets/chart_7days.dart';
 import '../widgets/comparison_chart.dart';
 import '../widgets/calendar_view.dart';
+import '../widgets/sleep_pattern_chart.dart';
 import 'daily_input_page.dart';
 
 /// データタブ — Calm Blue デザイン
@@ -135,6 +136,17 @@ class _DataPageState extends State<DataPage> {
                 SectionHeader(title: '体調と生活データの比較'),
                 const SizedBox(height: AppSpacing.sm),
                 AppCard(child: ComparisonChart(logs: _displayLogs)),
+
+                const SizedBox(height: AppSpacing.lg),
+
+                // --- 睡眠パターン ---
+                SectionHeader(title: '睡眠パターン'),
+                const SizedBox(height: AppSpacing.sm),
+                AppCard(child: SleepPatternChart(
+                  logs: _displayLogs.length > 7
+                      ? _displayLogs.sublist(_displayLogs.length - 7)
+                      : _displayLogs,
+                )),
 
                 const SizedBox(height: AppSpacing.lg),
 
