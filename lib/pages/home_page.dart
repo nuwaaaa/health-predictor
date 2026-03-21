@@ -7,7 +7,6 @@ import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/mood_selector.dart';
 import '../widgets/chart_7days.dart';
-import '../widgets/status_banner.dart';
 import '../widgets/prediction_card.dart';
 import 'daily_input_page.dart';
 
@@ -170,11 +169,6 @@ class _HomePageState extends State<HomePage> {
 
               // --- (3) 今日の記録サマリー ---
               _todaySummaryCard(),
-
-              const SizedBox(height: AppSpacing.md),
-
-              // --- (4) ステータスバナー ---
-              StatusBanner(status: widget.status),
 
               const SizedBox(height: AppSpacing.lg),
 

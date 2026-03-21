@@ -197,11 +197,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
                 children: [
                   const SizedBox(height: AppSpacing.md),
 
-                  // --- 予測サマリー ---
-                  _predictionSummary(),
-
-                  const SizedBox(height: AppSpacing.lg),
-
                   // --- 不調の基準 ---
                   SectionHeader(title: 'あなたの「不調」の基準'),
                   const SizedBox(height: AppSpacing.sm),
@@ -256,84 +251,11 @@ class _AnalysisPageState extends State<AnalysisPage> {
                   const SizedBox(height: AppSpacing.sm),
                   _feedbackCard(),
 
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // --- モデル情報 ---
-                  SectionHeader(title: 'モデル情報'),
-                  const SizedBox(height: AppSpacing.sm),
-                  _modelInfoCard(),
-
                   const SizedBox(height: AppSpacing.xl),
                 ],
               ),
             ),
     );
-  }
-
-  Widget _predictionSummary() {
-    final today = widget.prediction;
-    final tomorrow = widget.tomorrowPrediction;
-
-    if (today == null && tomorrow == null) {
-      return const SizedBox.shrink();
-    }
-
-    return AppCard(
-      child: Row(
-        children: [
-          if (today != null)
-            Expanded(child: _summaryColumn('今日', today)),
-          if (today != null && tomorrow != null)
-            Container(
-              width: 1,
-              height: 48,
-              color: context.dividerColor,
-              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            ),
-          if (tomorrow != null)
-            Expanded(child: _summaryColumn('明日', tomorrow)),
-        ],
-      ),
-    );
-  }
-
-  Widget _summaryColumn(String label, Prediction pred) {
-    final riskLabel = pred.riskLabel;
-    final color = _riskColor(riskLabel);
-
-    return Column(
-      children: [
-        Text(label, style: AppTextStyles.caption),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          riskLabel,
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: color,
-          ),
-        ),
-        Text(
-          pred.riskPercent,
-          style: TextStyle(fontSize: 12, color: color),
-        ),
-      ],
-    );
-  }
-
-  Color _riskColor(String riskLabel) {
-    switch (riskLabel) {
-      case '高め':
-        return Colors.red.shade500;
-      case 'やや注意':
-        return AppColors.chartOrange;
-      case '低め':
-        return AppColors.chartGreen;
-      case '良好':
-        return AppColors.primary;
-      default:
-        return AppColors.textSub;
-    }
   }
 
   Widget _unhealthyThresholdCard() {
@@ -563,26 +485,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
                     fontSize: 12, fontWeight: FontWeight.w600, color: color)),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _modelInfoCard() {
-    final status = widget.status;
-    final modelLabel =
-        status.modelType == 'lightgbm' ? 'LightGBM' : 'ロジスティック回帰';
-
-    return AppCard(
-      child: Column(
-        children: [
-          _infoRow('使用モデル', modelLabel),
-          _infoRow('信頼度', status.confidenceLevelLabel),
-          _infoRow('データ日数', '${status.daysCollected}日'),
-          _infoRow('不調件数', '${status.unhealthyCount}件'),
-          if (status.recentMissingRate > 0)
-            _infoRow(
-                '直近7日欠損率', '${(status.recentMissingRate * 100).round()}%'),
-        ],
       ),
     );
   }
