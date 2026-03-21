@@ -53,12 +53,25 @@ class Chart7Days extends StatelessWidget {
       labelInterval = (logs.length / 8).ceil();
     }
 
-    return SizedBox(
-      height: 200,
-      width: double.infinity,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        child: LineChart(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _legendItem(context, showMA ? blueColor.withAlpha(100) : blueColor, '日次スコア', false),
+            if (showMA) ...[
+              const SizedBox(width: 16),
+              _legendItem(context, blueColor, '7日移動平均', false),
+            ],
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        SizedBox(
+          height: 200,
+          width: double.infinity,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: LineChart(
           LineChartData(
             minX: 0,
             maxX: maxX + 0.6,
@@ -166,6 +179,50 @@ class Chart7Days extends StatelessWidget {
           ),
         ),
       ),
+      ],
     );
   }
+
+  static Widget _legendItem(BuildContext context, Color color, String label, bool dashed) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 16,
+          height: 3,
+          child: dashed
+              ? CustomPaint(painter: _DashedLinePainter(color: color))
+              : Container(color: color),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: AppTextStyles.captionSmall),
+      ],
+    );
+  }
+}
+
+class _DashedLinePainter extends CustomPainter {
+  final Color color;
+  _DashedLinePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = size.height;
+    const dashWidth = 4.0;
+    const gapWidth = 2.0;
+    double x = 0;
+    while (x < size.width) {
+      canvas.drawLine(
+        Offset(x, size.height / 2),
+        Offset((x + dashWidth).clamp(0, size.width), size.height / 2),
+        paint,
+      );
+      x += dashWidth + gapWidth;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

@@ -122,6 +122,15 @@ class _ComparisonChartState extends State<ComparisonChart> {
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            _legendItem(context.chartBlueColor, '体調スコア', false),
+            const SizedBox(width: 16),
+            _legendItem(context.chartOrangeColor,
+                _activeOptions[_selectedFeature] ?? '', true),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
         SizedBox(
           height: 200,
           child: _buildChart(),
@@ -447,4 +456,47 @@ class _ComparisonChartState extends State<ComparisonChart> {
       ),
     );
   }
+
+  Widget _legendItem(Color color, String label, bool dashed) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 16,
+          height: 3,
+          child: dashed
+              ? CustomPaint(painter: _DashedLinePainter(color: color))
+              : Container(color: color),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: AppTextStyles.captionSmall),
+      ],
+    );
+  }
+}
+
+class _DashedLinePainter extends CustomPainter {
+  final Color color;
+  _DashedLinePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = size.height;
+    const dashWidth = 4.0;
+    const gapWidth = 2.0;
+    double x = 0;
+    while (x < size.width) {
+      canvas.drawLine(
+        Offset(x, size.height / 2),
+        Offset((x + dashWidth).clamp(0, size.width), size.height / 2),
+        paint,
+      );
+      x += dashWidth + gapWidth;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
