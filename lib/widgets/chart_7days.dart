@@ -6,10 +6,18 @@ import '../theme/app_theme.dart';
 class Chart7Days extends StatefulWidget {
   final List<DailyLog> logs;
 
-  const Chart7Days({super.key, required this.logs});
+  /// 表示ウィンドウ幅（7, 30, 0=全期間）
+  final int periodDays;
+
+  const Chart7Days({
+    super.key,
+    required this.logs,
+    this.periodDays = 0,
+  });
 
   /// 7日移動平均を計算
-  static List<FlSpot> calcMovingAverage(List<DailyLog> logs, {int window = 7}) {
+  static List<FlSpot> calcMovingAverage(List<DailyLog> logs,
+      {int window = 7}) {
     final spots = <FlSpot>[];
     for (int i = window - 1; i < logs.length; i++) {
       double sum = 0;
@@ -34,26 +42,47 @@ class Chart7Days extends StatefulWidget {
 
 class _Chart7DaysState extends State<Chart7Days> {
   bool _showMA = false;
+  ScrollController? _scrollController;
 
-  /// 日次ログを週単位に集約
-  static List<_WeekBucket> _aggregateWeekly(List<DailyLog> logs) {
-    final buckets = <_WeekBucket>[];
-    for (final log in logs) {
-      final date = DateTime.tryParse(log.dateKey);
-      if (date == null) continue;
-      // 月曜始まりの週キー
-      final monday = date.subtract(Duration(days: date.weekday - 1));
-      final weekKey =
-          '${monday.year}-${monday.month.toString().padLeft(2, '0')}-${monday.day.toString().padLeft(2, '0')}';
+  @override
+  void initState() {
+    super.initState();
+    _initScrollController();
+  }
 
-      if (buckets.isEmpty || buckets.last.weekKey != weekKey) {
-        buckets.add(_WeekBucket(weekKey: weekKey, monday: monday));
-      }
-      if (log.moodScore != null) {
-        buckets.last.scores.add(log.moodScore!.toDouble());
-      }
+  @override
+  void didUpdateWidget(covariant Chart7Days oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.periodDays != widget.periodDays ||
+        oldWidget.logs.length != widget.logs.length) {
+      _initScrollController();
     }
-    return buckets.where((b) => b.scores.isNotEmpty).toList();
+  }
+
+  void _initScrollController() {
+    _scrollController?.dispose();
+    if (_isScrollable) {
+      _scrollController = ScrollController();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController != null &&
+            _scrollController!.hasClients &&
+            _scrollController!.position.maxScrollExtent > 0) {
+          _scrollController!
+              .jumpTo(_scrollController!.position.maxScrollExtent);
+        }
+      });
+    } else {
+      _scrollController = null;
+    }
+  }
+
+  bool get _isScrollable =>
+      widget.periodDays > 0 && widget.logs.length > widget.periodDays;
+
+  @override
+  void dispose() {
+    _scrollController?.dispose();
+    super.dispose();
   }
 
   @override
@@ -68,7 +97,6 @@ class _Chart7DaysState extends State<Chart7Days> {
       );
     }
 
-    final useWeekly = logs.length > 31;
     final blueColor = context.chartBlueColor;
 
     return Column(
@@ -76,19 +104,17 @@ class _Chart7DaysState extends State<Chart7Days> {
       children: [
         Row(
           children: [
-            _legendItem(context, blueColor,
-                useWeekly ? '週平均' : '日次スコア', false),
+            _legendItem(context, blueColor, '日次スコア', false),
             const Spacer(),
-            if (!useWeekly && logs.length > 7)
+            if (logs.length > 7)
               GestureDetector(
                 onTap: () => setState(() => _showMA = !_showMA),
                 child: Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: _showMA
-                        ? context.primaryTintColor
-                        : context.bgColor,
+                    color:
+                        _showMA ? context.primaryTintColor : context.bgColor,
                     borderRadius: BorderRadius.circular(AppRadii.pill),
                     border: Border.all(
                       color: _showMA
@@ -101,9 +127,8 @@ class _Chart7DaysState extends State<Chart7Days> {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: _showMA
-                          ? AppColors.primary
-                          : context.textSubColor,
+                      color:
+                          _showMA ? AppColors.primary : context.textSubColor,
                     ),
                   ),
                 ),
@@ -114,17 +139,59 @@ class _Chart7DaysState extends State<Chart7Days> {
         SizedBox(
           height: 200,
           width: double.infinity,
-          child: useWeekly
-              ? _buildWeeklyChart(context)
-              : _buildDailyChart(context),
+          child: _isScrollable
+              ? _buildScrollableChart(context)
+              : _buildFitChart(context),
         ),
+        if (_isScrollable)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Center(
+              child: Text(
+                '← 左右にスライドして過去のデータを確認 →',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: context.textSubColor,
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
 
-  /// 日次チャート（〜31日）
-  Widget _buildDailyChart(BuildContext context) {
+  /// スクロール可能チャート（7日/30日タブ）
+  Widget _buildScrollableChart(BuildContext context) {
     final logs = widget.logs;
+    final periodDays = widget.periodDays;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final viewportWidth = constraints.maxWidth;
+        // 1日あたりの幅を viewport / periodDays から算出
+        final pixelsPerDay = (viewportWidth - 28) / periodDays;
+        // チャート全体の幅
+        final chartWidth = 28 + (pixelsPerDay * (logs.length - 1 + 0.6));
+
+        return SingleChildScrollView(
+          controller: _scrollController,
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: chartWidth.clamp(viewportWidth, double.infinity),
+            height: 200,
+            child: _buildChart(context, logs),
+          ),
+        );
+      },
+    );
+  }
+
+  /// 一画面に収めるチャート（全期間タブ or データが少ない場合）
+  Widget _buildFitChart(BuildContext context) {
+    return _buildChart(context, widget.logs);
+  }
+
+  Widget _buildChart(BuildContext context, List<DailyLog> logs) {
     final maxX = (logs.length - 1).toDouble();
     final gridColor = context.chartGridColor;
     final blueColor = context.chartBlueColor;
@@ -132,8 +199,10 @@ class _Chart7DaysState extends State<Chart7Days> {
     int labelInterval;
     if (logs.length <= 10) {
       labelInterval = 1;
-    } else {
+    } else if (logs.length <= 31) {
       labelInterval = 5;
+    } else {
+      labelInterval = (logs.length / 8).ceil();
     }
 
     return Padding(
@@ -144,15 +213,52 @@ class _Chart7DaysState extends State<Chart7Days> {
           maxX: maxX + 0.6,
           minY: 1,
           maxY: 5,
-          gridData: _gridData(gridColor),
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: 1,
+            getDrawingHorizontalLine: (_) => FlLine(
+              color: gridColor,
+              strokeWidth: 0.5,
+            ),
+          ),
           borderData: FlBorderData(show: false),
-          lineTouchData: _touchData(blueColor),
+          lineTouchData: LineTouchData(
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipItems: (touchedSpots) {
+                return touchedSpots.map((spot) {
+                  final i = spot.x.round();
+                  final dateLabel =
+                      (i >= 0 && i < logs.length) ? logs[i].dateKey.substring(5) : '';
+                  return LineTooltipItem(
+                    '$dateLabel\n${spot.y.toStringAsFixed(1)}',
+                    TextStyle(
+                      color: spot.bar.color ?? blueColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  );
+                }).toList();
+              },
+            ),
+          ),
           titlesData: FlTitlesData(
             topTitles:
                 const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             rightTitles:
                 const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            leftTitles: _leftTitles(),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 28,
+                getTitlesWidget: (value, meta) {
+                  return Text(
+                    value.toInt().toString(),
+                    style: AppTextStyles.captionSmall,
+                  );
+                },
+              ),
+            ),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
@@ -168,10 +274,13 @@ class _Chart7DaysState extends State<Chart7Days> {
                   if (!isFirst && !isLast && i % labelInterval != 0) {
                     return const SizedBox.shrink();
                   }
+                  final dateKey = logs[i].dateKey;
+                  final label = logs.length > 60
+                      ? dateKey.substring(2, 7)
+                      : dateKey.substring(5);
                   return Padding(
                     padding: const EdgeInsets.only(top: 6),
-                    child: Text(logs[i].dateKey.substring(5),
-                        style: AppTextStyles.captionSmall),
+                    child: Text(label, style: AppTextStyles.captionSmall),
                   );
                 },
               ),
@@ -183,7 +292,7 @@ class _Chart7DaysState extends State<Chart7Days> {
               barWidth: _showMA ? 1.5 : 2.5,
               color: _showMA ? blueColor.withAlpha(100) : blueColor,
               dotData: FlDotData(
-                show: true,
+                show: widget.periodDays != 0 || logs.length <= 31,
                 getDotPainter: (spot, __, ___, ____) => FlDotCirclePainter(
                   radius: 3,
                   color: blueColor,
@@ -210,136 +319,6 @@ class _Chart7DaysState extends State<Chart7Days> {
     );
   }
 
-  /// 週平均チャート（32日〜）
-  Widget _buildWeeklyChart(BuildContext context) {
-    final buckets = _aggregateWeekly(widget.logs);
-    if (buckets.isEmpty) {
-      return const Center(
-        child: Text('データなし', style: AppTextStyles.caption),
-      );
-    }
-
-    final maxX = (buckets.length - 1).toDouble();
-    final gridColor = context.chartGridColor;
-    final blueColor = context.chartBlueColor;
-
-    final labelInterval = buckets.length <= 8
-        ? 1
-        : (buckets.length / 6).ceil();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: LineChart(
-        LineChartData(
-          minX: 0,
-          maxX: maxX + 0.6,
-          minY: 1,
-          maxY: 5,
-          gridData: _gridData(gridColor),
-          borderData: FlBorderData(show: false),
-          lineTouchData: _touchData(blueColor),
-          titlesData: FlTitlesData(
-            topTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            leftTitles: _leftTitles(),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                interval: 1,
-                reservedSize: 30,
-                getTitlesWidget: (value, meta) {
-                  final i = value.round();
-                  if (i < 0 || i >= buckets.length) {
-                    return const SizedBox.shrink();
-                  }
-                  final isFirst = i == 0;
-                  final isLast = i == buckets.length - 1;
-                  if (!isFirst && !isLast && i % labelInterval != 0) {
-                    return const SizedBox.shrink();
-                  }
-                  final label = buckets[i].weekKey.substring(5);
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text('$label〜',
-                        style: AppTextStyles.captionSmall),
-                  );
-                },
-              ),
-            ),
-          ),
-          lineBarsData: [
-            LineChartBarData(
-              isCurved: true,
-              barWidth: 2.5,
-              color: blueColor,
-              dotData: FlDotData(
-                show: buckets.length <= 20,
-                getDotPainter: (spot, __, ___, ____) => FlDotCirclePainter(
-                  radius: 3,
-                  color: blueColor,
-                  strokeWidth: 0,
-                ),
-              ),
-              spots: [
-                for (int i = 0; i < buckets.length; i++)
-                  FlSpot(i.toDouble(), buckets[i].average),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // --- 共通ヘルパー ---
-
-  FlGridData _gridData(Color gridColor) {
-    return FlGridData(
-      show: true,
-      drawVerticalLine: false,
-      horizontalInterval: 1,
-      getDrawingHorizontalLine: (_) => FlLine(
-        color: gridColor,
-        strokeWidth: 0.5,
-      ),
-    );
-  }
-
-  LineTouchData _touchData(Color blueColor) {
-    return LineTouchData(
-      touchTooltipData: LineTouchTooltipData(
-        getTooltipItems: (touchedSpots) {
-          return touchedSpots.map((spot) {
-            return LineTooltipItem(
-              spot.y.toStringAsFixed(1),
-              TextStyle(
-                color: spot.bar.color ?? blueColor,
-                fontWeight: FontWeight.bold,
-              ),
-            );
-          }).toList();
-        },
-      ),
-    );
-  }
-
-  AxisTitles _leftTitles() {
-    return AxisTitles(
-      sideTitles: SideTitles(
-        showTitles: true,
-        reservedSize: 28,
-        getTitlesWidget: (value, meta) {
-          return Text(
-            value.toInt().toString(),
-            style: AppTextStyles.captionSmall,
-          );
-        },
-      ),
-    );
-  }
-
   static Widget _legendItem(
       BuildContext context, Color color, String label, bool dashed) {
     return Row(
@@ -357,16 +336,6 @@ class _Chart7DaysState extends State<Chart7Days> {
       ],
     );
   }
-}
-
-class _WeekBucket {
-  final String weekKey;
-  final DateTime monday;
-  final List<double> scores = [];
-
-  _WeekBucket({required this.weekKey, required this.monday});
-
-  double get average => scores.reduce((a, b) => a + b) / scores.length;
 }
 
 class _DashedLinePainter extends CustomPainter {

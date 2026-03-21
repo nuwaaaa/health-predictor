@@ -28,38 +28,36 @@ class DataPage extends StatefulWidget {
 
 class _DataPageState extends State<DataPage> {
   int _periodDays = 7;
-  List<DailyLog> _displayLogs = [];
+  List<DailyLog>? _allLogs;
   bool _loadingMore = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _displayLogs = widget.logs;
-  }
+  /// 表示用ログ: 全データ取得済みならそれを使い、未取得なら widget.logs
+  List<DailyLog> get _displayLogs => _allLogs ?? widget.logs;
 
   @override
   void didUpdateWidget(covariant DataPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_periodDays == 7) {
-      _displayLogs = widget.logs;
+    // 親から新しい logs が来たらキャッシュをクリアして再取得に備える
+    if (oldWidget.logs != widget.logs) {
+      _allLogs = null;
     }
   }
 
   Future<void> _changePeriod(int days) async {
     if (days == _periodDays) return;
-    setState(() {
-      _periodDays = days;
-      _loadingMore = true;
-    });
+    setState(() => _periodDays = days);
 
+    // 全データ未取得なら取得（7日タブ以外、またはスクロール用に必要）
+    if (_allLogs == null && days != 7) {
+      await _fetchAllLogs();
+    }
+  }
+
+  Future<void> _fetchAllLogs() async {
+    setState(() => _loadingMore = true);
     try {
-      if (days == 7) {
-        setState(() => _displayLogs = widget.logs);
-      } else {
-        final n = days == 0 ? 365 : days;
-        final logs = await widget.service.getLastNDays(n);
-        setState(() => _displayLogs = logs);
-      }
+      final logs = await widget.service.getLastNDays(365);
+      if (mounted) setState(() => _allLogs = logs);
     } catch (e) {
       debugPrint('データ読み込み失敗: $e');
       if (mounted) {
@@ -92,6 +90,8 @@ class _DataPageState extends State<DataPage> {
 
   @override
   Widget build(BuildContext context) {
+    final logs = _displayLogs;
+
     return Scaffold(
       appBar: AppBar(title: const Text('データ')),
       body: RefreshIndicator(
@@ -128,14 +128,19 @@ class _DataPageState extends State<DataPage> {
                 // --- 体調グラフ ---
                 SectionHeader(title: '体調推移'),
                 const SizedBox(height: AppSpacing.sm),
-                AppCard(child: Chart7Days(logs: _displayLogs)),
+                AppCard(
+                  child: Chart7Days(
+                    logs: logs,
+                    periodDays: _periodDays,
+                  ),
+                ),
 
                 const SizedBox(height: AppSpacing.lg),
 
                 // --- 体調×特徴量 比較グラフ ---
                 SectionHeader(title: '体調と生活データの比較'),
                 const SizedBox(height: AppSpacing.sm),
-                AppCard(child: ComparisonChart(logs: _displayLogs)),
+                AppCard(child: ComparisonChart(logs: logs)),
 
                 const SizedBox(height: AppSpacing.lg),
 
@@ -143,9 +148,9 @@ class _DataPageState extends State<DataPage> {
                 SectionHeader(title: '睡眠パターン'),
                 const SizedBox(height: AppSpacing.sm),
                 AppCard(child: SleepPatternChart(
-                  logs: _displayLogs.length > 7
-                      ? _displayLogs.sublist(_displayLogs.length - 7)
-                      : _displayLogs,
+                  logs: logs.length > 7
+                      ? logs.sublist(logs.length - 7)
+                      : logs,
                 )),
 
                 const SizedBox(height: AppSpacing.lg),
@@ -155,7 +160,7 @@ class _DataPageState extends State<DataPage> {
                 const SizedBox(height: AppSpacing.sm),
                 AppCard(
                   child: CalendarView(
-                    logs: _displayLogs,
+                    logs: logs,
                     onTap: _openDailyEdit,
                   ),
                 ),
