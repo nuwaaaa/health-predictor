@@ -355,7 +355,7 @@ class _DailyInputPageState extends State<DailyInputPage> {
 
   @override
   Widget build(BuildContext context) {
-    final dur = _sleepDuration ?? widget.todayLog?.sleep?.durationHours;
+    final dur = _sleepDuration;
     final isReadOnly = widget.readOnly;
 
     final String title;
@@ -408,33 +408,31 @@ class _DailyInputPageState extends State<DailyInputPage> {
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
-              // 読み取り専用で就寝・起床が不明なら時刻ボタンを隠す
-              if (!(isReadOnly && _bedTime == null && _wakeTime == null))
-                IgnorePointer(
-                  ignoring: isReadOnly,
-                  child: Opacity(
-                    opacity: isReadOnly ? 0.5 : 1.0,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _timeButton(
-                            label: '就寝',
-                            time: _bedTime,
-                            onTap: () => _pickTime(true),
-                          ),
+              IgnorePointer(
+                ignoring: isReadOnly,
+                child: Opacity(
+                  opacity: isReadOnly ? 0.5 : 1.0,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _timeButton(
+                          label: '就寝',
+                          time: _bedTime,
+                          onTap: () => _pickTime(true),
                         ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: _timeButton(
-                            label: '起床',
-                            time: _wakeTime,
-                            onTap: () => _pickTime(false),
-                          ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: _timeButton(
+                          label: '起床',
+                          time: _wakeTime,
+                          onTap: () => _pickTime(false),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
+              ),
               if (dur != null) ...[
                 const SizedBox(height: AppSpacing.sm),
                 Text(

@@ -296,6 +296,25 @@ class FirestoreService {
       final sleepHours =
           (baseSleep * 10).roundToDouble() / 10; // 小数1桁
 
+      // 就寝・起床時刻を生成
+      int bedMinute;
+      if (isWeekend) {
+        bedMinute = 23 * 60 + rng.nextInt(150); // 23:00〜01:30
+      } else if (mood <= 2) {
+        bedMinute = 24 * 60 + rng.nextInt(120); // 0:00〜2:00
+      } else {
+        bedMinute = 22 * 60 + 30 + rng.nextInt(120); // 22:30〜0:30
+      }
+      final wakeMinute = bedMinute + (sleepHours * 60).round();
+      final bedH = (bedMinute ~/ 60) % 24;
+      final bedM = bedMinute % 60;
+      final wakeH = (wakeMinute ~/ 60) % 24;
+      final wakeM = wakeMinute % 60;
+      final bedTimeStr =
+          '${bedH.toString().padLeft(2, '0')}:${bedM.toString().padLeft(2, '0')}';
+      final wakeTimeStr =
+          '${wakeH.toString().padLeft(2, '0')}:${wakeM.toString().padLeft(2, '0')}';
+
       // 歩数
       int steps;
       if (mood <= 2) {
@@ -319,6 +338,8 @@ class FirestoreService {
         'key': key,
         'moodScore': mood,
         'sleep': {
+          'bedTime': bedTimeStr,
+          'wakeTime': wakeTimeStr,
           'durationHours': sleepHours,
           'source': 'test',
         },
