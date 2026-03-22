@@ -695,7 +695,7 @@ class _ComparisonChartState extends State<ComparisonChart> {
           ),
           lineBarsData: [
             LineChartBarData(
-              isCurved: true,
+              isCurved: false,
               barWidth: 2.5,
               color: blueColor,
               dotData: FlDotData(
@@ -713,7 +713,7 @@ class _ComparisonChartState extends State<ComparisonChart> {
               ],
             ),
             LineChartBarData(
-              isCurved: true,
+              isCurved: false,
               barWidth: 2,
               color: orangeColor,
               dashArray: [5, 3],

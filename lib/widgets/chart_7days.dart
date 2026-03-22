@@ -374,7 +374,7 @@ class _Chart7DaysState extends State<Chart7Days> {
           ),
           lineBarsData: [
             LineChartBarData(
-              isCurved: true,
+              isCurved: false,
               barWidth: _showMA ? 1.5 : 2.5,
               color: _showMA ? blueColor.withAlpha(100) : blueColor,
               dotData: FlDotData(
@@ -393,7 +393,7 @@ class _Chart7DaysState extends State<Chart7Days> {
             ),
             if (_showMA)
               LineChartBarData(
-                isCurved: true,
+                isCurved: false,
                 barWidth: 2.5,
                 color: blueColor,
                 dotData: const FlDotData(show: false),
