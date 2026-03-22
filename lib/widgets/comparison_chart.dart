@@ -370,8 +370,7 @@ class _ComparisonChartState extends State<ComparisonChart> {
             width: chartWidth.clamp(viewportWidth, double.infinity),
             height: _chartHeight,
             child: _buildChart(context,
-                showLeftAxis: false, showRightAxis: false,
-                scrollable: true),
+                showLeftAxis: false, showRightAxis: false),
           ),
         );
       },
@@ -523,8 +522,7 @@ class _ComparisonChartState extends State<ComparisonChart> {
   }
 
   Widget _buildChart(BuildContext context,
-      {required bool showLeftAxis, required bool showRightAxis,
-      bool scrollable = false}) {
+      {required bool showLeftAxis, required bool showRightAxis}) {
     final logs = widget.logs;
     final maxX = (logs.length - 1).toDouble();
     final featureValues = _getFeatureValues(logs);
@@ -578,9 +576,7 @@ class _ComparisonChartState extends State<ComparisonChart> {
             ),
           ),
           borderData: FlBorderData(show: false),
-          lineTouchData: scrollable
-              ? const LineTouchData(enabled: false)
-              : LineTouchData(
+          lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
                     fitInsideHorizontally: true,
                     fitInsideVertically: true,

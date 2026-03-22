@@ -253,7 +253,7 @@ class _Chart7DaysState extends State<Chart7Days> {
             width: chartWidth.clamp(viewportWidth, double.infinity),
             height: _chartHeight,
             child: _buildChart(context, logs,
-                showLeftAxis: false, scrollable: true),
+                showLeftAxis: false),
           ),
         );
       },
@@ -261,7 +261,7 @@ class _Chart7DaysState extends State<Chart7Days> {
   }
 
   Widget _buildChart(BuildContext context, List<DailyLog> logs,
-      {required bool showLeftAxis, bool scrollable = false}) {
+      {required bool showLeftAxis}) {
     final maxX = (logs.length - 1).toDouble();
     final gridColor = context.chartGridColor;
     final blueColor = context.chartBlueColor;
@@ -297,9 +297,7 @@ class _Chart7DaysState extends State<Chart7Days> {
             ),
           ),
           borderData: FlBorderData(show: false),
-          lineTouchData: scrollable
-              ? const LineTouchData(enabled: false)
-              : LineTouchData(
+          lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
                     fitInsideHorizontally: true,
                     fitInsideVertically: true,
