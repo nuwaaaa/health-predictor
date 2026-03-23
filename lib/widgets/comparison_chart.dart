@@ -75,6 +75,11 @@ class _ComparisonChartState extends State<ComparisonChart> {
   bool get _isScrollable =>
       widget.periodDays > 0 && widget.logs.length > widget.periodDays;
 
+  static const _barFeatures = {'sleep', 'steps', 'delta1', 'dev14', 'sleep_dev', 'steps_dev'};
+  static const _deviationFeatures = {'delta1', 'dev14', 'sleep_dev', 'steps_dev'};
+  bool get _isBarFeature => _barFeatures.contains(_selectedFeature);
+  bool get _isWeekendFeature => _selectedFeature == 'is_weekend';
+
   @override
   void initState() {
     super.initState();
@@ -181,8 +186,12 @@ class _ComparisonChartState extends State<ComparisonChart> {
           children: [
             _legendItem(context.chartBlueColor, '体調スコア', false),
             const SizedBox(width: 16),
-            _legendItem(context.chartOrangeColor,
-                _activeOptions[_selectedFeature] ?? '', true),
+            if (_isBarFeature || _isWeekendFeature)
+              _barLegendItem(context.chartOrangeColor,
+                  _activeOptions[_selectedFeature] ?? '')
+            else
+              _legendItem(context.chartOrangeColor,
+                  _activeOptions[_selectedFeature] ?? '', true),
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -190,7 +199,7 @@ class _ComparisonChartState extends State<ComparisonChart> {
           height: _chartHeight,
           child: _isScrollable
               ? _buildScrollableLayout(context)
-              : _buildChart(context, showLeftAxis: true, showRightAxis: true),
+              : _buildChart(context, showLeftAxis: true, showRightAxis: !_isWeekendFeature),
         ),
         if (_isScrollable)
           Padding(
@@ -225,8 +234,8 @@ class _ComparisonChartState extends State<ComparisonChart> {
         ),
         // スクロール可能なチャート本体
         Expanded(child: _buildScrollableContent(context)),
-        // 固定の右Y軸（特徴量）
-        if (validValues.isNotEmpty)
+        // 固定の右Y軸（特徴量）— 休日背景の場合は非表示
+        if (validValues.isNotEmpty && !_isWeekendFeature)
           SizedBox(
             width: _rightAxisWidth,
             height: _chartHeight,
@@ -545,6 +554,46 @@ class _ComparisonChartState extends State<ComparisonChart> {
     final blueColor = context.chartBlueColor;
     final orangeColor = context.chartOrangeColor;
 
+    final isBar = _isBarFeature;
+    final isDev = _deviationFeatures.contains(_selectedFeature);
+    final isWE = _isWeekendFeature;
+
+    // --- 棒グラフ用スポット（ジグザグパスで矩形を描画）---
+    double barBaseline = 1.0;
+    final barSpots = <FlSpot>[];
+    if (isBar) {
+      barBaseline = isDev ? normalize(0) : 1.0;
+      const w = 0.3;
+      for (int i = 0; i < featureValues.length; i++) {
+        final v = featureValues[i];
+        if (v == null) continue;
+        final x = i.toDouble();
+        final y = normalize(v);
+        barSpots.add(FlSpot(x - w, barBaseline));
+        barSpots.add(FlSpot(x - w, y));
+        barSpots.add(FlSpot(x + w, y));
+        barSpots.add(FlSpot(x + w, barBaseline));
+      }
+    }
+
+    // --- 休日背景用スポット（連続する休日をマージ）---
+    final weekendSpots = <FlSpot>[];
+    if (isWE) {
+      int? start;
+      for (int i = 0; i <= featureValues.length; i++) {
+        final v = i < featureValues.length && featureValues[i] == 1.0;
+        if (v && start == null) {
+          start = i;
+        } else if (!v && start != null) {
+          weekendSpots.add(FlSpot(start - 0.5, _minY));
+          weekendSpots.add(FlSpot(start - 0.5, _maxY));
+          weekendSpots.add(FlSpot(i - 0.5, _maxY));
+          weekendSpots.add(FlSpot(i - 0.5, _minY));
+          start = null;
+        }
+      }
+    }
+
     int labelInterval;
     if (logs.length <= 10) {
       labelInterval = 1;
@@ -577,42 +626,44 @@ class _ComparisonChartState extends State<ComparisonChart> {
           ),
           borderData: FlBorderData(show: false),
           lineTouchData: LineTouchData(
-                  touchTooltipData: LineTouchTooltipData(
-                    fitInsideHorizontally: true,
-                    fitInsideVertically: true,
-                    getTooltipItems: (touchedSpots) {
-                      return touchedSpots.map((spot) {
-                        final isMood = spot.bar.color == blueColor ||
-                            spot.bar.color == blueColor.withAlpha(100);
-                        if (isMood) {
-                          final i = spot.x.round();
-                          final dateLabel = (i >= 0 && i < logs.length)
-                              ? logs[i].dateKey.substring(5)
-                              : '';
-                          return LineTooltipItem(
-                            '$dateLabel\n${spot.y.toStringAsFixed(1)}',
-                            TextStyle(
-                              color: spot.bar.color ?? blueColor,
-                              fontWeight: FontWeight.bold,
+            touchTooltipData: LineTouchTooltipData(
+              fitInsideHorizontally: true,
+              fitInsideVertically: true,
+              getTooltipItems: (touchedSpots) {
+                return touchedSpots.map((spot) {
+                  // 体調ラインのみツールチップを表示
+                  if (spot.barIndex != 0) return null;
+                  final i = spot.x.round();
+                  final dateLabel = (i >= 0 && i < logs.length)
+                      ? logs[i].dateKey.substring(5)
+                      : '';
+                  final fv = (i >= 0 && i < featureValues.length)
+                      ? featureValues[i]
+                      : null;
+                  return LineTooltipItem(
+                    '$dateLabel\n${spot.y.toStringAsFixed(1)}',
+                    TextStyle(
+                      color: blueColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                    children: fv != null
+                        ? [
+                            TextSpan(
+                              text: '\n${isWE ? (fv >= 0.5 ? "休日" : "平日") : _formatRightAxis(fv)}',
+                              style: TextStyle(
+                                color: orangeColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
                             ),
-                          );
-                        } else {
-                          final original = featureRange == 0
-                              ? featureMin
-                              : featureMin +
-                                  (spot.y - 1.0) / 4.0 * featureRange;
-                          return LineTooltipItem(
-                            _formatRightAxis(original),
-                            TextStyle(
-                              color: orangeColor,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          );
-                        }
-                      }).toList();
-                    },
-                  ),
-                ),
+                          ]
+                        : null,
+                  );
+                }).toList();
+              },
+            ),
+          ),
           titlesData: FlTitlesData(
             topTitles:
                 const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -694,6 +745,7 @@ class _ComparisonChartState extends State<ComparisonChart> {
             ),
           ),
           lineBarsData: [
+            // 体調スコアライン（常に表示）
             LineChartBarData(
               isCurved: false,
               barWidth: 2.5,
@@ -712,18 +764,54 @@ class _ComparisonChartState extends State<ComparisonChart> {
                       i.toDouble(), (logs[i].moodScore ?? 3).toDouble()),
               ],
             ),
-            LineChartBarData(
-              isCurved: false,
-              barWidth: 2,
-              color: orangeColor,
-              dashArray: [5, 3],
-              dotData: const FlDotData(show: false),
-              spots: [
-                for (int i = 0; i < logs.length; i++)
-                  if (featureValues[i] != null)
-                    FlSpot(i.toDouble(), normalize(featureValues[i]!)),
-              ],
-            ),
+            // --- 棒グラフ（belowBarData/aboveBarData で矩形を塗りつぶし）---
+            if (isBar && barSpots.isNotEmpty)
+              LineChartBarData(
+                isCurved: false,
+                barWidth: 0,
+                color: Colors.transparent,
+                dotData: const FlDotData(show: false),
+                belowBarData: BarAreaData(
+                  show: true,
+                  color: orangeColor.withAlpha(80),
+                  cutOffY: barBaseline,
+                  applyCutOffY: true,
+                ),
+                aboveBarData: BarAreaData(
+                  show: isDev,
+                  color: orangeColor.withAlpha(60),
+                  cutOffY: barBaseline,
+                  applyCutOffY: true,
+                ),
+                spots: barSpots,
+              ),
+            // --- 休日背景（帯表示）---
+            if (isWE && weekendSpots.isNotEmpty)
+              LineChartBarData(
+                isCurved: false,
+                barWidth: 0,
+                color: Colors.transparent,
+                dotData: const FlDotData(show: false),
+                belowBarData: BarAreaData(
+                  show: true,
+                  color: orangeColor.withAlpha(30),
+                ),
+                spots: weekendSpots,
+              ),
+            // --- 折れ線（従来の破線表示）---
+            if (!isBar && !isWE)
+              LineChartBarData(
+                isCurved: false,
+                barWidth: 2,
+                color: orangeColor,
+                dashArray: [5, 3],
+                dotData: const FlDotData(show: false),
+                spots: [
+                  for (int i = 0; i < logs.length; i++)
+                    if (featureValues[i] != null)
+                      FlSpot(i.toDouble(), normalize(featureValues[i]!)),
+                ],
+              ),
           ],
         ),
       ),
@@ -735,6 +823,26 @@ class _ComparisonChartState extends State<ComparisonChart> {
     if (len <= 10) return 1;
     if (len <= 31) return 5;
     return (len / 8).ceil();
+  }
+
+  Widget _barLegendItem(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color.withAlpha(_isWeekendFeature ? 40 : 80),
+            border: _isWeekendFeature
+                ? null
+                : Border.all(color: color.withAlpha(180), width: 0.5),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: AppTextStyles.captionSmall),
+      ],
+    );
   }
 
   Widget _legendItem(Color color, String label, bool dashed) {
