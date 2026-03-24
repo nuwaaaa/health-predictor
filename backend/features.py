@@ -57,12 +57,12 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # 就寝時刻: 正午未満(深夜〜早朝)を+1440で補正してローリング平均を正しく計算
     bed_shifted = bed_minutes.where(bed_minutes >= 720, bed_minutes + 1440)
-    bed_filled = _fill_missing(bed_shifted, window=7)
+    bed_filled = _fill_missing(bed_shifted, window=7, default=config.FEATURE_DEFAULTS["bed_minutes"])
     df["bed_sin"] = np.sin(2 * np.pi * bed_filled / 1440)
     df["bed_cos"] = np.cos(2 * np.pi * bed_filled / 1440)
 
     # 起床時刻: 06:00-10:00付近に集中、境界問題なし
-    wake_filled = _fill_missing(wake_minutes, window=7)
+    wake_filled = _fill_missing(wake_minutes, window=7, default=config.FEATURE_DEFAULTS["wake_minutes"])
     df["wake_sin"] = np.sin(2 * np.pi * wake_filled / 1440)
     df["wake_cos"] = np.cos(2 * np.pi * wake_filled / 1440)
 
@@ -135,11 +135,8 @@ def _time_str_to_minutes(series: pd.Series) -> pd.Series:
     return series.apply(_parse)
 
 
-def _fill_missing(series: pd.Series, window: int = 7, default: float | None = None) -> pd.Series:
+def _fill_missing(series: pd.Series, window: int = 7, default: float = 0) -> pd.Series:
     """過去N日平均で欠損を補完する。最終フォールバックはグローバル平均→デフォルト値。"""
     rolling_mean = series.rolling(window=window, min_periods=1).mean()
     global_mean = series.mean()
-    result = series.fillna(rolling_mean).fillna(global_mean)
-    if default is not None:
-        return result.fillna(default)
-    return result.fillna(0)
+    return series.fillna(rolling_mean).fillna(global_mean).fillna(default)

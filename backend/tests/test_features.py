@@ -109,6 +109,22 @@ def test_default_fallback_all_nan():
     assert (result["stress_filled"] == 3.0).all()
 
 
+def test_bed_wake_default_fallback_all_nan():
+    """就寝・起床時刻が全NaN時にFEATURE_DEFAULTSのデフォルト値が使われること"""
+    df = _make_df()
+    df["bed_time"] = None
+    df["wake_time"] = None
+    result = build_features(df)
+    # bed_sin/bed_cos は NaN にならない（デフォルト 23:30 = 1410分 で補完）
+    assert pd.notna(result["bed_sin"]).all()
+    assert pd.notna(result["bed_cos"]).all()
+    # wake_sin/wake_cos は NaN にならない（デフォルト 07:00 = 420分 で補完）
+    assert pd.notna(result["wake_sin"]).all()
+    assert pd.notna(result["wake_cos"]).all()
+    # bed_sin の値が 0 でないこと（旧 fillna(0) と異なることを確認）
+    assert not (result["bed_sin"] == 0).all()
+
+
 def test_no_interaction_or_second_harmonic():
     """交互作用項・2次高調波が特徴量に含まれないこと"""
     cols = get_feature_columns()

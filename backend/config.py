@@ -34,6 +34,8 @@ FEATURE_DEFAULTS = {
     "nap_total_min": 0,
     "sleep_fragmentation": 1,
     "total_sleep_hours": 7.0,
+    "bed_minutes": 1410,   # 23:30 (shifted space: 正午未満は+1440補正済み)
+    "wake_minutes": 420,   # 07:00
 }
 
 # バッチ対象：直近N日以内に更新があったユーザー
