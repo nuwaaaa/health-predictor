@@ -272,7 +272,7 @@ class _Chart7DaysState extends State<Chart7Days> {
     } else if (logs.length <= 31) {
       labelInterval = 5;
     } else {
-      labelInterval = (logs.length / 8).ceil();
+      labelInterval = (logs.length / 5).ceil();
     }
 
     return Padding(
@@ -360,10 +360,12 @@ class _Chart7DaysState extends State<Chart7Days> {
                   if (!isFirst && !isLast && i % labelInterval != 0) {
                     return const SizedBox.shrink();
                   }
+                  // 最終ラベルが直前の定期ラベルに近すぎる場合はスキップ
+                  if (isLast && i % labelInterval != 0 && i % labelInterval < labelInterval ~/ 2) {
+                    return const SizedBox.shrink();
+                  }
                   final dateKey = logs[i].dateKey;
-                  final label = logs.length > 60
-                      ? dateKey.substring(2, 7)
-                      : dateKey.substring(5);
+                  final label = _formatDateLabel(dateKey, logs.length);
                   return Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(label, style: AppTextStyles.captionSmall),
@@ -403,6 +405,12 @@ class _Chart7DaysState extends State<Chart7Days> {
         ),
       ),
     );
+  }
+
+  static String _formatDateLabel(String dateKey, int totalDays) {
+    final m = int.parse(dateKey.substring(5, 7));
+    final d = int.parse(dateKey.substring(8, 10));
+    return '$m/$d';
   }
 
   static Widget _legendItem(

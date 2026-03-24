@@ -37,9 +37,13 @@ class _DataPageState extends State<DataPage> {
   @override
   void didUpdateWidget(covariant DataPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 親から新しい logs が来たらキャッシュをクリアして再取得に備える
+    // 親から新しい logs が来たらキャッシュをクリアして再取得
     if (oldWidget.logs != widget.logs) {
       _allLogs = null;
+      // 7日以外の期間が選択中なら全データを再取得
+      if (_periodDays != 7) {
+        _fetchAllLogs();
+      }
     }
   }
 

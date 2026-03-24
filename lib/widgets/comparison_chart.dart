@@ -600,7 +600,7 @@ class _ComparisonChartState extends State<ComparisonChart> {
     } else if (logs.length <= 31) {
       labelInterval = 5;
     } else {
-      labelInterval = (logs.length / 8).ceil();
+      labelInterval = (logs.length / 5).ceil();
     }
 
     return Padding(
@@ -721,10 +721,14 @@ class _ComparisonChartState extends State<ComparisonChart> {
                         ? 1
                         : logs.length <= 31
                             ? 5
-                            : (logs.length / 8).ceil();
+                            : (logs.length / 5).ceil();
                     final isFirst = i == 0;
                     final isLast = i == logs.length - 1;
                     if (!isFirst && !isLast && i % interval != 0) {
+                      return const SizedBox.shrink();
+                    }
+                    // 最終ラベルが直前の定期ラベルに近すぎる場合はスキップ
+                    if (isLast && i % interval != 0 && i % interval < interval ~/ 2) {
                       return const SizedBox.shrink();
                     }
                   } else {
@@ -733,9 +737,7 @@ class _ComparisonChartState extends State<ComparisonChart> {
                     }
                   }
                   final dateKey = logs[i].dateKey;
-                  final label = logs.length > 60
-                      ? dateKey.substring(2, 7)
-                      : dateKey.substring(5);
+                  final label = _formatDateLabel(dateKey, logs.length);
                   return Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(label, style: AppTextStyles.captionSmall),
@@ -822,7 +824,13 @@ class _ComparisonChartState extends State<ComparisonChart> {
     final len = widget.logs.length;
     if (len <= 10) return 1;
     if (len <= 31) return 5;
-    return (len / 8).ceil();
+    return (len / 5).ceil();
+  }
+
+  static String _formatDateLabel(String dateKey, int totalDays) {
+    final m = int.parse(dateKey.substring(5, 7));
+    final d = int.parse(dateKey.substring(8, 10));
+    return '$m/$d';
   }
 
   Widget _barLegendItem(Color color, String label) {
