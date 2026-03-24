@@ -11,6 +11,7 @@ import 'services/auth_service.dart';
 import 'services/background_sync_callback.dart';
 import 'services/migration_service.dart';
 import 'services/theme_notifier.dart';
+import 'services/widget_data_service.dart';
 import 'theme/app_theme.dart';
 
 final themeNotifier = ThemeNotifier();
@@ -29,6 +30,9 @@ void main() async {
     constraints: Constraints(networkType: NetworkType.connected),
     existingWorkPolicy: ExistingWorkPolicy.keep,
   );
+
+  // ホーム画面ウィジェットの初期化
+  await WidgetDataService.initialize();
 
   await MigrationService.runMigrations();
   await themeNotifier.load();

@@ -24,6 +24,9 @@ dependencies:
   # Background task scheduling
   workmanager: ^0.5.2
 
+  # Home screen widget
+  home_widget: ^0.4.0
+
   # Local storage
   shared_preferences: ^2.3.0
 

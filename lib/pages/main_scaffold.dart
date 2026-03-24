@@ -6,6 +6,7 @@ import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/health_sync_service.dart';
 import '../services/tomorrow_predictor.dart';
+import '../services/widget_data_service.dart';
 import '../theme/app_theme.dart';
 import 'home_page.dart';
 import 'data_page.dart';
@@ -121,6 +122,16 @@ class MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver 
         recentLogs: recentLogs,
         modelParams: status.modelParams!,
         confidence: status.confidenceLevel,
+      );
+    }
+
+    // ホーム画面ウィジェットを最新の予測で更新
+    final widgetPrediction = prediction ?? tomorrowPrediction;
+    if (widgetPrediction != null) {
+      WidgetDataService.updateRiskWidget(
+        riskPercent: widgetPrediction.riskPercent,
+        riskLabel: widgetPrediction.riskLabel,
+        confidence: widgetPrediction.confidence,
       );
     }
 
