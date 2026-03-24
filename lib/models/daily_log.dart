@@ -7,6 +7,7 @@ class DailyLog {
   final List<SleepSegment> sleepSegments;
   final SleepSummary? sleepSummary;
   final int? steps;
+  final String? stepsSource; // 'manual' or 'auto'
   final int? stress; // 1〜5（任意）
   final String? tzAtWake; // 例: Asia/Tokyo
   final DateTime? updatedAt;
@@ -18,6 +19,7 @@ class DailyLog {
     this.sleepSegments = const [],
     this.sleepSummary,
     this.steps,
+    this.stepsSource,
     this.stress,
     this.tzAtWake,
     this.updatedAt,
@@ -51,6 +53,7 @@ class DailyLog {
       sleepSegments: segments,
       sleepSummary: summary,
       steps: data['steps'] as int?,
+      stepsSource: data['stepsSource'] as String?,
       stress: data['stress'] as int?,
       tzAtWake: data['tzAtWake'] as String?,
       updatedAt: data['updatedAt'] != null
@@ -68,6 +71,7 @@ class DailyLog {
     }
     if (sleepSummary != null) map['sleepSummary'] = sleepSummary!.toMap();
     if (steps != null) map['steps'] = steps;
+    if (stepsSource != null) map['stepsSource'] = stepsSource;
     if (stress != null) map['stress'] = stress;
     if (tzAtWake != null) map['tzAtWake'] = tzAtWake;
     return map;

@@ -4,6 +4,7 @@ import '../models/model_status.dart';
 import '../models/prediction.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../services/health_sync_service.dart';
 import '../services/tomorrow_predictor.dart';
 import '../theme/app_theme.dart';
 import 'home_page.dart';
@@ -52,8 +53,18 @@ class MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && !_loading) {
-      _loadAll();
+      _autoSyncAndReload();
     }
+  }
+
+  /// アプリ復帰時にヘルスデータを自動同期してからデータを再読み込み
+  Future<void> _autoSyncAndReload() async {
+    final uid = _authService.uid;
+    if (uid != null) {
+      final syncService = HealthSyncService();
+      await syncService.syncAll(uid: uid, isBackground: false);
+    }
+    _loadAll();
   }
 
   Future<void> _loadAll() async {

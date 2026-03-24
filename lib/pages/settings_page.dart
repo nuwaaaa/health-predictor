@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../main.dart' show themeNotifier;
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../services/health_sync_service.dart';
 import '../services/theme_notifier.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
@@ -32,6 +33,23 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _seeding = false;
   bool _linking = false;
   bool _deleting = false;
+  bool _autoSyncEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAutoSyncPref();
+  }
+
+  Future<void> _loadAutoSyncPref() async {
+    final enabled = await HealthSyncService.isAutoSyncEnabled();
+    if (mounted) setState(() => _autoSyncEnabled = enabled);
+  }
+
+  Future<void> _toggleAutoSync(bool value) async {
+    setState(() => _autoSyncEnabled = value);
+    await HealthSyncService.setAutoSyncEnabled(value);
+  }
 
   // ---------------------------------------------------------------------------
   // アカウント連携
@@ -323,6 +341,39 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
               const SizedBox(height: AppSpacing.lg),
             ],
+
+            // --- データ同期 ---
+            SectionHeader(title: 'データ同期'),
+            const SizedBox(height: AppSpacing.sm),
+            AppCard(
+              child: Row(
+                children: [
+                  Icon(Icons.sync, size: 24, color: context.textSubColor),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('ヘルスデータ自動同期',
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: context.textMainColor)),
+                        Text('歩数・睡眠を自動で取得',
+                            style: AppTextStyles.captionSmall),
+                      ],
+                    ),
+                  ),
+                  Switch.adaptive(
+                    value: _autoSyncEnabled,
+                    onChanged: _toggleAutoSync,
+                    activeColor: AppColors.primary,
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.lg),
 
             // --- テーマ ---
             SectionHeader(title: '外観'),

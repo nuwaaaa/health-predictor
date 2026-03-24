@@ -77,6 +77,9 @@ class _DailyInputPageState extends State<DailyInputPage> {
     if (log.steps != null) {
       _stepsController.text = log.steps.toString();
     }
+    if (log.stepsSource == 'auto') {
+      _stepsFromAuto = true;
+    }
     _stress = log.stress;
 
     // 既存の仮眠セグメントを復元（主睡眠以外のセグメント）

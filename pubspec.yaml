@@ -21,6 +21,9 @@ dependencies:
   # Health data (HealthKit / Health Connect)
   health: ^11.1.0
 
+  # Background task scheduling
+  workmanager: ^0.5.2
+
   # Local storage
   shared_preferences: ^2.3.0
 

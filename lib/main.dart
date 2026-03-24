@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:workmanager/workmanager.dart';
 import 'firebase_options.dart';
 import 'pages/main_scaffold.dart';
 import 'pages/login_page.dart';
 import 'pages/onboarding_page.dart';
 import 'services/auth_service.dart';
+import 'services/background_sync_callback.dart';
 import 'services/migration_service.dart';
 import 'services/theme_notifier.dart';
 import 'theme/app_theme.dart';
@@ -17,6 +19,17 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
+
+  // バックグラウンド同期の初期化・登録
+  await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+  await Workmanager().registerPeriodicTask(
+    healthSyncTaskId,
+    healthSyncTaskName,
+    frequency: const Duration(hours: 1),
+    constraints: Constraints(networkType: NetworkType.connected),
+    existingWorkPolicy: ExistingWorkPolicy.keep,
+  );
+
   await MigrationService.runMigrations();
   await themeNotifier.load();
   final onboardingDone = await OnboardingPage.isCompleted();
