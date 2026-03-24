@@ -214,7 +214,7 @@
 
 ## 9. MVP実装状況と設計書との相違点
 
-> **更新日**: 2026-03-07
+> **更新日**: 2026-03-24
 > **対象**: 設計書 (`health prediction app design.md`) とコード実装の差異を整理
 
 ### コードに合わせて設計書を修正済み
@@ -223,6 +223,11 @@
 |---|---|
 |不調判定|「閾値以下」→「閾値未満（`<`）」に修正。閾値ちょうどは不調としない|
 |特徴量名|`steps_t1`→`steps_filled`、`mood_t1`→`mood_lag1` 等、コードの命名に統一。欠損フラグは小サンプルでの過学習リスクのため不採用|
+|欠損値フォールバック|`fillna(0)` → 特徴量別デフォルト値（`FEATURE_DEFAULTS`）に変更。就寝・起床時刻のデフォルトも追加|
+|Brier score|CV評価指標として追加。batch_logsに `brierScore` フィールドを追加|
+|アカウント削除|削除対象サブコレクションに `batch_logs`, `feedback` を追加済みであることを反映|
+|batch_logsセキュリティ|デフォルト拒否ルールでカバー済みであることを明記（TODOを解消）|
+|新機能追記|バックグラウンド自動同期（workmanager）、過去日ヘルスデータ遡及インポート、ホーム画面ウィジェット（WidgetKit/Android Widget）を設計書に追記|
 
 ### 設計書が正しいがMVP未実装（将来対応）
 
@@ -239,7 +244,9 @@
 
 ### コード側のTODO
 
-|項目|内容|
-|---|---|
-|`backend/config.py`|未使用定数 `VALIDATION_DAYS = 14` が残存（動的計算に移行済み）|
-|`lib/services/firestore_service.dart`|`deleteAllUserData()` の削除対象に `batch_logs` を追加する|
+> 以下は全て対応済み（2026-03-24 確認）
+
+|項目|内容|状況|
+|---|---|---|
+|`backend/config.py`|未使用定数 `VALIDATION_DAYS = 14` を削除|✅ 削除済み|
+|`lib/services/firestore_service.dart`|`deleteAllUserData()` の削除対象に `batch_logs` を追加|✅ 実装済み（`deletable` リストに含まれている）|
