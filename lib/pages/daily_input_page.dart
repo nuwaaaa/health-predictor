@@ -53,6 +53,16 @@ class _DailyInputPageState extends State<DailyInputPage> {
   bool get _isEditingPast => widget.dateKey != null;
   String get _targetDateKey => widget.dateKey ?? FirestoreService.todayKey();
 
+  /// 対象日を DateTime で返す（HealthKit クエリ用）
+  DateTime get _targetDate {
+    if (widget.dateKey != null) {
+      try {
+        return DateTime.parse(widget.dateKey!);
+      } catch (_) {}
+    }
+    return DateTime.now();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -228,7 +238,9 @@ class _DailyInputPageState extends State<DailyInputPage> {
         return;
       }
 
-      final steps = await _healthService.fetchTodaySteps();
+      final steps = await _healthService.fetchTodaySteps(
+        date: _isEditingPast ? _targetDate : null,
+      );
       if (steps == null || steps == 0) {
         _showError('歩数データが見つかりませんでした');
         return;
@@ -264,7 +276,9 @@ class _DailyInputPageState extends State<DailyInputPage> {
         return;
       }
 
-      final segments = await _healthService.fetchSleepSegments();
+      final segments = await _healthService.fetchSleepSegments(
+        date: _isEditingPast ? _targetDate : null,
+      );
       if (segments.isEmpty) {
         _showError('睡眠データが見つかりませんでした');
         return;
@@ -612,7 +626,7 @@ class _DailyInputPageState extends State<DailyInputPage> {
                 children: [
                   Text('睡眠', style: AppTextStyles.section),
                   const Spacer(),
-                  if (!isReadOnly && !_isEditingPast)
+                  if (!isReadOnly)
                     _autoImportButton(
                       label: '自動取得',
                       loading: _importingSleep,
@@ -723,7 +737,7 @@ class _DailyInputPageState extends State<DailyInputPage> {
                 children: [
                   Text('歩数', style: AppTextStyles.section),
                   const Spacer(),
-                  if (!isReadOnly && !_isEditingPast)
+                  if (!isReadOnly)
                     _autoImportButton(
                       label: '自動取得',
                       loading: _importingSteps,

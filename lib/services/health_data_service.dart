@@ -37,12 +37,16 @@ class HealthDataService {
     }
   }
 
-  /// 今日の歩数を取得（0:00〜現在）
-  Future<int?> fetchTodaySteps() async {
+  /// 指定日の歩数を取得（0:00〜23:59）
+  /// [date] を省略すると今日のデータを取得
+  Future<int?> fetchTodaySteps({DateTime? date}) async {
     try {
-      final now = DateTime.now();
-      final midnight = DateTime(now.year, now.month, now.day);
-      final steps = await _health.getTotalStepsInInterval(midnight, now);
+      final target = date ?? DateTime.now();
+      final start = DateTime(target.year, target.month, target.day);
+      final end = date != null
+          ? DateTime(target.year, target.month, target.day, 23, 59, 59)
+          : DateTime.now();
+      final steps = await _health.getTotalStepsInInterval(start, end);
       return steps;
     } catch (_) {
       return null;
@@ -50,15 +54,16 @@ class HealthDataService {
   }
 
   /// 全睡眠セグメントを取得（前日12:00〜当日23:59の36時間ウィンドウ）
+  /// [date] を省略すると今日を基準にしたウィンドウで取得
   ///
   /// 戻り値: SleepSegment のリスト（セグメント単位、統合しない）
   /// 主睡眠・仮眠の区別はしない（集約は SleepSummary.fromSegments で行う）
-  Future<List<SleepSegment>> fetchSleepSegments() async {
+  Future<List<SleepSegment>> fetchSleepSegments({DateTime? date}) async {
     try {
-      final now = DateTime.now();
+      final target = date ?? DateTime.now();
       // 36時間ウィンドウ: 前日12:00 〜 当日23:59
-      final start = DateTime(now.year, now.month, now.day - 1, 12, 0);
-      final end = DateTime(now.year, now.month, now.day, 23, 59);
+      final start = DateTime(target.year, target.month, target.day - 1, 12, 0);
+      final end = DateTime(target.year, target.month, target.day, 23, 59);
 
       final sessions = await _health.getHealthDataFromTypes(
         types: [HealthDataType.SLEEP_ASLEEP, HealthDataType.SLEEP_IN_BED],
