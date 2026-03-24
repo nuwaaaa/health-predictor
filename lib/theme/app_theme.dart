@@ -89,7 +89,7 @@ class AppShadows {
 
   static final card = [
     BoxShadow(
-      color: const Color(0xFF243447).withValues(alpha: 0.06),
+      color: const Color(0xFF243447).withAlpha(15),
       offset: const Offset(0, 4),
       blurRadius: 12,
     ),
