@@ -141,7 +141,7 @@ class _ComparisonChartState extends State<ComparisonChart> {
           children: [
             Expanded(
               child: DropdownButtonFormField<String>(
-                initialValue: _selectedFeature,
+                value: _selectedFeature,
                 decoration: const InputDecoration(
                   labelText: '比較する生活データ',
                   isDense: true,
