@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/daily_log.dart';
+import '../models/prediction.dart';
 import '../services/firestore_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
@@ -7,6 +8,9 @@ import '../widgets/chart_7days.dart';
 import '../widgets/comparison_chart.dart';
 import '../widgets/calendar_view.dart';
 import '../widgets/sleep_pattern_chart.dart';
+import '../widgets/mood_heatmap.dart';
+import '../widgets/prediction_accuracy_chart.dart';
+import '../widgets/correlation_scatter.dart';
 import 'daily_input_page.dart';
 
 /// データタブ — Calm Blue デザイン
@@ -30,9 +34,16 @@ class _DataPageState extends State<DataPage> {
   int _periodDays = 7;
   List<DailyLog>? _allLogs;
   bool _loadingMore = false;
+  List<Prediction>? _predictions;
 
   /// 表示用ログ: 全データ取得済みならそれを使い、未取得なら widget.logs
   List<DailyLog> get _displayLogs => _allLogs ?? widget.logs;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPredictions();
+  }
 
   @override
   void didUpdateWidget(covariant DataPage oldWidget) {
@@ -40,6 +51,8 @@ class _DataPageState extends State<DataPage> {
     // 親から新しい logs が来たらキャッシュをクリアして再取得
     if (oldWidget.logs != widget.logs) {
       _allLogs = null;
+      _predictions = null;
+      _fetchPredictions();
       // 7日以外の期間が選択中なら全データを再取得
       if (_periodDays != 7) {
         _fetchAllLogs();
@@ -71,6 +84,15 @@ class _DataPageState extends State<DataPage> {
       }
     } finally {
       if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  Future<void> _fetchPredictions() async {
+    try {
+      final preds = await widget.service.getLastNPredictions(90);
+      if (mounted) setState(() => _predictions = preds);
+    } catch (e) {
+      debugPrint('予測データ読み込み失敗: $e');
     }
   }
 
@@ -161,6 +183,32 @@ class _DataPageState extends State<DataPage> {
                       ? logs.sublist(logs.length - 7)
                       : logs,
                 )),
+
+                const SizedBox(height: AppSpacing.lg),
+
+                // --- 体調ヒートマップ ---
+                SectionHeader(title: '体調ヒートマップ'),
+                const SizedBox(height: AppSpacing.sm),
+                AppCard(child: MoodHeatmap(logs: logs)),
+
+                const SizedBox(height: AppSpacing.lg),
+
+                // --- 予測 vs 実績 ---
+                SectionHeader(title: '予測と実績の振り返り'),
+                const SizedBox(height: AppSpacing.sm),
+                AppCard(
+                  child: PredictionAccuracyChart(
+                    logs: logs,
+                    predictions: _predictions ?? [],
+                  ),
+                ),
+
+                const SizedBox(height: AppSpacing.lg),
+
+                // --- 相関散布図 ---
+                SectionHeader(title: '生活データと体調の相関'),
+                const SizedBox(height: AppSpacing.sm),
+                AppCard(child: CorrelationScatter(logs: logs)),
 
                 const SizedBox(height: AppSpacing.lg),
 

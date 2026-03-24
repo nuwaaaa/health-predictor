@@ -224,6 +224,21 @@ class FirestoreService {
         doc.id, doc.data() as Map<String, dynamic>);
   }
 
+  /// 直近N日分の予測結果をリストで取得
+  Future<List<Prediction>> getLastNPredictions(int days) async {
+    final startKey =
+        dateKey(DateTime.now().subtract(Duration(days: days)));
+    final snap = await _predictionsCol
+        .where(FieldPath.documentId, isGreaterThanOrEqualTo: startKey)
+        .get();
+    final docs = snap.docs.toList()
+      ..sort((a, b) => a.id.compareTo(b.id));
+    return docs
+        .map((d) =>
+            Prediction.fromFirestore(d.id, d.data() as Map<String, dynamic>))
+        .toList();
+  }
+
   // --- Feedback ---
 
   /// 週次フィードバックを保存
