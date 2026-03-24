@@ -8,7 +8,6 @@ import '../main.dart' show themeNotifier;
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/health_sync_service.dart';
-import '../services/theme_notifier.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
@@ -367,7 +366,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   Switch.adaptive(
                     value: _autoSyncEnabled,
                     onChanged: _toggleAutoSync,
-                    activeColor: AppColors.primary,
+                    activeTrackColor: AppColors.primary,
                   ),
                 ],
               ),

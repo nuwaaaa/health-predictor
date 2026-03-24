@@ -193,11 +193,6 @@ class _CalendarViewState extends State<CalendarView> {
       DailyLog? log, bool isToday, bool isFuture, bool isSelected) {
     final hasMood = log?.moodScore != null;
     final moodScore = log?.moodScore ?? 0;
-    final isEmpty = log == null ||
-        (log.moodScore == null &&
-            log.sleep == null &&
-            log.steps == null &&
-            log.stress == null);
 
     Color bgColor;
     Color textColor;
@@ -361,7 +356,7 @@ class _CalendarViewState extends State<CalendarView> {
             )
           else ...[
             // Mood
-            if (log!.moodScore != null)
+            if (log.moodScore != null)
               _detailRow(
                 context,
                 MoodSelector.emojiFor(log.moodScore!),
