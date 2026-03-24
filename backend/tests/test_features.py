@@ -11,28 +11,33 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from features import build_features, get_feature_columns
 
 
-def _make_df(n: int = 20) -> pd.DataFrame:
+def _make_df(n: int = 20, with_segments: bool = False) -> pd.DataFrame:
     """テスト用 DataFrame を生成"""
     dates = [f"2026-01-{i+1:02d}" for i in range(n)]
-    return pd.DataFrame(
-        {
-            "date_key": dates,
-            "moodScore": [3 + (i % 3) for i in range(n)],
-            "sleep_hours": [7.0 + (i % 3) * 0.5 for i in range(n)],
-            "bed_time": [
-                f"{23 if i % 2 == 0 else 0}:{i % 6 * 10:02d}"
-                if i % 5 != 0
-                else None
-                for i in range(n)
-            ],
-            "wake_time": [
-                f"07:{i % 6 * 10:02d}" if i % 7 != 0 else None
-                for i in range(n)
-            ],
-            "steps": [8000 + i * 100 for i in range(n)],
-            "stress": [None if i % 4 == 0 else 2 + (i % 3) for i in range(n)],
-        }
-    )
+    data = {
+        "date_key": dates,
+        "moodScore": [3 + (i % 3) for i in range(n)],
+        "sleep_hours": [7.0 + (i % 3) * 0.5 for i in range(n)],
+        "bed_time": [
+            f"{23 if i % 2 == 0 else 0}:{i % 6 * 10:02d}"
+            if i % 5 != 0
+            else None
+            for i in range(n)
+        ],
+        "wake_time": [
+            f"07:{i % 6 * 10:02d}" if i % 7 != 0 else None
+            for i in range(n)
+        ],
+        "steps": [8000 + i * 100 for i in range(n)],
+        "stress": [None if i % 4 == 0 else 2 + (i % 3) for i in range(n)],
+    }
+    if with_segments:
+        data["nap_total_min"] = [30 if i % 3 == 0 else 0 for i in range(n)]
+        data["sleep_fragmentation"] = [2 if i % 3 == 0 else 1 for i in range(n)]
+        data["total_sleep_hours"] = [
+            7.0 + (i % 3) * 0.5 + (0.5 if i % 3 == 0 else 0) for i in range(n)
+        ]
+    return pd.DataFrame(data)
 
 
 def test_build_features_returns_all_columns():
@@ -111,3 +116,41 @@ def test_no_interaction_or_second_harmonic():
     assert "day_cos2" not in cols
     assert "sleep_stress" not in cols
     assert "steps_stress" not in cols
+
+
+def test_sleep_segment_features_present():
+    """睡眠セグメント特徴量（nap_total_min, sleep_fragmentation, total_sleep_hours）が生成されること"""
+    cols = get_feature_columns()
+    assert "nap_total_min" in cols
+    assert "sleep_fragmentation" in cols
+    assert "total_sleep_hours" in cols
+
+
+def test_sleep_segment_features_with_data():
+    """sleepSegment データがある場合の特徴量生成"""
+    df = _make_df(with_segments=True)
+    result = build_features(df)
+    assert "nap_total_min" in result.columns
+    assert "sleep_fragmentation" in result.columns
+    assert "total_sleep_hours" in result.columns
+    # 仮眠30分のエントリが存在すること
+    assert (result["nap_total_min"] == 30).any()
+    # 断片化=2のエントリが存在すること
+    assert (result["sleep_fragmentation"] == 2).any()
+
+
+def test_sleep_segment_features_backward_compat():
+    """sleepSegment データが無い既存データでのフォールバック"""
+    df = _make_df()  # nap_total_min, sleep_fragmentation, total_sleep_hours 列なし
+    result = build_features(df)
+    # nap_total_min は0にフォールバック
+    assert (result["nap_total_min"] == 0).all()
+    # sleep_fragmentation は1にフォールバック
+    assert (result["sleep_fragmentation"] == 1).all()
+    # total_sleep_hours は sleep_hours と同じ値（補完処理後）
+    assert pd.notna(result["total_sleep_hours"]).all()
+
+
+def test_feature_count():
+    """特徴量カラム数が20であること（17+3新規）"""
+    assert len(get_feature_columns()) == 20

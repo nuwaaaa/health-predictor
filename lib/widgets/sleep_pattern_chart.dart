@@ -27,6 +27,9 @@ class SleepPatternChart extends StatelessWidget {
       );
     }
 
+    final hasAnyNaps = logsWithSleep.any(
+        (l) => l.sleepSummary != null && l.sleepSummary!.napTotalMin > 0);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -37,6 +40,10 @@ class SleepPatternChart extends StatelessWidget {
             const SizedBox(width: 16),
             _legendDot(AppColors.chartOrange,
                 '${recommendedHours.toStringAsFixed(0)}h未満'),
+            if (hasAnyNaps) ...[
+              const SizedBox(width: 16),
+              _legendDot(const Color(0xFF90CAF9), '仮眠'),
+            ],
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -71,6 +78,8 @@ class SleepPatternChart extends StatelessWidget {
     final bedStr = sleep.bedTime ?? '--:--';
     final wakeStr = sleep.wakeTime ?? '--:--';
     final mmdd = log.dateKey.substring(5);
+    final napMin = log.sleepSummary?.napTotalMin ?? 0;
+    final napFraction = (napMin / 60.0 / 12.0).clamp(0.0, 1.0);
 
     return Builder(builder: (context) {
       final color = isGood ? context.chartGreenColor : context.chartOrangeColor;
@@ -95,6 +104,7 @@ class SleepPatternChart extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
+                      // 主睡眠バー
                       Container(
                         height: 20,
                         width: constraints.maxWidth * barFraction,
@@ -114,6 +124,29 @@ class SleepPatternChart extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      // 仮眠バー（主睡眠の右に薄い青で表示）
+                      if (napMin > 0)
+                        Positioned(
+                          left: constraints.maxWidth * barFraction,
+                          child: Container(
+                            height: 20,
+                            width: constraints.maxWidth * napFraction,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF90CAF9),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '${napMin}m',
+                              style: const TextStyle(
+                                fontSize: 9,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
                     ],
                   );
                 },

@@ -1,4 +1,5 @@
 import 'package:health/health.dart';
+import '../models/daily_log.dart';
 
 /// HealthKit (iOS) / Health Connect (Android) からデータを取得するサービス
 class HealthDataService {
@@ -48,14 +49,16 @@ class HealthDataService {
     }
   }
 
-  /// 昨晩の睡眠データを取得
-  /// 戻り値: {bedTime: "HH:mm", wakeTime: "HH:mm", durationHours: double} or null
-  Future<Map<String, dynamic>?> fetchLastNightSleep() async {
+  /// 全睡眠セグメントを取得（前日12:00〜当日23:59の36時間ウィンドウ）
+  ///
+  /// 戻り値: SleepSegment のリスト（セグメント単位、統合しない）
+  /// 主睡眠・仮眠の区別はしない（集約は SleepSummary.fromSegments で行う）
+  Future<List<SleepSegment>> fetchSleepSegments() async {
     try {
       final now = DateTime.now();
-      // 昨日の18:00〜今日の12:00の範囲で睡眠を検索
-      final start = DateTime(now.year, now.month, now.day - 1, 18, 0);
-      final end = DateTime(now.year, now.month, now.day, 12, 0);
+      // 36時間ウィンドウ: 前日12:00 〜 当日23:59
+      final start = DateTime(now.year, now.month, now.day - 1, 12, 0);
+      final end = DateTime(now.year, now.month, now.day, 23, 59);
 
       final sessions = await _health.getHealthDataFromTypes(
         types: [HealthDataType.SLEEP_ASLEEP, HealthDataType.SLEEP_IN_BED],
@@ -63,40 +66,56 @@ class HealthDataService {
         endTime: end,
       );
 
-      if (sessions.isEmpty) return null;
+      if (sessions.isEmpty) return [];
 
-      // 最も早い開始時刻と最も遅い終了時刻を取得
-      DateTime? earliest;
-      DateTime? latest;
+      // セグメントに変換（重複排除: start+end の組み合わせ）
+      final seen = <String>{};
+      final segments = <SleepSegment>[];
 
       for (final point in sessions) {
-        if (earliest == null || point.dateFrom.isBefore(earliest)) {
-          earliest = point.dateFrom;
-        }
-        if (latest == null || point.dateTo.isAfter(latest)) {
-          latest = point.dateTo;
-        }
+        final key = '${point.dateFrom.toIso8601String()}_${point.dateTo.toIso8601String()}';
+        if (seen.contains(key)) continue;
+        seen.add(key);
+
+        final minutes = point.dateTo.difference(point.dateFrom).inMinutes;
+        if (minutes <= 0) continue;
+
+        segments.add(SleepSegment(
+          start: point.dateFrom.toIso8601String(),
+          end: point.dateTo.toIso8601String(),
+          minutes: minutes,
+          source: 'auto',
+        ));
       }
 
-      if (earliest == null || latest == null) return null;
-
-      final bedTime =
-          '${earliest.hour.toString().padLeft(2, '0')}:${earliest.minute.toString().padLeft(2, '0')}';
-      final wakeTime =
-          '${latest.hour.toString().padLeft(2, '0')}:${latest.minute.toString().padLeft(2, '0')}';
-      final durationHours =
-          latest.difference(earliest).inMinutes / 60.0;
-
-      if (durationHours <= 0 || durationHours > 24) return null;
-
-      return {
-        'bedTime': bedTime,
-        'wakeTime': wakeTime,
-        'durationHours':
-            (durationHours * 10).roundToDouble() / 10, // 小数1桁
-      };
+      // 開始時刻でソート
+      segments.sort((a, b) => a.start.compareTo(b.start));
+      return segments;
     } catch (_) {
+      return [];
+    }
+  }
+
+  /// 後方互換: 昨晩の睡眠データを取得（既存コード用）
+  /// 内部で fetchSleepSegments を呼び、最長ブロックを返す
+  /// 戻り値: {bedTime: "HH:mm", wakeTime: "HH:mm", durationHours: double} or null
+  Future<Map<String, dynamic>?> fetchLastNightSleep() async {
+    final segments = await fetchSleepSegments();
+    if (segments.isEmpty) return null;
+
+    final summary = SleepSummary.fromSegments(segments);
+    if (summary.longestBlockMin <= 0) return null;
+    if (summary.longestBlockStart == null || summary.longestBlockEnd == null) {
       return null;
     }
+
+    final durationHours = summary.longestBlockMin / 60.0;
+    if (durationHours <= 0 || durationHours > 24) return null;
+
+    return {
+      'bedTime': summary.longestBlockStart,
+      'wakeTime': summary.longestBlockEnd,
+      'durationHours': (durationHours * 10).roundToDouble() / 10,
+    };
   }
 }

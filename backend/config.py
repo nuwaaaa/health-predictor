@@ -31,6 +31,9 @@ FEATURE_DEFAULTS = {
     "sleep_hours": 7.0,
     "steps": 5000,
     "stress": 3.0,
+    "nap_total_min": 0,
+    "sleep_fragmentation": 1,
+    "total_sleep_hours": 7.0,
 }
 
 # バッチ対象：直近N日以内に更新があったユーザー

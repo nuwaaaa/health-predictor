@@ -156,6 +156,28 @@ class TomorrowPredictor {
     final wakeSin = sin(2 * pi * wakeFilled / 1440);
     final wakeCos = cos(2 * pi * wakeFilled / 1440);
 
+    // --- 睡眠セグメント特徴量（D+1 は未知→デフォルト値で補完）---
+    // 仮眠の傾向は過去データから取得、D+1は未知なのでデフォルト
+    final napValues = <double>[];
+    final fragValues = <double>[];
+    final totalSleepValues = <double>[];
+    for (final log in recentLogs) {
+      if (log.sleepSummary != null) {
+        napValues.add(log.sleepSummary!.napTotalMin.toDouble());
+        fragValues.add(log.sleepSummary!.segmentCount.toDouble());
+        totalSleepValues.add(log.sleepSummary!.totalSleepHours);
+      } else if (log.sleep?.durationHours != null) {
+        napValues.add(0);
+        fragValues.add(1);
+        totalSleepValues.add(log.sleep!.durationHours!);
+      }
+    }
+    final napTotalMin = napValues.isNotEmpty ? _rollingMean(napValues, 7) : 0.0;
+    final sleepFragmentation =
+        fragValues.isNotEmpty ? _rollingMean(fragValues, 7) : 1.0;
+    final totalSleepHours =
+        totalSleepValues.isNotEmpty ? _rollingMean(totalSleepValues, 7) : 7.0;
+
     // --- 歩数特徴量（steps(D) = 今日の歩数）---
     final stepsHistory = <double>[];
     for (final log in recentLogs) {
@@ -201,6 +223,9 @@ class TomorrowPredictor {
       'bed_cos': bedCos,
       'wake_sin': wakeSin,
       'wake_cos': wakeCos,
+      'nap_total_min': napTotalMin,
+      'sleep_fragmentation': sleepFragmentation,
+      'total_sleep_hours': totalSleepHours,
       'steps_filled': stepsFilled,
       'steps_dev': stepsDev,
       'stress_filled': stressFilled,

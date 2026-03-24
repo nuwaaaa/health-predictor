@@ -66,6 +66,17 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     df["wake_sin"] = np.sin(2 * np.pi * wake_filled / 1440)
     df["wake_cos"] = np.cos(2 * np.pi * wake_filled / 1440)
 
+    # --- 睡眠セグメント特徴量（仮眠・断片化）---
+    # nap_total_min: 仮眠合計（分）。sleepSummary が無い既存データは 0
+    df["nap_total_min"] = df["nap_total_min"].fillna(0) if "nap_total_min" in df.columns else 0
+    # sleep_fragmentation: セグメント数。既存データは 1
+    df["sleep_fragmentation"] = df["sleep_fragmentation"].fillna(1) if "sleep_fragmentation" in df.columns else 1
+    # total_sleep_hours: 主睡眠+仮眠合計。既存データは sleep_hours と同値
+    if "total_sleep_hours" not in df.columns:
+        df["total_sleep_hours"] = df["sleep_hours"]
+    df["total_sleep_hours"] = _fill_missing(
+        df["total_sleep_hours"], window=7, default=config.FEATURE_DEFAULTS["sleep_hours"])
+
     # --- 歩数特徴量 ---
     # 歩数は t-1 を使用（当日はまだ増えるため）
     df["steps_lag1"] = df["steps"].shift(1)
@@ -100,6 +111,9 @@ def get_feature_columns() -> list[str]:
         "bed_cos",
         "wake_sin",
         "wake_cos",
+        "nap_total_min",
+        "sleep_fragmentation",
+        "total_sleep_hours",
         "steps_filled",
         "steps_dev",
         "stress_filled",

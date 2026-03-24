@@ -118,7 +118,7 @@ class FirestoreService {
     return DailyLog.fromFirestore(doc.id, doc.data() as Map<String, dynamic>);
   }
 
-  /// 睡眠データを保存
+  /// 睡眠データを保存（後方互換: 主睡眠のみ）
   Future<void> saveSleep({
     required String bedTime,
     required String wakeTime,
@@ -136,6 +136,38 @@ class FirestoreService {
       },
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+  }
+
+  /// 睡眠セグメントを保存（セグメントベース統一管理）
+  ///
+  /// sleepSegments + sleepSummary を保存し、
+  /// 後方互換のため sleep フィールドも最長ブロックの値で同期更新する。
+  Future<void> saveSleepSegments({
+    required List<SleepSegment> segments,
+    String? dateKeyOverride,
+  }) async {
+    final key = dateKeyOverride ?? todayKey();
+    final summary = SleepSummary.fromSegments(segments);
+
+    final data = <String, dynamic>{
+      'sleepSegments': segments.map((s) => s.toMap()).toList(),
+      'sleepSummary': summary.toMap(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    // 後方互換: sleep フィールドも最長ブロックの値で更新
+    if (summary.longestBlockMin > 0) {
+      final source = segments.any((s) => s.source == 'auto') ? 'auto' : 'manual';
+      data['sleep'] = {
+        'bedTime': summary.longestBlockStart,
+        'wakeTime': summary.longestBlockEnd,
+        'durationHours':
+            (summary.longestBlockHours * 10).roundToDouble() / 10,
+        'source': source,
+      };
+    }
+
+    await _dailyCol.doc(key).set(data, SetOptions(merge: true));
   }
 
   /// 歩数を保存

@@ -88,13 +88,36 @@ def _process_user(db: firestore.Client, uid: str, today: str):
     for doc in docs:
         data = doc.to_dict()
         sleep_data = data.get("sleep", {})
+        summary = data.get("sleepSummary", {})
+
+        # sleepSummary がある場合はセグメントベースの値を使用
+        # 無い場合（既存データ）は sleep フィールドからフォールバック
+        if summary:
+            sleep_hours = summary.get("longestBlockMin", 0) / 60.0 if summary.get("longestBlockMin") else sleep_data.get("durationHours")
+            bed_time = summary.get("longestBlockStart") or sleep_data.get("bedTime")
+            wake_time = summary.get("longestBlockEnd") or sleep_data.get("wakeTime")
+            nap_total_min = summary.get("napTotalMin", 0)
+            sleep_fragmentation = summary.get("segmentCount", 1)
+            total_sleep_min = summary.get("totalSleepMin", 0)
+            total_sleep_hours = total_sleep_min / 60.0 if total_sleep_min else sleep_hours
+        else:
+            sleep_hours = sleep_data.get("durationHours")
+            bed_time = sleep_data.get("bedTime")
+            wake_time = sleep_data.get("wakeTime")
+            nap_total_min = 0
+            sleep_fragmentation = 1
+            total_sleep_hours = sleep_hours  # 既存データ: 主睡眠=合計
+
         rows.append(
             {
                 "date_key": doc.id,
                 "moodScore": data.get("moodScore"),  # Noneも含める（欠損率算出のため）
-                "sleep_hours": sleep_data.get("durationHours"),
-                "bed_time": sleep_data.get("bedTime"),      # "HH:mm" or None
-                "wake_time": sleep_data.get("wakeTime"),    # "HH:mm" or None
+                "sleep_hours": sleep_hours,
+                "bed_time": bed_time,       # "HH:mm" or None
+                "wake_time": wake_time,     # "HH:mm" or None
+                "nap_total_min": nap_total_min,
+                "sleep_fragmentation": sleep_fragmentation,
+                "total_sleep_hours": total_sleep_hours,
                 "steps": data.get("steps"),
                 "stress": data.get("stress"),
             }

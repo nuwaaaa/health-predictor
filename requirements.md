@@ -29,7 +29,7 @@
 |項目          |必須/任意|入力方法                                 |
 |------------|-----|-------------------------------------|
 |体調スコア（1〜5段階）|必須   |顔アイコン1タップ                            |
-|睡眠（就寝・起床時刻） |必須   |Apple Health / Google Fit 自動取得 or 手入力|
+|睡眠（就寝・起床時刻） |必須   |Apple Health / Google Fit 自動取得 or 手入力。複数セグメント対応（仮眠・分割睡眠）|
 |歩数          |必須   |Apple Health / Google Fit 自動取得 or 手入力|
 |ストレス（1〜5段階） |任意   |数値タップ                                |
 
@@ -137,6 +137,7 @@
 - 体調の時系列: 前日スコア(`mood_lag1`)、3日/7日移動平均(`mood_ma3`, `mood_ma7`)、前日差分(`mood_delta1`)、14日平均偏差(`mood_dev14`)
 - 生活データ: 睡眠時間(`sleep_hours_filled`)、歩数(`steps_filled`, 前日値)、ストレス(`stress_filled`, 前日値)、各偏差(`sleep_dev`, `steps_dev`)
 - 睡眠時刻: 就寝時刻(`bed_sin`, `bed_cos`)、起床時刻(`wake_sin`, `wake_cos`) — sin/cos周期エンコーディング（周期=24時間）
+- 睡眠セグメント: 仮眠合計(`nap_total_min`)、睡眠断片化(`sleep_fragmentation`)、総睡眠時間(`total_sleep_hours`)
 - カレンダー: 曜日(`day_sin`, `day_cos`)、休日フラグ(`is_weekend`)
 - リーク防止: 当日(t)の体調は予測入力に使わない（t-1以前のみ）
 

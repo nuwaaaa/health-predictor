@@ -15,6 +15,9 @@ _DOW_LABELS = ["月", "火", "水", "木", "金", "土", "日"]
 _FEATURE_TO_ADVICE: dict[str, str] = {
     "sleep_hours_filled": "sleep",
     "sleep_dev": "sleep",
+    "nap_total_min": "sleep",
+    "sleep_fragmentation": "sleep",
+    "total_sleep_hours": "sleep",
     "bed_sin": "bedtime",
     "bed_cos": "bedtime",
     "steps_filled": "steps",
