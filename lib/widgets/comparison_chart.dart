@@ -140,21 +140,26 @@ class _ComparisonChartState extends State<ComparisonChart> {
         Row(
           children: [
             Expanded(
-              child: DropdownButtonFormField<String>(
-                initialValue: _selectedFeature,
+              child: InputDecorator(
                 decoration: const InputDecoration(
                   labelText: '比較する生活データ',
                   isDense: true,
                 ),
-                items: _activeOptions.entries
-                    .map((e) => DropdownMenuItem(
-                          value: e.key,
-                          child: Text(e.value, style: const TextStyle(fontSize: 13)),
-                        ))
-                    .toList(),
-                onChanged: (v) {
-                  if (v != null) setState(() => _selectedFeature = v);
-                },
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedFeature,
+                    isDense: true,
+                    items: _activeOptions.entries
+                        .map((e) => DropdownMenuItem(
+                              value: e.key,
+                              child: Text(e.value, style: const TextStyle(fontSize: 13)),
+                            ))
+                        .toList(),
+                    onChanged: (v) {
+                      if (v != null) setState(() => _selectedFeature = v);
+                    },
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
