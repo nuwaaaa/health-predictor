@@ -47,7 +47,7 @@ class _CorrelationScatterState extends State<CorrelationScatter> {
 
     // 平均線を計算
     final avgX = xValues.reduce((a, b) => a + b) / xValues.length;
-    final avgY = yValues.reduce((a, b) => a + b) / yValues.length;
+
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
