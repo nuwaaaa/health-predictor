@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -21,15 +22,19 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
 
-  // バックグラウンド同期の初期化・登録
-  await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
-  await Workmanager().registerPeriodicTask(
-    healthSyncTaskId,
-    healthSyncTaskName,
-    frequency: const Duration(hours: 1),
-    constraints: Constraints(networkType: NetworkType.connected),
-    existingWorkPolicy: ExistingWorkPolicy.keep,
-  );
+  // バックグラウンド同期の初期化・登録（シミュレータ等では未対応のため失敗を許容）
+  try {
+    await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+    await Workmanager().registerPeriodicTask(
+      healthSyncTaskId,
+      healthSyncTaskName,
+      frequency: const Duration(hours: 1),
+      constraints: Constraints(networkType: NetworkType.connected),
+      existingWorkPolicy: ExistingWorkPolicy.keep,
+    );
+  } on PlatformException catch (e) {
+    debugPrint('Workmanager registration skipped: $e');
+  }
 
   // ホーム画面ウィジェットの初期化
   await WidgetDataService.initialize();
