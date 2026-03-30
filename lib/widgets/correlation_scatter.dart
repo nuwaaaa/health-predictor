@@ -39,7 +39,6 @@ class _CorrelationScatterState extends State<CorrelationScatter> {
 
     // X軸の範囲を計算
     final xValues = points.map((p) => p.x).toList();
-    final yValues = points.map((p) => p.y).toList();
     final xMin = xValues.reduce((a, b) => a < b ? a : b);
     final xMax = xValues.reduce((a, b) => a > b ? a : b);
     final xRange = xMax - xMin;
