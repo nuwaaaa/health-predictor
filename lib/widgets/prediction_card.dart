@@ -206,8 +206,9 @@ class PredictionCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: context.bgColor,
+                color: context.dividerColor,
                 borderRadius: BorderRadius.circular(AppRadii.button),
+                border: Border.all(color: context.dividerColor),
               ),
               child: Text(
                 _riskGuidance(displayP),
@@ -260,7 +261,7 @@ class PredictionCard extends StatelessWidget {
         label = '信頼度：中';
         break;
       default:
-        bgColor = context.bgColor;
+        bgColor = context.dividerColor;
         textColor = context.textSubColor;
         label = '信頼度：低';
     }
@@ -269,6 +270,7 @@ class PredictionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(AppRadii.pill),
+        border: Border.all(color: context.dividerColor),
       ),
       child: Text(
         label,

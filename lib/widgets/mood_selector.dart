@@ -80,12 +80,13 @@ class _MoodTile extends StatelessWidget {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primaryTint : context.bgColor,
+            color: isSelected ? AppColors.primaryTint : context.cardColor,
             borderRadius: BorderRadius.circular(AppRadii.button),
             border: Border.all(
               color: isSelected ? AppColors.primary : context.dividerColor,
               width: isSelected ? 2 : 1,
             ),
+            boxShadow: context.isDark ? null : AppShadows.card,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

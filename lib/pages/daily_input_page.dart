@@ -795,15 +795,16 @@ class _DailyInputPageState extends State<DailyInputPage> {
                               decoration: BoxDecoration(
                                 color: selected
                                     ? context.cautionSoftColor
-                                    : context.bgColor,
+                                    : context.cardColor,
                                 borderRadius:
                                     BorderRadius.circular(AppRadii.button),
                                 border: Border.all(
                                   color: selected
                                       ? AppColors.chartOrange
                                       : context.dividerColor,
-                                  width: selected ? 2 : 1,
+                                  width: selected ? 2 : 1.5,
                                 ),
+                                boxShadow: context.isDark ? null : AppShadows.card,
                               ),
                               child: Center(
                                 child: Text(
@@ -932,9 +933,10 @@ class _DailyInputPageState extends State<DailyInputPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: context.bgColor,
+          color: context.cardColor,
           borderRadius: BorderRadius.circular(AppRadii.button),
-          border: Border.all(color: context.dividerColor),
+          border: Border.all(color: context.dividerColor, width: 1.5),
+          boxShadow: context.isDark ? null : AppShadows.card,
         ),
         child: Column(
           children: [

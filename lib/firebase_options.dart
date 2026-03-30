@@ -63,7 +63,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '480274101583',
     projectId: 'health-predictor-601e9',
     storageBucket: 'health-predictor-601e9.firebasestorage.app',
-    iosBundleId: 'com.example.healthPredictor',
+    iosBundleId: 'com.nuwaaaa.healthpredictor',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -72,7 +72,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '480274101583',
     projectId: 'health-predictor-601e9',
     storageBucket: 'health-predictor-601e9.firebasestorage.app',
-    iosBundleId: 'com.example.healthPredictor',
+    iosBundleId: 'com.nuwaaaa.healthpredictor',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

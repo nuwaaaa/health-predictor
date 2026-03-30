@@ -21,6 +21,7 @@ class AppCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.cardColor,
         borderRadius: BorderRadius.circular(AppRadii.card),
+        border: Border.all(color: context.dividerColor),
         boxShadow: context.isDark ? null : AppShadows.card,
       ),
       child: child,
@@ -52,6 +53,7 @@ class AccentCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.cardColor,
         borderRadius: BorderRadius.circular(AppRadii.card),
+        border: Border.all(color: context.dividerColor),
         boxShadow: context.isDark ? null : AppShadows.card,
       ),
       child: ClipRRect(
@@ -113,7 +115,7 @@ class AppPill extends StatelessWidget {
               ? AppColors.primaryTint
               : filled
                   ? AppColors.primary
-                  : context.cardColor,
+                  : context.dividerColor,
           borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(
             color: selected ? AppColors.primary : context.dividerColor,
@@ -244,8 +246,9 @@ class _MetricChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: data.filled ? AppColors.primaryTint : context.bgColor,
+        color: data.filled ? AppColors.primaryTint : context.dividerColor,
         borderRadius: BorderRadius.circular(AppRadii.pill),
+        border: Border.all(color: context.dividerColor),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

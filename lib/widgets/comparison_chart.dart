@@ -168,7 +168,7 @@ class _ComparisonChartState extends State<ComparisonChart> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _showAdvanced ? context.primaryTintColor : context.bgColor,
+                  color: _showAdvanced ? context.primaryTintColor : context.dividerColor,
                   borderRadius: BorderRadius.circular(AppRadii.pill),
                   border: Border.all(
                     color: _showAdvanced ? context.primaryWithAlpha(80) : context.dividerColor,

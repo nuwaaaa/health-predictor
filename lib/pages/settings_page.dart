@@ -1,5 +1,7 @@
 import 'dart:developer' as developer;
 
+import 'package:url_launcher/url_launcher.dart';
+
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kDebugMode, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -389,11 +391,11 @@ class _SettingsPageState extends State<SettingsPage> {
               title: 'プライバシーポリシー',
               subtitle: 'データの取り扱いについて',
               trailing: Icon(Icons.open_in_new, size: 18, color: context.textSubColor),
-              onTap: () {
-                // TODO: プライバシーポリシーURLが確定したら更新する
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('プライバシーポリシーは準備中です')),
-                );
+              onTap: () async {
+                final uri = Uri.parse('https://nuwaaaa.github.io/health-predictor/privacy');
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
               },
             ),
 
@@ -543,7 +545,7 @@ class _SettingsPageState extends State<SettingsPage> {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: selected ? context.primaryTintColor : context.bgColor,
+            color: selected ? context.primaryTintColor : context.dividerColor,
             borderRadius: BorderRadius.circular(AppRadii.button),
             border: Border.all(
               color: selected ? AppColors.primary : context.dividerColor,

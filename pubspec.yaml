@@ -33,6 +33,9 @@ dependencies:
   # Chart
   fl_chart: ^0.68.0
 
+  # URL launcher (プライバシーポリシー等)
+  url_launcher: ^6.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

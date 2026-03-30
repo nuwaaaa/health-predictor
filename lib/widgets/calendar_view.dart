@@ -80,6 +80,8 @@ class _CalendarViewState extends State<CalendarView> {
         _buildWeekdayLabels(context),
         const SizedBox(height: AppSpacing.xs),
         _buildCalendarGrid(context, logMap),
+        const SizedBox(height: AppSpacing.sm),
+        _buildLegend(context),
         if (_selectedDateKey != null) ...[
           const SizedBox(height: AppSpacing.sm),
           _buildDetailCard(context, _selectedDateKey!, selectedLog),
@@ -221,7 +223,7 @@ class _CalendarViewState extends State<CalendarView> {
             },
       child: Container(
         margin: const EdgeInsets.all(2),
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(8),
@@ -240,31 +242,63 @@ class _CalendarViewState extends State<CalendarView> {
                 color: textColor,
               ),
             ),
-            if (hasMood && !isSelected)
-              Text(
-                MoodSelector.emojiFor(moodScore),
-                style: const TextStyle(fontSize: 10),
-              )
-            else
-              const SizedBox(height: 14),
           ],
         ),
       ),
     );
   }
 
+  Widget _buildLegend(BuildContext context) {
+    const items = [
+      (1, '不調'),
+      (2, ''),
+      (3, '普通'),
+      (4, ''),
+      (5, '好調'),
+    ];
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: items.map((item) {
+        final (score, label) = item;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: _moodColor(context, score),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+            if (label.isNotEmpty) ...[
+              const SizedBox(width: 3),
+              Text(
+                label,
+                style: AppTextStyles.captionSmall.copyWith(
+                  color: context.textSubColor,
+                ),
+              ),
+            ],
+            const SizedBox(width: 6),
+          ],
+        );
+      }).toList(),
+    );
+  }
+
   Color _moodColor(BuildContext context, int score) {
     switch (score) {
       case 1:
-        return context.colorWithAdaptiveAlpha(Colors.red, 25);
+        return context.colorWithAdaptiveAlpha(const Color(0xFFE53935), 130); // 赤
       case 2:
-        return context.colorWithAdaptiveAlpha(AppColors.chartOrange, 30);
+        return context.colorWithAdaptiveAlpha(const Color(0xFFFF7043), 110); // オレンジ赤
       case 3:
-        return context.colorWithAdaptiveAlpha(AppColors.primary, 20);
+        return context.colorWithAdaptiveAlpha(const Color(0xFFFFB300), 100); // 黄
       case 4:
-        return context.colorWithAdaptiveAlpha(AppColors.chartGreen, 25);
+        return context.colorWithAdaptiveAlpha(const Color(0xFF66BB6A), 110); // 黄緑
       case 5:
-        return context.colorWithAdaptiveAlpha(AppColors.chartGreen, 40);
+        return context.colorWithAdaptiveAlpha(const Color(0xFF2E7D32), 130); // 濃緑
       default:
         return Colors.transparent;
     }
@@ -310,9 +344,12 @@ class _CalendarViewState extends State<CalendarView> {
                     decoration: BoxDecoration(
                       color: editable
                           ? AppColors.primaryTint
-                          : context.bgColor,
+                          : context.dividerColor,
                       borderRadius:
                           BorderRadius.circular(AppRadii.pill),
+                      border: Border.all(
+                        color: editable ? AppColors.primary : context.dividerColor,
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,

@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CLIENT_ID</key>
+	<string>480274101583-rp0rhv4294ndltdhni5mrbvgjne9051t.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.480274101583-rp0rhv4294ndltdhni5mrbvgjne9051t</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>480274101583-br5ansrtfq02j93slv28k7da4c6u810k.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
 	<string>AIzaSyCdbP38PN4ggzlEXZOFoQnzlLbg2_VhCtQ</string>
 	<key>GCM_SENDER_ID</key>
@@ -9,7 +15,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.healthPredictor</string>
+	<string>com.nuwaaaa.healthpredictor</string>
 	<key>PROJECT_ID</key>
 	<string>health-predictor-601e9</string>
 	<key>STORAGE_BUCKET</key>
@@ -24,11 +30,7 @@
 	<true></true>
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
-	<key>CLIENT_ID</key>
-	<string>480274101583-oggcshriol3hqqfgfmlj5klrmh4i8ecj.apps.googleusercontent.com</string>
-	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.480274101583-oggcshriol3hqqfgfmlj5klrmh4i8ecj</string>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:480274101583:ios:dee819a1b9e068149e813a</string>
+	<string>1:480274101583:ios:15ab29734f18b38f9e813a</string>
 </dict>
 </plist>

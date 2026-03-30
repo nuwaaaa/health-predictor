@@ -8,7 +8,6 @@ import '../widgets/chart_7days.dart';
 import '../widgets/comparison_chart.dart';
 import '../widgets/calendar_view.dart';
 import '../widgets/sleep_pattern_chart.dart';
-import '../widgets/mood_heatmap.dart';
 import '../widgets/prediction_accuracy_chart.dart';
 import '../widgets/correlation_scatter.dart';
 import 'daily_input_page.dart';
@@ -183,13 +182,6 @@ class _DataPageState extends State<DataPage> {
                       ? logs.sublist(logs.length - 7)
                       : logs,
                 )),
-
-                const SizedBox(height: AppSpacing.lg),
-
-                // --- 体調ヒートマップ ---
-                SectionHeader(title: '体調ヒートマップ'),
-                const SizedBox(height: AppSpacing.sm),
-                AppCard(child: MoodHeatmap(logs: logs)),
 
                 const SizedBox(height: AppSpacing.lg),
 

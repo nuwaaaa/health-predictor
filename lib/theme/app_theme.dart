@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  static const background = Color(0xFFF8FAFD);
+  static const background = Color(0xFFDCFEE3);
   static const card = Color(0xFFFFFFFF);
   static const primary = Color(0xFF6F95E6);
   static const primaryTint = Color(0xFFE6EEFF);
@@ -89,7 +89,7 @@ class AppShadows {
 
   static final card = [
     BoxShadow(
-      color: const Color(0xFF243447).withAlpha(15),
+      color: const Color(0xFF243447).withAlpha(35),
       offset: const Offset(0, 4),
       blurRadius: 12,
     ),
@@ -103,7 +103,7 @@ class AppShadows {
 class AppColorsDark {
   AppColorsDark._();
 
-  static const background = Color(0xFF121820);
+  static const background = Color(0xFF1B1E19);
   static const card = Color(0xFF1C2530);
   static const textMain = Color(0xFFE2E8F0);
   static const textSub = Color(0xFF8899AA);
@@ -207,7 +207,7 @@ ThemeData buildCalmBlueTheme() {
 
     // AppBar
     appBarTheme: const AppBarTheme(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.card,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       centerTitle: true,
@@ -278,20 +278,20 @@ ThemeData buildCalmBlueTheme() {
     // TextField / InputDecoration
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: AppColors.background,
+      fillColor: AppColors.card,
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadii.input),
-        borderSide: const BorderSide(color: AppColors.divider),
+        borderSide: const BorderSide(color: AppColors.textSub, width: 1.5),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadii.input),
-        borderSide: const BorderSide(color: AppColors.divider),
+        borderSide: const BorderSide(color: AppColors.textSub, width: 1.5),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadii.input),
-        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        borderSide: const BorderSide(color: AppColors.primary, width: 2),
       ),
       labelStyle: AppTextStyles.caption,
       hintStyle: AppTextStyles.caption,
@@ -395,20 +395,20 @@ ThemeData buildCalmBlueDarkTheme() {
 
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: AppColorsDark.background,
+      fillColor: AppColorsDark.card,
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadii.input),
-        borderSide: const BorderSide(color: AppColorsDark.divider),
+        borderSide: const BorderSide(color: AppColorsDark.textSub, width: 1.5),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadii.input),
-        borderSide: const BorderSide(color: AppColorsDark.divider),
+        borderSide: const BorderSide(color: AppColorsDark.textSub, width: 1.5),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadii.input),
-        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        borderSide: const BorderSide(color: AppColors.primary, width: 2),
       ),
       labelStyle: const TextStyle(fontSize: 14, color: AppColorsDark.textSub),
       hintStyle: const TextStyle(fontSize: 14, color: AppColorsDark.textSub),

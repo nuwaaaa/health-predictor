@@ -74,8 +74,9 @@ class StatusBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: context.bgColor,
+        color: context.dividerColor,
         borderRadius: BorderRadius.circular(AppRadii.pill),
+        border: Border.all(color: context.dividerColor),
       ),
       child: Text(
         '$label: $value',
