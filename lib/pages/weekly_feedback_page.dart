@@ -98,7 +98,7 @@ class _WeeklyFeedbackPageState extends State<WeeklyFeedbackPage> {
               child: _feedbackButton(
                 label: '当たった',
                 icon: Icons.check_circle_outline,
-                color: Colors.green,
+                color: AppColors.mood5,
                 result: 'correct',
               ),
             ),
@@ -107,7 +107,7 @@ class _WeeklyFeedbackPageState extends State<WeeklyFeedbackPage> {
               child: _feedbackButton(
                 label: '外れた',
                 icon: Icons.cancel_outlined,
-                color: Colors.red,
+                color: AppColors.mood1,
                 result: 'incorrect',
               ),
             ),

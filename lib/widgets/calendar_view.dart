@@ -288,20 +288,8 @@ class _CalendarViewState extends State<CalendarView> {
   }
 
   Color _moodColor(BuildContext context, int score) {
-    switch (score) {
-      case 1:
-        return context.colorWithAdaptiveAlpha(const Color(0xFFE53935), 130); // 赤
-      case 2:
-        return context.colorWithAdaptiveAlpha(const Color(0xFFFF7043), 110); // オレンジ赤
-      case 3:
-        return context.colorWithAdaptiveAlpha(const Color(0xFFFFB300), 100); // 黄
-      case 4:
-        return context.colorWithAdaptiveAlpha(const Color(0xFF66BB6A), 110); // 黄緑
-      case 5:
-        return context.colorWithAdaptiveAlpha(const Color(0xFF2E7D32), 130); // 濃緑
-      default:
-        return Colors.transparent;
-    }
+    if (score < 1 || score > 5) return Colors.transparent;
+    return context.moodColor(score).withAlpha(140);
   }
 
   Widget _buildDetailCard(

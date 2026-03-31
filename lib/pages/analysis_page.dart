@@ -445,12 +445,12 @@ class _AnalysisPageState extends State<AnalysisPage> {
             children: [
               Expanded(
                 child: _fbButton('当たった', Icons.check_circle_outline,
-                    AppColors.chartGreen, 'correct'),
+                    AppColors.mood5, 'correct'),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: _fbButton(
-                    '外れた', Icons.cancel_outlined, Colors.red, 'incorrect'),
+                    '外れた', Icons.cancel_outlined, AppColors.mood1, 'incorrect'),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(

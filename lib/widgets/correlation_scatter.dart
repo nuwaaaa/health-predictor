@@ -26,7 +26,6 @@ class _CorrelationScatterState extends State<CorrelationScatter> {
   Widget build(BuildContext context) {
     final points = _buildPoints();
     final blueColor = context.chartBlueColor;
-    final orangeColor = context.chartOrangeColor;
 
     if (points.isEmpty) {
       return const SizedBox(
@@ -181,7 +180,7 @@ class _CorrelationScatterState extends State<CorrelationScatter> {
                       p.y,
                       dotPainter: FlDotCirclePainter(
                         radius: 4,
-                        color: _spotColor(context, p.y, blueColor, orangeColor),
+                        color: _spotColor(context, p.y),
                         strokeWidth: 0,
                       ),
                     ),
@@ -236,11 +235,8 @@ class _CorrelationScatterState extends State<CorrelationScatter> {
     );
   }
 
-  Color _spotColor(
-      BuildContext context, double mood, Color blue, Color orange) {
-    if (mood <= 2) return orange;
-    if (mood >= 4) return context.chartGreenColor;
-    return blue;
+  Color _spotColor(BuildContext context, double mood) {
+    return context.moodColor(mood.round().clamp(1, 5));
   }
 
   String _formatX(double value) {

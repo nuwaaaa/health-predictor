@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// アプリのテーマモードを管理する ValueNotifier
 /// 設定値は SharedPreferences に永続化される
 class ThemeNotifier extends ValueNotifier<ThemeMode> {
-  ThemeNotifier() : super(ThemeMode.system);
+  ThemeNotifier() : super(ThemeMode.dark);
 
   static const _prefKey = 'theme_mode';
 

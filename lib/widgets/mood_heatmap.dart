@@ -191,31 +191,7 @@ class MoodHeatmap extends StatelessWidget {
   }
 
   Color _moodColor(BuildContext context, int mood) {
-    // 1(不調)=赤系、3(普通)=黄系、5(好調)=緑系のグラデーション
-    switch (mood) {
-      case 1:
-        return context.isDark
-            ? const Color(0xFFCC4444)
-            : const Color(0xFFE57373);
-      case 2:
-        return context.isDark
-            ? const Color(0xFFCC7744)
-            : const Color(0xFFFFB74D);
-      case 3:
-        return context.isDark
-            ? const Color(0xFFCCAA44)
-            : const Color(0xFFFFD54F);
-      case 4:
-        return context.isDark
-            ? const Color(0xFF66AA66)
-            : const Color(0xFF81C784);
-      case 5:
-        return context.isDark
-            ? const Color(0xFF448844)
-            : const Color(0xFF4CAF50);
-      default:
-        return Colors.grey.withAlpha(40);
-    }
+    return context.moodColor(mood);
   }
 
   Widget _buildLegend(BuildContext context) {

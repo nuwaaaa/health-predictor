@@ -1,34 +1,41 @@
 import 'package:flutter/material.dart';
 
 // ─────────────────────────────────────────────
-// Design Tokens — "Calm Blue"
+// Design Tokens — "Tech Black"
 // ─────────────────────────────────────────────
 
 class AppColors {
   AppColors._();
 
-  static const background = Color(0xFFDCFEE3);
-  static const card = Color(0xFFFFFFFF);
+  static const background = Color(0xFF080C12);
+  static const card = Color(0xFF0F1520);
   static const primary = Color(0xFF6F95E6);
-  static const primaryTint = Color(0xFFE6EEFF);
-  static const textMain = Color(0xFF243447);
-  static const textSub = Color(0xFF7B8A9A);
-  static const divider = Color(0xFFE6ECF3);
-  static const cautionSoft = Color(0xFFFFD9C7);
-  static const cautionSoft2 = Color(0xFFFFC9B2);
-  static const destructive = Colors.red;
+  static const primaryTint = Color(0xFF0D1E3A);
+  static const textMain = Color(0xFFE2E8F0);
+  static const textSub = Color(0xFF8899AA);
+  static const divider = Color(0xFF1A2540);
+  static const cautionSoft = Color(0xFF2A1A0E);
+  static const cautionSoft2 = Color(0xFF3A2010);
+  static const destructive = Color(0xFFE06060);
 
   // Chart palette
-  static const chartBlue = Color(0xFF6F95E6);
-  static const chartOrange = Color(0xFFE8A87C);
-  static const chartGreen = Color(0xFF7EC8A8);
-  static const chartGrid = Color(0xFFE6ECF3);
+  static const chartBlue = Color(0xFF7FA8E8);
+  static const chartOrange = Color(0xFFD4956A);
+  static const chartGreen = Color(0xFF6DB895);
+  static const chartGrid = Color(0xFF1A2540);
 
   // Confidence badge
-  static const confidenceHighBg = Color(0xFFD4EDDA);
-  static const confidenceHighText = Color(0xFF276749);
-  static const confidenceMedBg = Color(0xFFFFF3CD);
-  static const confidenceMedText = Color(0xFF856404);
+  static const confidenceHighBg = Color(0xFF0D2B1F);
+  static const confidenceHighText = Color(0xFF6DB895);
+  static const confidenceMedBg = Color(0xFF2B2008);
+  static const confidenceMedText = Color(0xFFD4B060);
+
+  // Unified mood/health state colors (1=最悪 〜 5=最良)
+  static const mood1 = Color(0xFFE06060); // とても悪い — red
+  static const mood2 = Color(0xFFD4956A); // 悪い       — orange
+  static const mood3 = Color(0xFFD4B060); // 普通       — amber
+  static const mood4 = Color(0xFF6DB895); // 良い       — teal-green
+  static const mood5 = Color(0xFF7FCFB0); // とても良い — bright teal-green
 }
 
 class AppTextStyles {
@@ -89,53 +96,53 @@ class AppShadows {
 
   static final card = [
     BoxShadow(
-      color: const Color(0xFF243447).withAlpha(35),
-      offset: const Offset(0, 4),
-      blurRadius: 12,
+      color: const Color(0xFF6F95E6).withAlpha(18),
+      offset: const Offset(0, 2),
+      blurRadius: 16,
     ),
   ];
 }
 
 // ─────────────────────────────────────────────
-// Dark Colors — Calm Blue Dark
+// Dark Colors — Tech Black Deep
 // ─────────────────────────────────────────────
 
 class AppColorsDark {
   AppColorsDark._();
 
-  static const background = Color(0xFF1B1E19);
-  static const card = Color(0xFF1C2530);
+  static const background = Color(0xFF050810);
+  static const card = Color(0xFF0A0E14);
   static const textMain = Color(0xFFE2E8F0);
   static const textSub = Color(0xFF8899AA);
-  static const divider = Color(0xFF2D3A4A);
+  static const divider = Color(0xFF142035);
 
   // Primary tint (dark)
-  static const primaryTint = Color(0xFF1E2D45);
+  static const primaryTint = Color(0xFF0A1830);
 
   // Caution (dark)
-  static const cautionSoft = Color(0xFF3A2A1E);
-  static const cautionSoft2 = Color(0xFF4A3020);
+  static const cautionSoft = Color(0xFF221508);
+  static const cautionSoft2 = Color(0xFF301A0A);
 
-  // Chart palette (dark) — 彩度を下げ明度を調整
+  // Chart palette (dark)
   static const chartBlue = Color(0xFF7FA8E8);
   static const chartOrange = Color(0xFFD4956A);
   static const chartGreen = Color(0xFF6DB895);
-  static const chartGrid = Color(0xFF2D3A4A);
+  static const chartGrid = Color(0xFF142035);
 
   // Confidence badge (dark)
-  static const confidenceHighBg = Color(0xFF1A3328);
+  static const confidenceHighBg = Color(0xFF0A2018);
   static const confidenceHighText = Color(0xFF6DB895);
-  static const confidenceMedBg = Color(0xFF332E1A);
+  static const confidenceMedBg = Color(0xFF231A06);
   static const confidenceMedText = Color(0xFFD4B060);
 
-  // Risk colors (dark) — 彩度抑えめ
-  static const riskHigh = Color(0xFFE06060);
-  static const riskMedium = Color(0xFFD4956A);
-  static const riskLow = Color(0xFFD4B060);
+  // Risk colors — mood colors と同一値で統一
+  static const riskHigh = AppColors.mood1;
+  static const riskMedium = AppColors.mood2;
+  static const riskLow = AppColors.mood3;
 
   // Semantic feedback (dark)
-  static const positiveBg = Color(0xFF1A3328);
-  static const negativeBg = Color(0xFF331A1A);
+  static const positiveBg = Color(0xFF0A2018);
+  static const negativeBg = Color(0xFF220A0A);
   static const positiveText = Color(0xFF6DB895);
   static const negativeText = Color(0xFFE06060);
 
@@ -169,22 +176,34 @@ extension AdaptiveColors on BuildContext {
   Color get confidenceMedBg => isDark ? AppColorsDark.confidenceMedBg : AppColors.confidenceMedBg;
   Color get confidenceMedText => isDark ? AppColorsDark.confidenceMedText : AppColors.confidenceMedText;
 
-  // Risk
+  // Mood (1〜5) → 統一体調色
+  Color moodColor(int score) {
+    switch (score) {
+      case 1: return AppColors.mood1;
+      case 2: return AppColors.mood2;
+      case 3: return AppColors.mood3;
+      case 4: return AppColors.mood4;
+      case 5: return AppColors.mood5;
+      default: return AppColors.textSub;
+    }
+  }
+
+  // Risk (予測リスク確率) → mood colors と統一
   Color riskColor(double p) {
-    if (p >= 0.6) return isDark ? AppColorsDark.riskHigh : Colors.red.shade700;
-    if (p >= 0.4) return isDark ? AppColorsDark.riskMedium : Colors.orange.shade700;
-    if (p >= 0.2) return isDark ? AppColorsDark.riskLow : Colors.amber.shade700;
-    return chartGreenColor;
+    if (p >= 0.6) return AppColors.mood1;
+    if (p >= 0.4) return AppColors.mood2;
+    if (p >= 0.2) return AppColors.mood3;
+    return AppColors.mood5;
   }
 
   // Feedback / contribution
-  Color get positiveBgColor => isDark ? AppColorsDark.positiveBg : Colors.green.shade50;
-  Color get negativeBgColor => isDark ? AppColorsDark.negativeBg : Colors.red.shade50;
-  Color get positiveTextColor => isDark ? AppColorsDark.positiveText : Colors.green.shade500;
-  Color get negativeTextColor => isDark ? AppColorsDark.negativeText : Colors.red.shade500;
+  Color get positiveBgColor => AppColorsDark.positiveBg;
+  Color get negativeBgColor => AppColorsDark.negativeBg;
+  Color get positiveTextColor => AppColorsDark.positiveText;
+  Color get negativeTextColor => AppColorsDark.negativeText;
 
   // Auto-import badge
-  Color get autoImportTextColor => isDark ? AppColorsDark.autoImportText : const Color(0xFF276749);
+  Color get autoImportTextColor => AppColorsDark.autoImportText;
 
   // Alpha helper — ダーク時は alpha を高くして可視性を確保
   Color primaryWithAlpha(int lightAlpha) =>
@@ -202,12 +221,12 @@ ThemeData buildCalmBlueTheme() {
   return ThemeData(
     useMaterial3: true,
     colorSchemeSeed: AppColors.primary,
-    brightness: Brightness.light,
+    brightness: Brightness.dark,
     scaffoldBackgroundColor: AppColors.background,
 
     // AppBar
     appBarTheme: const AppBarTheme(
-      backgroundColor: AppColors.card,
+      backgroundColor: AppColors.background,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       centerTitle: true,
@@ -283,18 +302,18 @@ ThemeData buildCalmBlueTheme() {
           const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadii.input),
-        borderSide: const BorderSide(color: AppColors.textSub, width: 1.5),
+        borderSide: const BorderSide(color: AppColors.divider, width: 1.5),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadii.input),
-        borderSide: const BorderSide(color: AppColors.textSub, width: 1.5),
+        borderSide: const BorderSide(color: AppColors.divider, width: 1.5),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadii.input),
         borderSide: const BorderSide(color: AppColors.primary, width: 2),
       ),
-      labelStyle: AppTextStyles.caption,
-      hintStyle: AppTextStyles.caption,
+      labelStyle: const TextStyle(fontSize: 14, color: AppColors.textSub),
+      hintStyle: const TextStyle(fontSize: 14, color: AppColors.textSub),
     ),
 
     // ChoiceChip / Chip
@@ -311,9 +330,9 @@ ThemeData buildCalmBlueTheme() {
 
     // Snackbar
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: AppColors.textMain,
+      backgroundColor: AppColors.card,
       contentTextStyle:
-          const TextStyle(fontSize: 14, color: Colors.white),
+          const TextStyle(fontSize: 14, color: AppColors.textMain),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadii.button),
       ),

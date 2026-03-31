@@ -6,6 +6,7 @@ import '../services/firestore_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/mood_selector.dart';
+import '../widgets/ai_orb_widget.dart';
 import '../widgets/prediction_card.dart';
 import 'daily_input_page.dart';
 
@@ -91,6 +92,13 @@ class _HomePageState extends State<HomePage> {
 
               // --- (0) 入力促進バナー ---
               _inputProgressBanner(),
+
+              // --- (0.5) AI オーブキャラクター ---
+              AiOrbWidget(
+                prediction: widget.prediction,
+                status: widget.status,
+              ),
+              const SizedBox(height: AppSpacing.sm),
 
               // --- (1) 今日の予測カード ---
               PredictionCard(
