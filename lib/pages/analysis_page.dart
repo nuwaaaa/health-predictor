@@ -4,6 +4,7 @@ import '../models/prediction.dart';
 import '../services/firestore_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/sensia_message_widget.dart';
 
 /// 分析タブ — Calm Blue デザイン
 class AnalysisPage extends StatefulWidget {
@@ -204,6 +205,13 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
                   const SizedBox(height: AppSpacing.lg),
 
+                  // --- Sensiaのアドバイス（要因より前） ---
+                  SectionHeader(title: 'Sensiaからのアドバイス'),
+                  const SizedBox(height: AppSpacing.sm),
+                  _sensiaAdviceSection(pred),
+
+                  const SizedBox(height: AppSpacing.lg),
+
                   // --- 今日の要因 TOP3 ---
                   SectionHeader(title: '今日の予測に影響した要因 TOP3'),
                   const SizedBox(height: AppSpacing.sm),
@@ -227,21 +235,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
                     const EmptyState(
                       icon: Icons.analytics_outlined,
                       message: '明日の予測データがありません',
-                    ),
-
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // --- アドバイス ---
-                  SectionHeader(title: '改善アドバイス'),
-                  const SizedBox(height: AppSpacing.sm),
-                  if (pred != null && pred.advices.isNotEmpty)
-                    _adviceCard(pred.advices)
-                  else if (_clientAdvices.isNotEmpty)
-                    _adviceCard(_clientAdvices)
-                  else
-                    const EmptyState(
-                      icon: Icons.lightbulb_outline,
-                      message: 'データが増えるとアドバイスが表示されます',
                     ),
 
                   const SizedBox(height: AppSpacing.lg),
@@ -385,31 +378,30 @@ class _AnalysisPageState extends State<AnalysisPage> {
     );
   }
 
-  Widget _adviceCard(List<Advice> advices) {
-    return AccentCard(
-      accentColor: AppColors.chartOrange,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: advices.map((a) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.lightbulb_outline,
-                    size: 18, color: AppColors.chartOrange),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    a.message,
-                    style: AppTextStyles.body.copyWith(fontSize: 14),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
+  Widget _sensiaAdviceSection(Prediction? pred) {
+    final advices = (pred != null && pred.advices.isNotEmpty)
+        ? pred.advices
+        : _clientAdvices;
+
+    if (advices.isEmpty) {
+      return const EmptyState(
+        icon: Icons.lightbulb_outline,
+        message: 'データが増えるとアドバイスが表示されます',
+      );
+    }
+
+    final p = pred?.displayPToday;
+    final level = p == null
+        ? SensiaRiskLevel.low
+        : p >= 0.5
+            ? SensiaRiskLevel.high
+            : p >= 0.3
+                ? SensiaRiskLevel.medium
+                : SensiaRiskLevel.low;
+
+    return SensiaAdviceCard(
+      messages: advices.map((a) => a.message).toList(),
+      riskLevel: level,
     );
   }
 

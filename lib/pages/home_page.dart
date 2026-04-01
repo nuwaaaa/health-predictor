@@ -8,6 +8,7 @@ import '../widgets/common_widgets.dart';
 import '../widgets/mood_selector.dart';
 import '../widgets/ai_orb_widget.dart';
 import '../widgets/prediction_card.dart';
+import '../widgets/sensia_message_widget.dart';
 import 'daily_input_page.dart';
 
 /// ホームタブ — Calm Blue デザイン
@@ -90,7 +91,11 @@ class _HomePageState extends State<HomePage> {
             children: [
               const SizedBox(height: AppSpacing.md),
 
-              // --- (0) 入力促進バナー ---
+              // --- (0) Sensia メッセージ ---
+              _sensiaMessage(),
+              const SizedBox(height: AppSpacing.sm),
+
+              // --- (0.5) 入力促進バナー ---
               _inputProgressBanner(),
 
               // --- (0.5) AI オーブキャラクター ---
@@ -180,6 +185,61 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Sensia メッセージ（入力状態に応じて内容が変わる）
+  Widget _sensiaMessage() {
+    final log = widget.todayLog;
+    final hasMood = log?.moodScore != null;
+    final hasSleep = log?.sleep?.durationHours != null;
+    final hasSteps = log?.steps != null;
+    final hasStress = log?.stress != null;
+    final done = [hasMood, hasSleep, hasSteps, hasStress].where((b) => b).length;
+
+    if (done == 4) {
+      // 全入力完了 — 明日の予測パーセントを表示
+      final tomorrow = widget.tomorrowPrediction ?? widget.prediction;
+      final pct = tomorrow?.riskPercent ?? '--%';
+      final p = tomorrow?.displayPToday;
+      final level = p == null
+          ? SensiaRiskLevel.low
+          : p >= 0.5
+              ? SensiaRiskLevel.high
+              : p >= 0.3
+                  ? SensiaRiskLevel.medium
+                  : SensiaRiskLevel.low;
+      return SensiaMessageWidget(
+        message: '今日の記録は完了です。明日の不調リスクは $pct の見込みです。',
+        riskLevel: level,
+      );
+    }
+
+    if (!hasMood) {
+      // 体調未入力
+      return const SensiaMessageWidget(
+        message: '今日の体調を教えてください。記録を続けると予測の精度が上がります。',
+        riskLevel: SensiaRiskLevel.low,
+      );
+    }
+
+    if (done == 1) {
+      // 体調のみ入力済み
+      return const SensiaMessageWidget(
+        message: '体調を記録しました。睡眠と歩数も入力すると、明日の予測ができるようになります。',
+        riskLevel: SensiaRiskLevel.low,
+      );
+    }
+
+    // 一部未入力
+    final missing = <String>[];
+    if (!hasSleep) missing.add('睡眠');
+    if (!hasSteps) missing.add('歩数');
+    if (!hasStress) missing.add('ストレス');
+    final missingLabel = missing.first;
+    return SensiaMessageWidget(
+      message: '$missingLabelがまだ記録されていません。入力すると予測の精度が上がります。',
+      riskLevel: SensiaRiskLevel.medium,
     );
   }
 

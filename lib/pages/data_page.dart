@@ -10,6 +10,7 @@ import '../widgets/calendar_view.dart';
 import '../widgets/sleep_pattern_chart.dart';
 import '../widgets/prediction_accuracy_chart.dart';
 import '../widgets/correlation_scatter.dart';
+import '../widgets/sensia_message_widget.dart';
 import 'daily_input_page.dart';
 
 /// データタブ — Calm Blue デザイン
@@ -150,6 +151,10 @@ class _DataPageState extends State<DataPage> {
                   ),
                 )
               else ...[
+                // --- Sensia メッセージ ---
+                _sensiaMessage(logs),
+                const SizedBox(height: AppSpacing.lg),
+
                 // --- 体調グラフ ---
                 SectionHeader(title: '体調推移'),
                 const SizedBox(height: AppSpacing.sm),
@@ -221,6 +226,93 @@ class _DataPageState extends State<DataPage> {
         ),
       ),
     );
+  }
+
+  /// データ画面のSensiaメッセージ（グラフ上部）
+  Widget _sensiaMessage(List<DailyLog> logs) {
+    // 最新の予測を dateKey 降順で取得
+    final sorted = (_predictions ?? []).toList()
+      ..sort((a, b) => b.dateKey.compareTo(a.dateKey));
+    final latest = sorted.isNotEmpty ? sorted.first : null;
+    final recentLog = logs.isNotEmpty ? logs.last : null;
+
+    final p = latest?.displayPToday;
+    final level = p == null
+        ? SensiaRiskLevel.low
+        : p >= 0.5
+            ? SensiaRiskLevel.high
+            : p >= 0.3
+                ? SensiaRiskLevel.medium
+                : SensiaRiskLevel.low;
+
+    return SensiaMessageWidget(
+      message: _generateDataSensiaMessage(latest, recentLog),
+      riskLevel: level,
+    );
+  }
+
+  /// 寄与度・アドバイスから自然言語メッセージを生成
+  String _generateDataSensiaMessage(Prediction? prediction, DailyLog? recentLog) {
+    if (prediction == null || prediction.contributions.isEmpty) {
+      if (prediction?.advices.isNotEmpty == true) {
+        return prediction!.advices.first.message;
+      }
+      return 'データを積み重ねると、不調の要因をより詳しく分析できるようになります。';
+    }
+
+    final top = prediction.contributions.first;
+    final isRisk = top.isRiskIncrease;
+
+    switch (top.feature) {
+      case 'sleep_hours_filled':
+        final hours = recentLog?.sleep?.durationHours;
+        if (hours != null) {
+          return isRisk
+              ? '昨日は睡眠が${hours.toStringAsFixed(1)}時間と短めでした。あなたのデータでは、睡眠が不足すると翌日の不調リスクが上がる傾向があります。'
+              : '昨日は${hours.toStringAsFixed(1)}時間の睡眠がとれていました。十分な睡眠がリスク低下に貢献しています。';
+        }
+        return isRisk
+            ? '睡眠時間が今日のリスクに最も影響しています。休息を意識してみてください。'
+            : '睡眠の質がリスク低下に貢献しています。この調子を続けましょう。';
+
+      case 'steps_filled':
+        final steps = recentLog?.steps;
+        if (steps != null) {
+          return isRisk
+              ? '昨日の歩数は$steps歩でした。活動量を少し増やすと、コンディションの改善につながる可能性があります。'
+              : '昨日は$steps歩、よく動けていました。活動量がリスク低下に貢献しています。';
+        }
+        return isRisk
+            ? '活動量が今日のリスクに影響しています。少し体を動かしてみてください。'
+            : '昨日の活動量がリスク低下に貢献しています。';
+
+      case 'stress_filled':
+        final stress = recentLog?.stress;
+        if (stress != null) {
+          return isRisk
+              ? 'ストレスレベルが$stressと高めでした。意識的に休息の時間を作ってみてください。'
+              : 'ストレスレベルが$stressと低めで、リスク低下に貢献しています。';
+        }
+        return isRisk
+            ? 'ストレスが今日のコンディションに影響しています。休息を心がけてみてください。'
+            : 'ストレスレベルが低めで、リスク低下に貢献しています。';
+
+      case 'mood_lag1':
+      case 'mood_ma3':
+      case 'mood_ma7':
+        return isRisk
+            ? '最近の体調の流れが今日のリスクに影響しています。無理せず過ごすことを心がけてみてください。'
+            : '最近の体調の安定がリスク低下に貢献しています。この調子を続けていきましょう。';
+
+      default:
+        if (prediction.advices.isNotEmpty) {
+          return prediction.advices.first.message;
+        }
+        final label = top.label;
+        return isRisk
+            ? '「$label」が今日のリスクに最も影響しています。'
+            : '「$label」がリスク低下に貢献しています。';
+    }
   }
 
   Widget _periodPill(int days, String label, IconData icon, String subLabel) {
