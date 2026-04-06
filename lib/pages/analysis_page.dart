@@ -8,7 +8,6 @@ import '../widgets/common_widgets.dart';
 import '../widgets/sensia_message_widget.dart';
 import '../widgets/chart_7days.dart';
 import '../widgets/comparison_chart.dart';
-import '../widgets/prediction_accuracy_chart.dart';
 
 /// 分析タブ — Calm Blue デザイン
 class AnalysisPage extends StatefulWidget {
@@ -38,7 +37,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
   int _periodDays = 7;
   List<DailyLog>? _allLogs;
   bool _loadingMore = false;
-  List<Prediction>? _predictions;
 
   // フィードバック用
   bool _feedbackSubmitted = false;
@@ -52,7 +50,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
   @override
   void initState() {
     super.initState();
-    _fetchPredictions();
     _checkExistingFeedback();
     _computeClientAdvice();
   }
@@ -62,8 +59,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.logs != widget.logs) {
       _allLogs = null;
-      _predictions = null;
-      _fetchPredictions();
       if (_periodDays != 7) {
         _fetchAllLogs();
       }
@@ -95,14 +90,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
     }
   }
 
-  Future<void> _fetchPredictions() async {
-    try {
-      final preds = await widget.service.getLastNPredictions(90);
-      if (mounted) setState(() => _predictions = preds);
-    } catch (e) {
-      debugPrint('予測データ読み込み失敗: $e');
-    }
-  }
 
   String get _currentWeekKey {
     final now = DateTime.now();
@@ -122,9 +109,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
   }
 
   Future<void> _computeClientAdvice() async {
-    final pred = widget.prediction;
-    if (pred != null && pred.advices.isNotEmpty) return;
-
     try {
       final logs = await widget.service.getLastNDays(90);
       if (logs.length < 14) return;
@@ -146,6 +130,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
       final advices = <Advice>[];
 
+      // 睡眠
       final goodSleep = goodDays
           .where((l) => l.sleep?.durationHours != null)
           .map((l) => l.sleep!.durationHours!)
@@ -156,16 +141,22 @@ class _AnalysisPageState extends State<AnalysisPage> {
           .toList();
       if (goodSleep.length >= 3 && badSleep.length >= 3) {
         final avgGood = goodSleep.reduce((a, b) => a + b) / goodSleep.length;
-        final avgBad = badSleep.reduce((a, b) => a + b) / badSleep.length;
+        final avgBad  = badSleep.reduce((a, b) => a + b)  / badSleep.length;
         if (avgGood - avgBad > 0.3) {
-          final recHours = (avgGood * 10).roundToDouble() / 10;
+          final goodH = (avgGood * 10).roundToDouble() / 10;
+          final badH  = (avgBad  * 10).roundToDouble() / 10;
           advices.add(Advice(
-            param: 'sleep',
-            message: '$recHours時間の睡眠をとった翌日は体調が安定する傾向があります',
+            param: 'sleep_good',
+            message: '$goodH時間以上の睡眠をとった翌日は体調が安定する傾向があります',
+          ));
+          advices.add(Advice(
+            param: 'sleep_bad',
+            message: '睡眠が$badH時間以下の翌日は不調になりやすい傾向があります',
           ));
         }
       }
 
+      // 歩数
       final goodSteps = goodDays
           .where((l) => l.steps != null)
           .map((l) => l.steps!.toDouble())
@@ -176,16 +167,22 @@ class _AnalysisPageState extends State<AnalysisPage> {
           .toList();
       if (goodSteps.length >= 3 && badSteps.length >= 3) {
         final avgGood = goodSteps.reduce((a, b) => a + b) / goodSteps.length;
-        final avgBad = badSteps.reduce((a, b) => a + b) / badSteps.length;
+        final avgBad  = badSteps.reduce((a, b) => a + b)  / badSteps.length;
         if (avgGood - avgBad > 500) {
-          final threshold = (avgGood / 1000).round() * 1000;
+          final goodThreshold = (avgGood / 1000).round() * 1000;
+          final badThreshold  = (avgBad  / 1000).round() * 1000;
           advices.add(Advice(
-            param: 'steps',
-            message: '$threshold歩以上の日は体調が安定する傾向があります',
+            param: 'steps_good',
+            message: '$goodThreshold歩以上の日は翌日の体調が安定する傾向があります',
+          ));
+          advices.add(Advice(
+            param: 'steps_bad',
+            message: '歩数が$badThreshold歩以下の日は翌日不調になりやすい傾向があります',
           ));
         }
       }
 
+      // ストレス
       final goodStress = goodDays
           .where((l) => l.stress != null)
           .map((l) => l.stress!.toDouble())
@@ -195,23 +192,24 @@ class _AnalysisPageState extends State<AnalysisPage> {
           .map((l) => l.stress!.toDouble())
           .toList();
       if (goodStress.length >= 3 && badStress.length >= 3) {
-        final avgGoodStr =
-            goodStress.reduce((a, b) => a + b) / goodStress.length;
-        final avgBadStr =
-            badStress.reduce((a, b) => a + b) / badStress.length;
+        final avgGoodStr = goodStress.reduce((a, b) => a + b) / goodStress.length;
+        final avgBadStr  = badStress.reduce((a, b) => a + b)  / badStress.length;
         if (avgBadStr - avgGoodStr > 0.5) {
-          final recLevel = avgGoodStr.round();
+          final goodLevel = avgGoodStr.round();
+          final badLevel  = avgBadStr.round();
           advices.add(Advice(
-            param: 'stress',
-            message: 'ストレスLv$recLevel以下の日は体調が良い傾向があります',
+            param: 'stress_good',
+            message: 'ストレスがLv$goodLevel以下の日は体調が安定しやすい傾向があります',
+          ));
+          advices.add(Advice(
+            param: 'stress_bad',
+            message: 'ストレスがLv$badLevel以上になると不調になりやすい傾向があります',
           ));
         }
       }
 
       if (advices.isNotEmpty && mounted) {
-        setState(() {
-          _clientAdvices = advices.length > 2 ? advices.sublist(0, 2) : advices;
-        });
+        setState(() => _clientAdvices = advices);
       }
     } catch (_) {}
   }
@@ -261,6 +259,13 @@ class _AnalysisPageState extends State<AnalysisPage> {
                 children: [
                   const SizedBox(height: AppSpacing.md),
 
+                  // --- Sensiaのアドバイス（最上部）---
+                  SectionHeader(title: 'Sensiaからのアドバイス'),
+                  const SizedBox(height: AppSpacing.sm),
+                  _sensiaAdviceSection(pred),
+
+                  const SizedBox(height: AppSpacing.lg),
+
                   // --- 期間切替 ---
                   Row(
                     children: [
@@ -306,29 +311,10 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
                     const SizedBox(height: AppSpacing.lg),
 
-                    // --- 予測 vs 実績 ---
-                    SectionHeader(title: '予測と実績の振り返り'),
-                    const SizedBox(height: AppSpacing.sm),
-                    AppCard(
-                      child: PredictionAccuracyChart(
-                        logs: logs,
-                        predictions: _predictions ?? [],
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.lg),
-
                     // --- 不調の基準 ---
                     SectionHeader(title: 'あなたの「不調」の基準'),
                     const SizedBox(height: AppSpacing.sm),
                     _unhealthyThresholdCard(),
-
-                    const SizedBox(height: AppSpacing.lg),
-
-                    // --- Sensiaのアドバイス ---
-                    SectionHeader(title: 'Sensiaからのアドバイス'),
-                    const SizedBox(height: AppSpacing.sm),
-                    _sensiaAdviceSection(pred),
 
                     const SizedBox(height: AppSpacing.lg),
 
@@ -410,29 +396,62 @@ class _AnalysisPageState extends State<AnalysisPage> {
   }
 
   Widget _sensiaAdviceSection(Prediction? pred) {
-    final advices = (pred != null && pred.advices.isNotEmpty)
-        ? pred.advices
-        : _clientAdvices;
+    // クライアント計算結果を _good / _bad に分類
+    final goodAdvices = _clientAdvices
+        .where((a) => a.param.endsWith('_good'))
+        .map((a) => a.message)
+        .toList();
+    final badAdvices = _clientAdvices
+        .where((a) => a.param.endsWith('_bad'))
+        .map((a) => a.message)
+        .toList();
 
-    if (advices.isEmpty) {
+    // クライアント計算未完了の場合はサーバー側 advices にフォールバック
+    final fallbackAdvices = (pred?.advices ?? []).map((a) => a.message).toList();
+
+    if (goodAdvices.isEmpty && badAdvices.isEmpty && fallbackAdvices.isEmpty) {
       return const EmptyState(
         icon: Icons.lightbulb_outline,
         message: 'データが増えるとアドバイスが表示されます',
       );
     }
 
-    final p = pred?.displayPToday;
-    final level = p == null
-        ? SensiaRiskLevel.low
-        : p >= 0.5
-            ? SensiaRiskLevel.high
-            : p >= 0.3
-                ? SensiaRiskLevel.medium
-                : SensiaRiskLevel.low;
+    // フォールバック時はまとめて表示
+    if (goodAdvices.isEmpty && badAdvices.isEmpty) {
+      return SensiaAdviceCard(
+        messages: fallbackAdvices,
+        riskLevel: SensiaRiskLevel.low,
+      );
+    }
 
-    return SensiaAdviceCard(
-      messages: advices.map((a) => a.message).toList(),
-      riskLevel: level,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (goodAdvices.isNotEmpty) ...[
+          Text('体調が安定する傾向', style: AppTextStyles.captionSmall.copyWith(
+            color: const Color(0xFF2A9D8F),
+            fontWeight: FontWeight.w600,
+          )),
+          const SizedBox(height: 6),
+          SensiaAdviceCard(
+            messages: goodAdvices,
+            riskLevel: SensiaRiskLevel.low,
+          ),
+        ],
+        if (goodAdvices.isNotEmpty && badAdvices.isNotEmpty)
+          const SizedBox(height: AppSpacing.md),
+        if (badAdvices.isNotEmpty) ...[
+          Text('不調になりやすい傾向', style: AppTextStyles.captionSmall.copyWith(
+            color: const Color(0xFFE76F51),
+            fontWeight: FontWeight.w600,
+          )),
+          const SizedBox(height: 6),
+          SensiaAdviceCard(
+            messages: badAdvices,
+            riskLevel: SensiaRiskLevel.high,
+          ),
+        ],
+      ],
     );
   }
 
