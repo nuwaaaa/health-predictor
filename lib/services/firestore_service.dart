@@ -637,4 +637,15 @@ class FirestoreService {
 
     await _statusRef.set(statusData, SetOptions(merge: true));
   }
+
+  /// 利用規約・プライバシーポリシーへの同意を記録
+  Future<void> recordConsent({
+    required String version,
+    required DateTime date,
+  }) async {
+    await _userDoc.set({
+      'consentVersion': version,
+      'consentDate': Timestamp.fromDate(date),
+    }, SetOptions(merge: true));
+  }
 }

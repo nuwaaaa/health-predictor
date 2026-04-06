@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/daily_log.dart';
 import '../models/model_status.dart';
 import '../models/prediction.dart';
@@ -8,6 +9,7 @@ import '../services/health_sync_service.dart';
 import '../services/tomorrow_predictor.dart';
 import '../services/widget_data_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/tech_background.dart';
 import 'home_page.dart';
 import 'data_page.dart';
 import 'analysis_page.dart';
@@ -146,6 +148,20 @@ class MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver 
       _loading = false;
     });
 
+    // 同意情報がまだFirestoreに同期されていない場合に書き込む
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('consent_pending_sync') == true) {
+      final version = prefs.getString('consent_version') ?? '1.0';
+      final dateStr = prefs.getString('consent_date');
+      final date = dateStr != null
+          ? DateTime.tryParse(dateStr) ?? DateTime.now()
+          : DateTime.now();
+      try {
+        await _service.recordConsent(version: version, date: date);
+        await prefs.setBool('consent_pending_sync', false);
+      } catch (_) {} // 失敗しても次回起動で再試行
+    }
+
     if (errors.isNotEmpty) {
       debugPrint('読み込みエラー: $errors');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -166,12 +182,26 @@ class MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver 
 
   @override
   Widget build(BuildContext context) {
+    final c1 = techBgColor1(_prediction, _status);
+    final c2 = techBgColor2(_prediction, _status);
+
     return Scaffold(
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : IndexedStack(
-              index: _currentIndex,
-              children: [
+      body: Stack(
+        children: [
+          // 画面全体の背景装飾（回路 + ドット）
+          Positioned.fill(
+            child: TechBackground(color1: c1, color2: c2),
+          ),
+          // 各タブページ（Scaffold を透明化して背景を透過させる）
+          Theme(
+            data: Theme.of(context).copyWith(
+              scaffoldBackgroundColor: Colors.transparent,
+            ),
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : IndexedStack(
+                    index: _currentIndex,
+                    children: [
                 HomePage(
                   service: _service,
                   todayLog: _todayLog,
@@ -199,8 +229,11 @@ class MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver 
                   service: _service,
                   onReload: _loadAll,
                 ),
-              ],
-            ),
+                  ],
+                ),
+          ),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: context.cardColor,

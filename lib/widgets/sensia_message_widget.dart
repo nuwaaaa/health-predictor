@@ -76,8 +76,8 @@ class _SensiaMessageWidgetState extends State<SensiaMessageWidget>
                 animation: _pulse,
                 builder: (context, _) {
                   return SizedBox(
-                    width: 24,
-                    height: 24,
+                    width: 32,
+                    height: 32,
                     child: CustomPaint(
                       painter: _MiniOrbPainter(
                         color: orbColor,
@@ -87,26 +87,26 @@ class _SensiaMessageWidgetState extends State<SensiaMessageWidget>
                   );
                 },
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 4),
               Text(
                 'Sensia',
                 style: TextStyle(
-                  fontSize: 8,
+                  fontSize: 10,
                   fontFamily: 'Courier',
                   fontWeight: FontWeight.w600,
                   color: orbColor,
-                  letterSpacing: 0.4,
+                  letterSpacing: 0.5,
                 ),
               ),
             ],
           ),
-          const SizedBox(width: AppSpacing.sm + 2),
+          const SizedBox(width: AppSpacing.sm + 4),
           // Message bubble
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: AppSpacing.sm,
+                horizontal: 14,
+                vertical: AppSpacing.sm + 2,
               ),
               decoration: BoxDecoration(
                 color: orbColor.withAlpha(18),
@@ -120,7 +120,7 @@ class _SensiaMessageWidgetState extends State<SensiaMessageWidget>
               child: Text(
                 widget.message,
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 15,
                   height: 1.6,
                   color: context.textMainColor,
                 ),
@@ -193,8 +193,8 @@ class _SensiaAdviceCardState extends State<SensiaAdviceCard>
                 animation: _pulse,
                 builder: (context, _) {
                   return SizedBox(
-                    width: 24,
-                    height: 24,
+                    width: 32,
+                    height: 32,
                     child: CustomPaint(
                       painter: _MiniOrbPainter(
                         color: orbColor,
@@ -208,7 +208,7 @@ class _SensiaAdviceCardState extends State<SensiaAdviceCard>
               Text(
                 'Sensia',
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 13,
                   fontFamily: 'Courier',
                   fontWeight: FontWeight.w700,
                   color: orbColor,
@@ -248,7 +248,7 @@ class _SensiaAdviceCardState extends State<SensiaAdviceCard>
                 child: Text(
                   entry.value,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     height: 1.6,
                     color: context.textMainColor,
                   ),
@@ -274,33 +274,37 @@ class _MiniOrbPainter extends CustomPainter {
     final radius = (size.width / 2) * scale;
 
     // Outer glow
-    final glowPaint = Paint()
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5)
-      ..color = color.withAlpha(70);
-    canvas.drawCircle(center, radius + 3, glowPaint);
+    canvas.drawCircle(
+      center, radius + 3,
+      Paint()
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5)
+        ..color = color.withAlpha(70),
+    );
 
     // Core orb — radial gradient for sphere feel
     final lighter = Color.lerp(color, Colors.white, 0.45)!;
-    final orbPaint = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(-0.35, -0.38),
-        colors: [
-          lighter.withAlpha(235),
-          color.withAlpha(210),
-          color.withAlpha(130),
-        ],
-        stops: const [0.0, 0.5, 1.0],
-      ).createShader(Rect.fromCircle(center: center, radius: radius));
-    canvas.drawCircle(center, radius, orbPaint);
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.35, -0.38),
+          colors: [
+            lighter.withAlpha(235),
+            color.withAlpha(210),
+            color.withAlpha(130),
+          ],
+          stops: const [0.0, 0.5, 1.0],
+        ).createShader(Rect.fromCircle(center: center, radius: radius)),
+    );
 
     // Specular highlight
-    final highlightPaint = Paint()
-      ..color = Colors.white.withAlpha(90)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
     canvas.drawCircle(
       center + Offset(-radius * 0.22, -radius * 0.22),
       radius * 0.28,
-      highlightPaint,
+      Paint()
+        ..color = Colors.white.withAlpha(90)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
     );
   }
 

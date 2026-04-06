@@ -390,6 +390,19 @@ class _SettingsPageState extends State<SettingsPage> {
                 }
               },
             ),
+            const SizedBox(height: AppSpacing.sm),
+            _settingCard(
+              icon: Icons.gavel_outlined,
+              title: '利用規約',
+              subtitle: 'サービスの利用条件について',
+              trailing: Icon(Icons.open_in_new, size: 18, color: context.textSubColor),
+              onTap: () async {
+                final uri = Uri.parse('https://nuwaaaa.github.io/health-predictor/terms');
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
 
             const SizedBox(height: AppSpacing.lg),
 

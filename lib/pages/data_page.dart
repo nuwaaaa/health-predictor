@@ -9,7 +9,6 @@ import '../widgets/comparison_chart.dart';
 import '../widgets/calendar_view.dart';
 import '../widgets/sleep_pattern_chart.dart';
 import '../widgets/prediction_accuracy_chart.dart';
-import '../widgets/correlation_scatter.dart';
 import '../widgets/sensia_message_widget.dart';
 import 'daily_input_page.dart';
 
@@ -199,13 +198,6 @@ class _DataPageState extends State<DataPage> {
                     predictions: _predictions ?? [],
                   ),
                 ),
-
-                const SizedBox(height: AppSpacing.lg),
-
-                // --- 相関散布図 ---
-                SectionHeader(title: '生活データと体調の相関'),
-                const SizedBox(height: AppSpacing.sm),
-                AppCard(child: CorrelationScatter(logs: logs)),
 
                 const SizedBox(height: AppSpacing.lg),
 

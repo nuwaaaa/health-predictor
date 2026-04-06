@@ -215,27 +215,22 @@ class _AnalysisPageState extends State<AnalysisPage> {
                   // --- 今日の要因 TOP3 ---
                   SectionHeader(title: '今日の予測に影響した要因 TOP3'),
                   const SizedBox(height: AppSpacing.sm),
-                  if (pred != null && pred.contributions.isNotEmpty)
-                    _contributionsCard(pred)
-                  else
-                    const EmptyState(
-                      icon: Icons.analytics_outlined,
-                      message: '予測データがありません',
-                    ),
+                  _contributionsSensiaCard(
+                    pred?.contributions ?? [],
+                    _riskLevel(pred?.displayPToday),
+                    emptyMessage: '予測データがありません',
+                  ),
 
                   const SizedBox(height: AppSpacing.lg),
 
                   // --- 明日の要因 TOP3 ---
                   SectionHeader(title: '明日の予測に影響した要因 TOP3'),
                   const SizedBox(height: AppSpacing.sm),
-                  if (widget.tomorrowPrediction != null &&
-                      widget.tomorrowPrediction!.contributions.isNotEmpty)
-                    _contributionsCard(widget.tomorrowPrediction!)
-                  else
-                    const EmptyState(
-                      icon: Icons.analytics_outlined,
-                      message: '明日の予測データがありません',
-                    ),
+                  _contributionsSensiaCard(
+                    widget.tomorrowPrediction?.contributions ?? [],
+                    _riskLevel(widget.tomorrowPrediction?.displayPToday),
+                    emptyMessage: '明日の予測データがありません',
+                  ),
 
                   const SizedBox(height: AppSpacing.lg),
 
@@ -304,78 +299,98 @@ class _AnalysisPageState extends State<AnalysisPage> {
     );
   }
 
-  Widget _contributionsCard(Prediction pred) {
-    final filtered = pred.contributions;
+  SensiaRiskLevel _riskLevel(double? p) {
+    if (p == null) return SensiaRiskLevel.low;
+    if (p >= 0.5) return SensiaRiskLevel.high;
+    if (p >= 0.3) return SensiaRiskLevel.medium;
+    return SensiaRiskLevel.low;
+  }
 
-    if (filtered.isEmpty) {
-      return const EmptyState(
-        icon: Icons.analytics_outlined,
-        message: '表示できる要因がありません',
-      );
+  Widget _contributionsSensiaCard(
+    List<FeatureContribution> contributions,
+    SensiaRiskLevel level, {
+    required String emptyMessage,
+  }) {
+    if (contributions.isEmpty) {
+      return EmptyState(icon: Icons.analytics_outlined, message: emptyMessage);
     }
-
-    final top3 = filtered.length > 3 ? filtered.sublist(0, 3) : filtered;
-
-    return AppCard(
-      child: Column(
-        children: [
-          ...top3.map((c) {
-            final isBad = c.isRiskIncrease;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: isBad
-                          ? context.negativeBgColor
-                          : context.positiveBgColor,
-                      borderRadius: BorderRadius.circular(AppRadii.button),
-                    ),
-                    child: Icon(
-                      isBad ? Icons.arrow_upward : Icons.arrow_downward,
-                      size: 18,
-                      color: isBad
-                          ? context.negativeTextColor
-                          : context.positiveTextColor,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(c.label,
-                            style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: context.textMainColor)),
-                        Text(
-                          isBad ? '不調になりやすい' : '調子が良くなりやすい',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isBad
-                                ? context.negativeTextColor
-                                : context.positiveTextColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            '※ 原因を示すものではなく、あなたのデータから見える傾向です',
-            style: AppTextStyles.captionSmall,
-          ),
-        ],
-      ),
+    final top3 = contributions.length > 3
+        ? contributions.sublist(0, 3)
+        : contributions;
+    return SensiaAdviceCard(
+      messages: top3.map(_contributionMessage).toList(),
+      riskLevel: level,
     );
+  }
+
+  /// 寄与度1件をSensiaの具体的なメッセージに変換
+  String _contributionMessage(FeatureContribution c) {
+    final bad = c.isRiskIncrease;
+    switch (c.feature) {
+      case 'sleep_hours_filled':
+        return bad
+            ? '昨夜の睡眠が少なめで、体調に影響が出やすい状態です。できるだけ早めの就寝を心がけてみてください。'
+            : '睡眠がしっかりとれており、体調の安定につながっています。この調子を続けましょう。';
+      case 'sleep_dev':
+        return bad
+            ? '睡眠時間にばらつきがあります。毎日同じ時間に寝起きすると体内リズムが整いやすくなります。'
+            : '睡眠時間が安定していて、体内リズムが整っています。';
+      case 'steps_filled':
+        return bad
+            ? '最近の歩数が少なめです。短い散歩でも体を動かすと気分が変わりやすいですよ。'
+            : '適度に体を動かせており、体調維持にプラスに働いています。';
+      case 'steps_dev':
+        return bad
+            ? '歩数の波が大きくなっています。毎日少しずつ歩く習慣をつけると安定しやすいです。'
+            : '歩数が安定していて、体のリズムが整っています。';
+      case 'stress_filled':
+        return bad
+            ? 'ストレスが高めになっています。今日は無理せず、ゆっくり過ごす時間を意識的に作ってみて。'
+            : 'ストレスが落ち着いており、体調を崩しにくい状態です。';
+      case 'mood_lag1':
+        return bad
+            ? '昨日の体調が優れなかった影響が続いているようです。今日は無理せず休養を優先して。'
+            : '昨日の体調が良かったことが、今日にも好影響を与えています。';
+      case 'mood_ma3':
+        return bad
+            ? 'ここ3日間、体調が低め傾向が続いています。休養を優先する時期かもしれません。'
+            : 'ここ3日間、体調が安定して良い状態が続いています。';
+      case 'mood_ma7':
+        return bad
+            ? 'この1週間、体調が優れない日が多いようです。生活習慣を見直すきっかけにしてみて。'
+            : '1週間通して体調の良い流れが続いています。';
+      case 'mood_delta1':
+        return bad
+            ? '体調が昨日より下がっています。今日は無理をせず、ゆっくり過ごしてください。'
+            : '体調が上向きになっており、良い流れです。';
+      case 'mood_dev14':
+        return bad
+            ? '体調の波が大きくなっています。規則正しい生活が安定につながりやすいです。'
+            : '体調のムラが少なく、安定した状態を保てています。';
+      case 'bed_sin':
+      case 'bed_cos':
+        return bad
+            ? '就寝時刻が不規則になっています。毎晩同じ時間に眠ると体内時計が整いやすくなります。'
+            : '就寝時刻が規則正しく、睡眠の質が保たれています。';
+      case 'wake_sin':
+      case 'wake_cos':
+        return bad
+            ? '起床時刻のばらつきが体調に影響しているかもしれません。できるだけ一定の時間に起きてみて。'
+            : '起床時刻が規則正しく、体内時計が整っています。';
+      case 'is_weekend':
+        return bad
+            ? '平日の疲れが出やすいタイミングです。意識的にリフレッシュの時間を作ってみて。'
+            : '今日はゆっくり過ごせる日です。しっかり休養をとって体調を整えましょう。';
+      case 'day_sin':
+      case 'day_cos':
+        return bad
+            ? '今日は体調が不安定になりやすい曜日の傾向があります。無理は禁物です。'
+            : '今日は体調が整いやすい曜日の傾向があります。';
+      default:
+        return bad
+            ? '${c.label}が体調にマイナスの影響を与えています。注意して過ごしてみて。'
+            : '${c.label}が体調の安定につながっています。';
+    }
   }
 
   Widget _sensiaAdviceSection(Prediction? pred) {

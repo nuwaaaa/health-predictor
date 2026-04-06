@@ -40,6 +40,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool _savingMood = false;
+  bool _orbPressed = false;
 
   Future<void> _onMoodSelected(int score) async {
     setState(() => _savingMood = true);
@@ -95,13 +96,20 @@ class _HomePageState extends State<HomePage> {
               _sensiaMessage(),
               const SizedBox(height: AppSpacing.sm),
 
-              // --- (0.5) 入力促進バナー ---
-              _inputProgressBanner(),
-
-              // --- (0.5) AI オーブキャラクター ---
-              AiOrbWidget(
-                prediction: widget.prediction,
-                status: widget.status,
+              // --- (0.5) AI オーブキャラクター (タップで分析タブへ) ---
+              GestureDetector(
+                onTapDown: (_) => setState(() => _orbPressed = true),
+                onTapUp: (_) => setState(() => _orbPressed = false),
+                onTapCancel: () => setState(() => _orbPressed = false),
+                onTap: () => widget.onSwitchTab(2),
+                child: AnimatedScale(
+                  scale: _orbPressed ? 0.96 : 1.0,
+                  duration: const Duration(milliseconds: 80),
+                  child: AiOrbWidget(
+                    prediction: widget.prediction,
+                    status: widget.status,
+                  ),
+                ),
               ),
               const SizedBox(height: AppSpacing.sm),
 
@@ -261,129 +269,6 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(width: 8),
           Text(message, style: AppTextStyles.captionSmall),
         ],
-      ),
-    );
-  }
-
-  /// 入力促進バナー
-  Widget _inputProgressBanner() {
-    final log = widget.todayLog;
-    final hasMood = log?.moodScore != null;
-    final hasSleep = log?.sleep?.durationHours != null;
-    final hasSteps = log?.steps != null;
-    final hasStress = log?.stress != null;
-
-    final done = [hasMood, hasSleep, hasSteps, hasStress].where((b) => b).length;
-
-    // 全入力済みなら非表示
-    if (done == 4) return const SizedBox.shrink();
-
-    // 体調未入力時は目立つCTA
-    if (!hasMood) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.md),
-        child: GestureDetector(
-          onTap: () {}, // MoodSelectorへのスクロールはページ内なので不要
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [context.primaryWithAlpha(30), context.primaryWithAlpha(10)],
-              ),
-              borderRadius: BorderRadius.circular(AppRadii.card),
-              border: Border.all(color: context.primaryWithAlpha(60)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: context.primaryWithAlpha(30),
-                    borderRadius: BorderRadius.circular(AppRadii.button),
-                  ),
-                  child: const Icon(Icons.edit_note, color: AppColors.primary, size: 24),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '今日の体調を記録しましょう',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: context.textMainColor,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '下のスコアをタップするだけ',
-                        style: AppTextStyles.captionSmall,
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.arrow_downward, color: AppColors.primary, size: 20),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    // 体調入力済みだが他が未入力の場合
-    final missing = <String>[];
-    if (!hasSleep) missing.add('睡眠');
-    if (!hasSteps) missing.add('歩数');
-    if (!hasStress) missing.add('ストレス');
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: GestureDetector(
-        onTap: _openDailyInput,
-        child: AppCard(
-          child: Row(
-            children: [
-              // プログレスインジケーター
-              SizedBox(
-                width: 36,
-                height: 36,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    CircularProgressIndicator(
-                      value: done / 4,
-                      strokeWidth: 3,
-                      backgroundColor: context.dividerColor,
-                      color: AppColors.chartGreen,
-                    ),
-                    Text(
-                      '$done/4',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: context.textMainColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  '${missing.join('・')}も追加しますか？',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: context.textMainColor,
-                  ),
-                ),
-              ),
-              Icon(Icons.chevron_right, color: context.textSubColor, size: 20),
-            ],
-          ),
-        ),
       ),
     );
   }
