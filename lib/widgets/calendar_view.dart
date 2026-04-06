@@ -249,47 +249,48 @@ class _CalendarViewState extends State<CalendarView> {
   }
 
   Widget _buildLegend(BuildContext context) {
-    const items = [
-      (1, '不調'),
-      (2, ''),
-      (3, '普通'),
-      (4, ''),
-      (5, '好調'),
-    ];
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: items.map((item) {
-        final (score, label) = item;
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
+    return Column(
+      children: [
+        // ラベル行
+        Text(
+          '不調　←　普通　→　好調',
+          style: AppTextStyles.captionSmall.copyWith(color: context.textSubColor),
+        ),
+        const SizedBox(height: 4),
+        // カラースクエア行
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [1, 2, 3, 4, 5].map((score) {
+            return Container(
               width: 14,
               height: 14,
+              margin: const EdgeInsets.symmetric(horizontal: 3),
               decoration: BoxDecoration(
                 color: _moodColor(context, score),
                 borderRadius: BorderRadius.circular(3),
               ),
-            ),
-            if (label.isNotEmpty) ...[
-              const SizedBox(width: 3),
-              Text(
-                label,
-                style: AppTextStyles.captionSmall.copyWith(
-                  color: context.textSubColor,
-                ),
-              ),
-            ],
-            const SizedBox(width: 6),
-          ],
-        );
-      }).toList(),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 
+  // オーブと同じ3色を端点・中点として線形補間
+  static const _colorRisk    = Color(0xFFE76F51); // 不調
+  static const _colorCaution = Color(0xFFE9C46A); // 普通
+  static const _colorGood    = Color(0xFF2A9D8F); // 好調
+
   Color _moodColor(BuildContext context, int score) {
     if (score < 1 || score > 5) return Colors.transparent;
-    return context.moodColor(score).withAlpha(140);
+    final t = (score - 1) / 4.0; // 0.0〜1.0
+    final Color base;
+    if (t <= 0.5) {
+      base = Color.lerp(_colorRisk, _colorCaution, t * 2)!;
+    } else {
+      base = Color.lerp(_colorCaution, _colorGood, (t - 0.5) * 2)!;
+    }
+    return base.withAlpha(180);
   }
 
   Widget _buildDetailCard(

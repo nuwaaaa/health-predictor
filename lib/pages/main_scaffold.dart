@@ -219,6 +219,7 @@ class MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver 
                 ),
                 AnalysisPage(
                   service: _service,
+                  logs: _last7,
                   prediction: _prediction,
                   tomorrowPrediction: _tomorrowPrediction,
                   isFallbackPrediction: _isFallbackPrediction,

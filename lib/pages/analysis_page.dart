@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+import '../models/daily_log.dart';
 import '../models/model_status.dart';
 import '../models/prediction.dart';
 import '../services/firestore_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/sensia_message_widget.dart';
+import '../widgets/chart_7days.dart';
+import '../widgets/comparison_chart.dart';
+import '../widgets/prediction_accuracy_chart.dart';
 
 /// 分析タブ — Calm Blue デザイン
 class AnalysisPage extends StatefulWidget {
   final FirestoreService service;
+  final List<DailyLog> logs;
   final Prediction? prediction;
   final Prediction? tomorrowPrediction;
   final bool isFallbackPrediction;
@@ -17,6 +22,7 @@ class AnalysisPage extends StatefulWidget {
   const AnalysisPage({
     super.key,
     required this.service,
+    required this.logs,
     required this.prediction,
     this.tomorrowPrediction,
     this.isFallbackPrediction = false,
@@ -28,17 +34,74 @@ class AnalysisPage extends StatefulWidget {
 }
 
 class _AnalysisPageState extends State<AnalysisPage> {
+  // グラフ用
+  int _periodDays = 7;
+  List<DailyLog>? _allLogs;
+  bool _loadingMore = false;
+  List<Prediction>? _predictions;
+
+  // フィードバック用
   bool _feedbackSubmitted = false;
   bool _feedbackSaving = false;
   bool _feedbackLoading = true;
   String? _alreadySubmittedWeek;
   List<Advice> _clientAdvices = [];
 
+  List<DailyLog> get _displayLogs => _allLogs ?? widget.logs;
+
   @override
   void initState() {
     super.initState();
+    _fetchPredictions();
     _checkExistingFeedback();
     _computeClientAdvice();
+  }
+
+  @override
+  void didUpdateWidget(covariant AnalysisPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.logs != widget.logs) {
+      _allLogs = null;
+      _predictions = null;
+      _fetchPredictions();
+      if (_periodDays != 7) {
+        _fetchAllLogs();
+      }
+    }
+  }
+
+  Future<void> _changePeriod(int days) async {
+    if (days == _periodDays) return;
+    setState(() => _periodDays = days);
+    if (_allLogs == null) {
+      await _fetchAllLogs();
+    }
+  }
+
+  Future<void> _fetchAllLogs() async {
+    setState(() => _loadingMore = true);
+    try {
+      final logs = await widget.service.getLastNDays(365);
+      if (mounted) setState(() => _allLogs = logs);
+    } catch (e) {
+      debugPrint('データ読み込み失敗: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('データの読み込みに失敗しました')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  Future<void> _fetchPredictions() async {
+    try {
+      final preds = await widget.service.getLastNPredictions(90);
+      if (mounted) setState(() => _predictions = preds);
+    } catch (e) {
+      debugPrint('予測データ読み込み失敗: $e');
+    }
   }
 
   String get _currentWeekKey {
@@ -98,8 +161,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
           final recHours = (avgGood * 10).roundToDouble() / 10;
           advices.add(Advice(
             param: 'sleep',
-            message:
-                '$recHours時間の睡眠をとった翌日は体調が安定する傾向があります',
+            message: '$recHours時間の睡眠をとった翌日は体調が安定する傾向があります',
           ));
         }
       }
@@ -186,6 +248,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
   Widget build(BuildContext context) {
     final pred = widget.prediction;
     final status = widget.status;
+    final logs = _displayLogs;
 
     return Scaffold(
       appBar: AppBar(title: const Text('分析')),
@@ -198,51 +261,98 @@ class _AnalysisPageState extends State<AnalysisPage> {
                 children: [
                   const SizedBox(height: AppSpacing.md),
 
-                  // --- 不調の基準 ---
-                  SectionHeader(title: 'あなたの「不調」の基準'),
-                  const SizedBox(height: AppSpacing.sm),
-                  _unhealthyThresholdCard(),
-
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // --- Sensiaのアドバイス（要因より前） ---
-                  SectionHeader(title: 'Sensiaからのアドバイス'),
-                  const SizedBox(height: AppSpacing.sm),
-                  _sensiaAdviceSection(pred),
-
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // --- 今日の要因 TOP3 ---
-                  SectionHeader(title: '今日の予測に影響した要因 TOP3'),
-                  const SizedBox(height: AppSpacing.sm),
-                  _contributionsSensiaCard(
-                    pred?.contributions ?? [],
-                    _riskLevel(pred?.displayPToday),
-                    emptyMessage: '予測データがありません',
+                  // --- 期間切替 ---
+                  Row(
+                    children: [
+                      _periodPill(7, '7日', Icons.swipe, 'スライド'),
+                      const SizedBox(width: AppSpacing.sm),
+                      _periodPill(30, '30日', Icons.swipe, 'スライド'),
+                      const SizedBox(width: AppSpacing.sm),
+                      _periodPill(0, '全期間', Icons.fullscreen, '一覧'),
+                    ],
                   ),
 
                   const SizedBox(height: AppSpacing.lg),
 
-                  // --- 明日の要因 TOP3 ---
-                  SectionHeader(title: '明日の予測に影響した要因 TOP3'),
-                  const SizedBox(height: AppSpacing.sm),
-                  _contributionsSensiaCard(
-                    widget.tomorrowPrediction?.contributions ?? [],
-                    _riskLevel(widget.tomorrowPrediction?.displayPToday),
-                    emptyMessage: '明日の予測データがありません',
-                  ),
+                  if (_loadingMore)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(AppSpacing.lg),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  else ...[
+                    // --- 体調グラフ ---
+                    SectionHeader(title: '体調推移'),
+                    const SizedBox(height: AppSpacing.sm),
+                    AppCard(
+                      child: Chart7Days(
+                        logs: logs,
+                        periodDays: _periodDays,
+                      ),
+                    ),
 
-                  const SizedBox(height: AppSpacing.lg),
+                    const SizedBox(height: AppSpacing.lg),
 
-                  // --- 今週のふりかえり ---
-                  SectionHeader(title: '今週のふりかえり'),
-                  const SizedBox(height: AppSpacing.sm),
-                  _feedbackCard(),
+                    // --- 体調×特徴量 比較グラフ ---
+                    SectionHeader(title: '体調と生活データの比較'),
+                    const SizedBox(height: AppSpacing.sm),
+                    AppCard(
+                      child: ComparisonChart(
+                        logs: logs,
+                        periodDays: _periodDays,
+                      ),
+                    ),
 
-                  const SizedBox(height: AppSpacing.xl),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // --- 予測 vs 実績 ---
+                    SectionHeader(title: '予測と実績の振り返り'),
+                    const SizedBox(height: AppSpacing.sm),
+                    AppCard(
+                      child: PredictionAccuracyChart(
+                        logs: logs,
+                        predictions: _predictions ?? [],
+                      ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // --- 不調の基準 ---
+                    SectionHeader(title: 'あなたの「不調」の基準'),
+                    const SizedBox(height: AppSpacing.sm),
+                    _unhealthyThresholdCard(),
+
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // --- Sensiaのアドバイス ---
+                    SectionHeader(title: 'Sensiaからのアドバイス'),
+                    const SizedBox(height: AppSpacing.sm),
+                    _sensiaAdviceSection(pred),
+
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // --- 今週のふりかえり ---
+                    SectionHeader(title: '今週のふりかえり'),
+                    const SizedBox(height: AppSpacing.sm),
+                    _feedbackCard(),
+
+                    const SizedBox(height: AppSpacing.xl),
+                  ],
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _periodPill(int days, String label, IconData icon, String subLabel) {
+    final selected = _periodDays == days;
+    return AppPill(
+      label: label,
+      selected: selected,
+      icon: icon,
+      subLabel: subLabel,
+      onTap: () => _changePeriod(days),
     );
   }
 
@@ -299,100 +409,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
     );
   }
 
-  SensiaRiskLevel _riskLevel(double? p) {
-    if (p == null) return SensiaRiskLevel.low;
-    if (p >= 0.5) return SensiaRiskLevel.high;
-    if (p >= 0.3) return SensiaRiskLevel.medium;
-    return SensiaRiskLevel.low;
-  }
-
-  Widget _contributionsSensiaCard(
-    List<FeatureContribution> contributions,
-    SensiaRiskLevel level, {
-    required String emptyMessage,
-  }) {
-    if (contributions.isEmpty) {
-      return EmptyState(icon: Icons.analytics_outlined, message: emptyMessage);
-    }
-    final top3 = contributions.length > 3
-        ? contributions.sublist(0, 3)
-        : contributions;
-    return SensiaAdviceCard(
-      messages: top3.map(_contributionMessage).toList(),
-      riskLevel: level,
-    );
-  }
-
-  /// 寄与度1件をSensiaの具体的なメッセージに変換
-  String _contributionMessage(FeatureContribution c) {
-    final bad = c.isRiskIncrease;
-    switch (c.feature) {
-      case 'sleep_hours_filled':
-        return bad
-            ? '昨夜の睡眠が少なめで、体調に影響が出やすい状態です。できるだけ早めの就寝を心がけてみてください。'
-            : '睡眠がしっかりとれており、体調の安定につながっています。この調子を続けましょう。';
-      case 'sleep_dev':
-        return bad
-            ? '睡眠時間にばらつきがあります。毎日同じ時間に寝起きすると体内リズムが整いやすくなります。'
-            : '睡眠時間が安定していて、体内リズムが整っています。';
-      case 'steps_filled':
-        return bad
-            ? '最近の歩数が少なめです。短い散歩でも体を動かすと気分が変わりやすいですよ。'
-            : '適度に体を動かせており、体調維持にプラスに働いています。';
-      case 'steps_dev':
-        return bad
-            ? '歩数の波が大きくなっています。毎日少しずつ歩く習慣をつけると安定しやすいです。'
-            : '歩数が安定していて、体のリズムが整っています。';
-      case 'stress_filled':
-        return bad
-            ? 'ストレスが高めになっています。今日は無理せず、ゆっくり過ごす時間を意識的に作ってみて。'
-            : 'ストレスが落ち着いており、体調を崩しにくい状態です。';
-      case 'mood_lag1':
-        return bad
-            ? '昨日の体調が優れなかった影響が続いているようです。今日は無理せず休養を優先して。'
-            : '昨日の体調が良かったことが、今日にも好影響を与えています。';
-      case 'mood_ma3':
-        return bad
-            ? 'ここ3日間、体調が低め傾向が続いています。休養を優先する時期かもしれません。'
-            : 'ここ3日間、体調が安定して良い状態が続いています。';
-      case 'mood_ma7':
-        return bad
-            ? 'この1週間、体調が優れない日が多いようです。生活習慣を見直すきっかけにしてみて。'
-            : '1週間通して体調の良い流れが続いています。';
-      case 'mood_delta1':
-        return bad
-            ? '体調が昨日より下がっています。今日は無理をせず、ゆっくり過ごしてください。'
-            : '体調が上向きになっており、良い流れです。';
-      case 'mood_dev14':
-        return bad
-            ? '体調の波が大きくなっています。規則正しい生活が安定につながりやすいです。'
-            : '体調のムラが少なく、安定した状態を保てています。';
-      case 'bed_sin':
-      case 'bed_cos':
-        return bad
-            ? '就寝時刻が不規則になっています。毎晩同じ時間に眠ると体内時計が整いやすくなります。'
-            : '就寝時刻が規則正しく、睡眠の質が保たれています。';
-      case 'wake_sin':
-      case 'wake_cos':
-        return bad
-            ? '起床時刻のばらつきが体調に影響しているかもしれません。できるだけ一定の時間に起きてみて。'
-            : '起床時刻が規則正しく、体内時計が整っています。';
-      case 'is_weekend':
-        return bad
-            ? '平日の疲れが出やすいタイミングです。意識的にリフレッシュの時間を作ってみて。'
-            : '今日はゆっくり過ごせる日です。しっかり休養をとって体調を整えましょう。';
-      case 'day_sin':
-      case 'day_cos':
-        return bad
-            ? '今日は体調が不安定になりやすい曜日の傾向があります。無理は禁物です。'
-            : '今日は体調が整いやすい曜日の傾向があります。';
-      default:
-        return bad
-            ? '${c.label}が体調にマイナスの影響を与えています。注意して過ごしてみて。'
-            : '${c.label}が体調の安定につながっています。';
-    }
-  }
-
   Widget _sensiaAdviceSection(Prediction? pred) {
     final advices = (pred != null && pred.advices.isNotEmpty)
         ? pred.advices
@@ -421,8 +437,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
   }
 
   Widget _feedbackCard() {
-    final alreadyDone =
-        _feedbackSubmitted || _alreadySubmittedWeek != null;
+    final alreadyDone = _feedbackSubmitted || _alreadySubmittedWeek != null;
 
     if (alreadyDone) {
       return AppCard(
@@ -471,8 +486,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
     );
   }
 
-  Widget _fbButton(
-      String label, IconData icon, Color color, String result) {
+  Widget _fbButton(String label, IconData icon, Color color, String result) {
     return GestureDetector(
       onTap: (_feedbackLoading || _feedbackSaving) ? null : () => _submitFeedback(result),
       child: Container(
