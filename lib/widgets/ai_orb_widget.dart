@@ -57,6 +57,45 @@ const _configs = {
   ),
 };
 
+// ─────────────────────────────────────────────────────────
+// Eye configuration per orb state
+// ─────────────────────────────────────────────────────────
+
+class _EyeConfig {
+  final double eyeY;       // vertical offset as fraction of orbRadius (+ = down)
+  final double eyeSpread;  // horizontal spread from center as fraction of orbRadius
+  final double pupilSize;  // pupil radius as fraction of orbRadius (0 = none)
+  final double pupilY;     // pupil vertical offset as fraction of orbRadius
+  final double squint;     // vertical openness: 0.0 = closed, 1.0 = fully open
+  final bool happyArc;     // score 5: upward-curving happy eyes
+  final bool closedArc;    // learning: closed downward arcs
+
+  const _EyeConfig({
+    this.eyeY = -0.02,
+    this.eyeSpread = 0.16,
+    this.pupilSize = 0.07,
+    this.pupilY = 0.0,
+    this.squint = 0.85,
+    this.happyArc = false,
+    this.closedArc = false,
+  });
+}
+
+const _eyeConfigs = {
+  OrbState.good: _EyeConfig(
+    eyeY: -0.08, eyeSpread: 0.19, pupilSize: 0.0, happyArc: true,
+  ),
+  OrbState.caution: _EyeConfig(
+    eyeY: -0.02, eyeSpread: 0.16, pupilSize: 0.07, pupilY: 0.0, squint: 0.85,
+  ),
+  OrbState.risk: _EyeConfig(
+    eyeY: 0.06, eyeSpread: 0.12, pupilSize: 0.055, pupilY: 0.04, squint: 0.40,
+  ),
+  OrbState.learning: _EyeConfig(
+    closedArc: true, eyeSpread: 0.14, eyeY: -0.02,
+  ),
+};
+
 OrbState _stateFromPrediction(Prediction? prediction, ModelStatus status) {
   if (!status.ready || prediction == null) return OrbState.learning;
   final p = prediction.displayPToday;
@@ -462,6 +501,9 @@ class _OrbPainter extends CustomPainter {
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
     );
 
+    // Eyes
+    _paintEyes(canvas, center, orbRadius);
+
     // Orbiting particles
     final n = cfg.particleCount;
     final orbitRadius = orbRadius + 22;
@@ -479,6 +521,79 @@ class _OrbPainter extends CustomPainter {
     }
   }
 
+
+  void _paintEyes(Canvas canvas, Offset center, double r) {
+    final eyeCfg = _eyeConfigs[state]!;
+
+    // Blink: briefly close eyes every ~5 s
+    final blinkVal = sin(t * 0.18);
+    final isBlinking = blinkVal > 0.96 && !eyeCfg.closedArc && !eyeCfg.happyArc;
+
+    final leftEye  = center + Offset(-eyeCfg.eyeSpread * r, eyeCfg.eyeY * r);
+    final rightEye = center + Offset( eyeCfg.eyeSpread * r, eyeCfg.eyeY * r);
+
+    if (eyeCfg.happyArc) {
+      _drawHappyArc(canvas, leftEye, r);
+      _drawHappyArc(canvas, rightEye, r);
+    } else if (eyeCfg.closedArc || isBlinking) {
+      _drawClosedEye(canvas, leftEye, r);
+      _drawClosedEye(canvas, rightEye, r);
+    } else {
+      _drawOpenEye(canvas, leftEye, r, eyeCfg);
+      _drawOpenEye(canvas, rightEye, r, eyeCfg);
+    }
+  }
+
+  void _drawHappyArc(Canvas canvas, Offset eye, double r) {
+    final w = r * 0.14;
+    final h = r * 0.09;
+    final path = Path()
+      ..moveTo(eye.dx - w, eye.dy)
+      ..quadraticBezierTo(eye.dx, eye.dy - h, eye.dx + w, eye.dy);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = Colors.white.withAlpha(220)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  void _drawClosedEye(Canvas canvas, Offset eye, double r) {
+    final w = r * 0.11;
+    final h = r * 0.04;
+    final path = Path()
+      ..moveTo(eye.dx - w, eye.dy)
+      ..quadraticBezierTo(eye.dx, eye.dy + h, eye.dx + w, eye.dy);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = Colors.white.withAlpha(170)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  void _drawOpenEye(Canvas canvas, Offset eye, double r, _EyeConfig cfg) {
+    final eyeW = r * 0.11;
+    final eyeH = r * 0.13 * cfg.squint;
+    final eyeRect = Rect.fromCenter(center: eye, width: eyeW * 2, height: eyeH * 2);
+
+    canvas.save();
+    canvas.clipRRect(RRect.fromRectAndRadius(eyeRect, Radius.circular(eyeW)));
+    canvas.drawOval(eyeRect, Paint()..color = Colors.white.withAlpha(210));
+
+    if (cfg.pupilSize > 0) {
+      canvas.drawCircle(
+        eye + Offset(0, cfg.pupilY * r),
+        r * cfg.pupilSize,
+        Paint()..color = const Color(0xFF0D1117).withAlpha(200),
+      );
+    }
+    canvas.restore();
+  }
 
   @override
   bool shouldRepaint(_OrbPainter old) => old.t != t || old.state != state;

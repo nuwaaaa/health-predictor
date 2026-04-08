@@ -113,6 +113,7 @@ class _MoodTile extends StatelessWidget {
                   painter: _SensiaOrbPainter(
                     color: orbColor,
                     glowStrength: isSelected ? 1.0 : 0.55,
+                    score: value,
                   ),
                 ),
               ),
@@ -137,8 +138,9 @@ class _SensiaOrbPainter extends CustomPainter {
   final Color color;
   /// 1.0 = 選択中（フル発光）、0.55 = 非選択（控えめ）
   final double glowStrength;
+  final int score; // 1–5 for eyes
 
-  const _SensiaOrbPainter({required this.color, this.glowStrength = 1.0});
+  const _SensiaOrbPainter({required this.color, this.glowStrength = 1.0, this.score = 0});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -179,9 +181,78 @@ class _SensiaOrbPainter extends CustomPainter {
         ..color = Colors.white.withAlpha((90 * glowStrength).round())
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
     );
+
+    // Eyes
+    _paintMiniEyes(canvas, size);
+  }
+
+  void _paintMiniEyes(Canvas canvas, Size size) {
+    if (score < 1 || score > 5) return;
+    final center = Offset(size.width / 2, size.height / 2);
+    final r = size.width / 2;
+
+    // Per-score parameters (index 0 = score 1)
+    const spreads = [0.24, 0.28, 0.30, 0.33, 0.36];
+    const eyeYs   = [0.10, 0.04, -0.03, -0.09, -0.13];
+    const squints  = [0.28, 0.52, 0.72, 0.88, 1.0];
+
+    final idx    = score - 1;
+    final spread = spreads[idx] * r;
+    final yOff   = eyeYs[idx] * r;
+    final sq     = squints[idx];
+
+    final leftEye  = Offset(center.dx - spread, center.dy + yOff);
+    final rightEye = Offset(center.dx + spread, center.dy + yOff);
+
+    if (score == 5) {
+      _miniHappyArc(canvas, leftEye, r);
+      _miniHappyArc(canvas, rightEye, r);
+    } else {
+      _miniOpenEye(canvas, leftEye, r, sq);
+      _miniOpenEye(canvas, rightEye, r, sq);
+    }
+  }
+
+  void _miniHappyArc(Canvas canvas, Offset eye, double r) {
+    final w = r * 0.20;
+    final h = r * 0.12;
+    final path = Path()
+      ..moveTo(eye.dx - w, eye.dy)
+      ..quadraticBezierTo(eye.dx, eye.dy - h, eye.dx + w, eye.dy);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = Colors.white.withAlpha(200)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  void _miniOpenEye(Canvas canvas, Offset eye, double r, double squint) {
+    final eyeW = r * 0.14;
+    final eyeH = r * 0.16 * squint;
+    if (eyeH < 0.8) {
+      // Extreme squint: just a thin line
+      canvas.drawLine(
+        Offset(eye.dx - eyeW, eye.dy),
+        Offset(eye.dx + eyeW, eye.dy),
+        Paint()
+          ..color = Colors.white.withAlpha(180)
+          ..strokeWidth = 1.0
+          ..strokeCap = StrokeCap.round,
+      );
+      return;
+    }
+    final eyeRect = Rect.fromCenter(center: eye, width: eyeW * 2, height: eyeH * 2);
+    canvas.save();
+    canvas.clipRRect(RRect.fromRectAndRadius(eyeRect, Radius.circular(eyeW)));
+    canvas.drawOval(eyeRect, Paint()..color = Colors.white.withAlpha(200));
+    canvas.drawCircle(eye, r * 0.06, Paint()..color = const Color(0xFF0D1117).withAlpha(180));
+    canvas.restore();
   }
 
   @override
   bool shouldRepaint(_SensiaOrbPainter old) =>
-      old.color != color || old.glowStrength != glowStrength;
+      old.color != color || old.glowStrength != glowStrength || old.score != score;
 }
