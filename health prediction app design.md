@@ -136,7 +136,10 @@ y_3d(t) = OR(y(t+1), y(t+2), y(t+3))
 
 - 睡眠時間
 - 歩数
-- 曜日
+- 曜日: Target Encoding（`day_te`）+ 休日フラグ（`is_weekend`）
+  - 各曜日の過去の不調率を特徴量として使用
+  - 時系列OTE（Expanding Window）で計算し、リークを防止
+  - データ量に応じてスムージング強度αを調整
 - 休日フラグ（**MVPは `is_weekend`（土日）のみ**。祝日対応は将来、日本祝日カレンダー or APIで追加）
 
 **体調の時系列特徴量（入力負担ゼロ・MVP必須）：**
@@ -148,6 +151,8 @@ y_3d(t) = OR(y(t+1), y(t+2), y(t+3))
 - `dev14(t-1) = mood(t-1) - ma14(t-1)`：t-1時点の14日平均との偏差
 
 > **⚠️ リーク防止ルール**: x(t) に使ってよい体調系は **t-1以前のみ**。特徴量は全部「t-1時点で確定しているもの」に揃える。`mood(t)` はラベル生成・表示には使うが、予測入力には絶対に入れない。
+> - `day_te` は「その日より前のデータのみ」から計算（Expanding Window OTE）
+> - 予測対象日の `day_te` は学習データ全期間の該当曜日の不調率から算出
 
 **睡眠・歩数の偏差特徴量（入力負担ゼロ）：**
 
@@ -353,7 +358,7 @@ iOS WidgetKit / Android AppWidget を `home_widget` パッケージで実装済�
 ### 特徴量
 
 - 過去7日平均で補完（7日ローリング平均 → グローバル平均 → 特徴量別デフォルト値の順でフォールバック）
-  - デフォルト値は `config.py` の `FEATURE_DEFAULTS` で定義（sleep_hours→7.0h, steps→5000, stress→3.0, bed_minutes→1410(23:30), wake_minutes→420(07:00) 等）
+  - デフォルト値は `config.py` の `FEATURE_DEFAULTS` で定義（sleep_hours→7.0h, steps→5000, stress→3.0, bed_minutes→1410(23:30), wake_minutes→420(07:00), day_te→0.2（事前確率としての初期推定値） 等）
 - 就寝・起床時刻は sin/cos 周期エンコーディングで変換（周期=1440分=24時間）
   - 就寝時刻のローリング平均補完時は正午未満の値に+1440シフトして深夜0時跨ぎを補正
 
@@ -481,6 +486,17 @@ fold 5: train=[0:86],  test=[86:100]
 - 成長期：共通モデル＋個人平均との差分特徴量でスケール
 - 将来：個人モデルは選択式（高精度モード）として有料化検討
 - **設計上の注意**: Cloud Runの実装を「ユーザー単位で処理」ではなく「パイプラインを差し替え可能」にしておく
+
+### TE のスムージング強度
+
+`day_te`（曜日の Target Encoding）は少量データで極端な値になりやすいため、データ量に応じてスムージング強度 α を調整する。
+
+| データ量 | α | 備考 |
+|---------|---|------|
+| 14〜29日 | 30 | 強いスムージング、ほぼグローバル平均 |
+| 30〜59日 | 15 | やや強い |
+| 60〜149日 | 10 | 標準 |
+| 150日以上 | 5 | 曜日固有の傾向を強く反映 |
 
 -----
 
@@ -725,8 +741,7 @@ shap_values = explainer.shap_values(X_today)
 |mood_delta1      |体調の変化        |mood(t-1) - mood(t-2)|
 |mood_dev14       |体調(2週間のばらつき) |t-1時点の14日平均との偏差  |
 |stress_filled    |ストレス         |t-1の値、欠損時は過去7日平均 |
-|day_sin          |曜日（周期sin）     |sin(2π×dow/7)     |
-|day_cos          |曜日（周期cos）     |cos(2π×dow/7)     |
+|day_te           |曜日の傾向         |その曜日の過去の不調率      |
 |is_weekend       |休日かどうか       |土日=1             |
 
 -----
@@ -771,8 +786,7 @@ shap_values = explainer.shap_values(X_today)
 |mood_dev14       |体調(2週間のばらつき)|-4〜+4  |0を中心に表示    |
 |sleep_dev        |睡眠(ばらつき)  |-6〜+6h   |0を中心に表示    |
 |steps_dev        |歩数(ばらつき)  |動的       |0を中心に表示    |
-|day_sin          |曜日(周期)    |-1〜+1   |           |
-|day_cos          |曜日(周期)    |-1〜+1   |           |
+|day_te           |曜日の傾向    |0〜1      |その曜日の不調率  |
 |is_weekend       |休日        |0 or 1   |           |
 
 **スケール自動調整ルール：**
@@ -1171,7 +1185,11 @@ users/{uid}/model_status/current
     "intercept": -0.5,
     "scalerMean": [2.5, 0.29, 3.2, ...],
     "scalerScale": [2.0, 0.45, 1.0, ...],
-    "featureColumns": ["day_sin", "day_cos", "is_weekend", "mood_lag1", ...]
+    "featureColumns": ["day_te", "is_weekend", "mood_lag1", ...],
+    "dayTeValues": {
+      "monday": 0.18, "tuesday": 0.12, "wednesday": 0.15,
+      "thursday": 0.20, "friday": 0.25, "saturday": 0.30, "sunday": 0.22
+    }
   }
 }
 ```
@@ -1591,3 +1609,7 @@ App Store / Google Play 審査ガイドラインで、アカウント作成機�
 |2026-03-24|ホーム画面ウィジェットを追記（Section 7.1）                         |WidgetKit / Android Widget で今日の不調リスクを表示                              |
 |2026-03-24|アカウント削除のTODOを解消（Section 15.2）                        |batch_logs含む全サブコレクション削除を実装済みに更新                                   |
 |2026-03-24|batch_logsセキュリティルールのTODOを解消（Section 15.1）           |デフォルト拒否ルールでカバー済みであることを明記                                         |
+|2026-04-XX|曜日特徴量を sin/cos から時系列 OTE に変更                        |アドバイス整合性向上、寄与度の解釈性確保                                             |
+|2026-04-XX|model_status に dayTeValues を追加                         |クライアント側推論で曜日別TE値を参照                                              |
+|2026-04-XX|データ量別 TE スムージング強度（α）を導入                             |少量データでの極端なTE値を防止                                                |
+|2026-04-XX|特徴量数を17→16に変更                                         |day_sin/cos削除、day_te追加                                           |
