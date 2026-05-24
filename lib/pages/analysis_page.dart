@@ -8,6 +8,9 @@ import '../widgets/common_widgets.dart';
 import '../widgets/sensia_message_widget.dart';
 import '../widgets/chart_7days.dart';
 import '../widgets/comparison_chart.dart';
+import '../widgets/status_banner.dart';
+import '../widgets/correlation_scatter.dart';
+import '../widgets/prediction_accuracy_chart.dart';
 
 /// 分析タブ — Calm Blue デザイン
 class AnalysisPage extends StatefulWidget {
@@ -45,6 +48,9 @@ class _AnalysisPageState extends State<AnalysisPage> {
   String? _alreadySubmittedWeek;
   List<Advice> _clientAdvices = [];
 
+  // 予測精度グラフ用
+  List<Prediction> _predictions = [];
+
   List<DailyLog> get _displayLogs => _allLogs ?? widget.logs;
 
   @override
@@ -52,6 +58,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
     super.initState();
     _checkExistingFeedback();
     _computeClientAdvice();
+    _fetchPredictions();
   }
 
   @override
@@ -87,6 +94,15 @@ class _AnalysisPageState extends State<AnalysisPage> {
       }
     } finally {
       if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  Future<void> _fetchPredictions() async {
+    try {
+      final preds = await widget.service.getLastNPredictions(90);
+      if (mounted) setState(() => _predictions = preds);
+    } catch (e) {
+      debugPrint('予測データ読み込み失敗: $e');
     }
   }
 
@@ -259,7 +275,12 @@ class _AnalysisPageState extends State<AnalysisPage> {
                 children: [
                   const SizedBox(height: AppSpacing.md),
 
-                  // --- Sensiaのアドバイス（最上部）---
+                  // --- AIモデル状態 ---
+                  StatusBanner(status: status),
+
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // --- Sensiaのアドバイス ---
                   SectionHeader(title: 'Sensiaからのアドバイス'),
                   const SizedBox(height: AppSpacing.sm),
                   _sensiaAdviceSection(pred),
@@ -311,10 +332,31 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
                     const SizedBox(height: AppSpacing.lg),
 
+                    // --- 特徴量と体調の相関 ---
+                    SectionHeader(title: '特徴量と翌日体調の相関'),
+                    const SizedBox(height: AppSpacing.sm),
+                    AppCard(
+                      child: CorrelationScatter(logs: logs),
+                    ),
+
+                    const SizedBox(height: AppSpacing.lg),
+
                     // --- 不調の基準 ---
                     SectionHeader(title: 'あなたの「不調」の基準'),
                     const SizedBox(height: AppSpacing.sm),
                     _unhealthyThresholdCard(),
+
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // --- 予測の振り返り ---
+                    SectionHeader(title: '予測の振り返り'),
+                    const SizedBox(height: AppSpacing.sm),
+                    AppCard(
+                      child: PredictionAccuracyChart(
+                        logs: logs,
+                        predictions: _predictions,
+                      ),
+                    ),
 
                     const SizedBox(height: AppSpacing.lg),
 
@@ -375,22 +417,28 @@ class _AnalysisPageState extends State<AnalysisPage> {
   }
 
   Widget _buildNotReady() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.model_training, size: 56, color: context.textSubColor),
-            const SizedBox(height: AppSpacing.lg),
-            const Text('データを集めています', style: AppTextStyles.section),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'あと ${widget.status.remainingDays} 日で予測が始まります',
-              style: AppTextStyles.caption,
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        children: [
+          StatusBanner(status: widget.status),
+          const SizedBox(height: AppSpacing.lg),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Column(
+              children: [
+                Icon(Icons.model_training, size: 48, color: context.textSubColor),
+                const SizedBox(height: AppSpacing.md),
+                const Text('データを集めています', style: AppTextStyles.section),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'あと ${widget.status.remainingDays} 日で予測が始まります',
+                  style: AppTextStyles.caption,
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

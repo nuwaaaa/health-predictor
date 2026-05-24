@@ -5,6 +5,8 @@ import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/calendar_view.dart';
 import '../widgets/sleep_pattern_chart.dart';
+import '../widgets/daily_list.dart';
+import '../widgets/mood_heatmap.dart';
 import 'daily_input_page.dart';
 
 /// データタブ — 記録ビューア
@@ -76,6 +78,27 @@ class _DataPageState extends State<DataPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: AppSpacing.md),
+
+              // --- 直近の記録 ---
+              SectionHeader(title: '直近の記録'),
+              const SizedBox(height: AppSpacing.sm),
+              DailyList(
+                logs: calendarLogs.length > 14
+                    ? calendarLogs.sublist(calendarLogs.length - 14)
+                    : calendarLogs,
+                onTap: _openDailyEdit,
+              ),
+
+              const SizedBox(height: AppSpacing.lg),
+
+              // --- 体調ヒートマップ ---
+              SectionHeader(title: '体調ヒートマップ'),
+              const SizedBox(height: AppSpacing.sm),
+              AppCard(
+                child: MoodHeatmap(logs: calendarLogs),
+              ),
+
+              const SizedBox(height: AppSpacing.lg),
 
               // --- 睡眠パターン ---
               SectionHeader(title: '睡眠パターン'),
